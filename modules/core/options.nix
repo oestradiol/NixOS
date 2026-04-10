@@ -1,0 +1,79 @@
+{ lib, ... }:
+{
+  options.myOS = {
+    gpu = lib.mkOption {
+      type = lib.types.enum [ "nvidia" "amd" ];
+      default = "nvidia";
+      description = "Primary GPU stack.";
+    };
+
+    profile = lib.mkOption {
+      type = lib.types.enum [ "daily" "paranoid" ];
+      default = "daily";
+      description = "Current trust profile.";
+    };
+
+    persistence.root = lib.mkOption {
+      type = lib.types.str;
+      default = "/persist";
+      description = "Persist mount used by impermanence.";
+    };
+
+    security = {
+      # ── Staged enablement (off until post-install) ──────────────
+      secureBoot.enable = lib.mkEnableOption "Secure Boot via Lanzaboote";
+      tpm.enable = lib.mkEnableOption "TPM-backed LUKS enrollment workflow";
+
+      # ── Infrastructure toggles ──────────────────────────────────
+      impermanence.enable = lib.mkEnableOption "tmpfs root + explicit persistence";
+      agenix.enable = lib.mkEnableOption "agenix secrets";
+      mullvad.enable = lib.mkEnableOption "Mullvad daemon";
+      mullvad.lockdown = lib.mkEnableOption "Mullvad strict lockdown use-case";
+
+      # ── Profile policy ──────────────────────────────────────────
+      browserLockdown.enable = lib.mkEnableOption "Paranoid browser policy set";
+      disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
+      gamingSysctls = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "SteamOS-aligned scheduler tuning and RT scheduling.";
+      };
+
+      # ── Kernel hardening (tunable per profile) ──────────────────
+      kernelHardening = {
+        initOnAlloc = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Zero pages on allocation (init_on_alloc=1). <1% gaming impact.";
+        };
+        initOnFree = lib.mkEnableOption "Zero pages on free (init_on_free=1). 1-7% impact";
+        slabNomerge = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Prevent slab cache merging (slab_nomerge). Negligible impact.";
+        };
+        pageAllocShuffle = lib.mkEnableOption "Randomize free page list (page_alloc.shuffle=1)";
+        moduleBlacklist = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Blacklist dangerous kernel modules (dccp, sctp, rds, tipc, firewire).";
+        };
+      };
+
+      # ── System hardening (tunable per profile) ──────────────────
+      apparmor = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "AppArmor MAC framework. ~1-3% syscall overhead.";
+      };
+      auditd = lib.mkEnableOption "Audit daemon (resource overhead, useful for forensics)";
+      lockRoot = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Lock root account and restrict su to wheel group.";
+      };
+      usbRestrict = lib.mkEnableOption "USB authorized_default=2 (may block external hubs)";
+      hardenedMemory.enable = lib.mkEnableOption "Graphene hardened allocator (stability risk)";
+    };
+  };
+}

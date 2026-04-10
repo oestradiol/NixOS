@@ -1,0 +1,13 @@
+result
+*.swp
+.DS_Store
+.direnv/
+.envrc
+.env
+.secrets/
+secrets/*.age
+secrets/*.key
+secrets/*.pem
+secrets/*.pub
+*.qcow2
+*.img
