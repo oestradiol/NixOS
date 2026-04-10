@@ -45,7 +45,7 @@ in {
           udp dport { 67, 547 } accept
           ip daddr 127.0.0.53 tcp dport 53 accept
           ip daddr 127.0.0.53 udp dport 53 accept
-          oifname { ${lib.concatStringsSep ", " (map (n: '"'+n+'"') vpnIfaces)} } accept
+          oifname { ${lib.concatStringsSep ", " (map (n: "\"${n}\"") vpnIfaces)} } accept
           udp dport 51820 accept
           tcp dport { 443, 1401 } accept
         }
