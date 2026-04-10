@@ -48,12 +48,14 @@
   fileSystems."/home/player" = {
     device = "/dev/mapper/cryptroot";
     fsType = "btrfs";
+    neededForBoot = true; # Required for impermanence
     options = [ "subvol=@home-daily" "compress=zstd" "noatime" ];
   };
 
   fileSystems."/home/ghost" = {
     device = "/dev/mapper/cryptroot";
     fsType = "btrfs";
+    neededForBoot = true; # Required for impermanence
     options = [ "subvol=@home-paranoid" "compress=zstd" "noatime" ];
   };
 
