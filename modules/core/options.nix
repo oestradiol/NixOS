@@ -33,6 +33,11 @@
       # ── Profile policy ──────────────────────────────────────────
       browserLockdown.enable = lib.mkEnableOption "Paranoid browser policy set";
       disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
+      controllers.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Bluetooth and Xbox controller support (xpadneo, game-devices-udev-rules).";
+      };
       gamingSysctls = lib.mkOption {
         type = lib.types.bool;
         default = true;
