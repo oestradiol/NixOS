@@ -74,6 +74,18 @@
       };
       usbRestrict = lib.mkEnableOption "USB authorized_default=2 (may block external hubs)";
       hardenedMemory.enable = lib.mkEnableOption "Graphene hardened allocator (stability risk)";
+
+      # ── VM isolation layer (strongest practical sandbox) ───────
+      vmIsolation.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Enable KVM/QEMU VM isolation layer for untrusted workloads.
+          Provides stronger isolation than bubblewrap (separate kernel, hardware virtualization).
+          Intended for paranoid profile use or specific untrusted applications.
+          WARNING: Significant resource overhead. daily driver: compatible but not enabled by default.
+        '';
+      };
     };
   };
 }

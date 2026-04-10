@@ -18,6 +18,7 @@
     ../../modules/security/secure-boot.nix
     ../../modules/security/flatpak.nix
     ../../modules/security/scanners.nix
+    ../../modules/security/vm-isolation.nix  # Disabled by default, knob: myOS.security.vmIsolation.enable
     # Desktop
     ../../modules/gpu
     ../../modules/desktop/theme.nix
