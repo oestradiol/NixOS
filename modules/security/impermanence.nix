@@ -1,63 +1,68 @@
 { config, lib, ... }:
 let
   persistRoot = config.myOS.persistence.root;
+  impermanenceEnabled = config.myOS.security.impermanence.enable;
 in {
-  config = lib.mkIf config.myOS.security.impermanence.enable {
-    environment.persistence.${persistRoot} = {
-      hideMounts = true;
+  config = lib.mkMerge [
+    (lib.mkIf impermanenceEnabled {
+      environment.persistence.${persistRoot} = {
+        hideMounts = true;
 
-      directories = [
-        "/var/lib/nixos"
-        "/var/lib/systemd"
-        "/etc/NetworkManager/system-connections"
-        "/var/lib/bluetooth"
-        "/var/lib/flatpak"
-        "/var/lib/mullvad-vpn"
-        "/etc/mullvad-vpn"
-      ];
-
-      files = [
-        "/etc/machine-id"
-        "/etc/ssh/ssh_host_ed25519_key"
-        "/etc/ssh/ssh_host_ed25519_key.pub"
-        "/etc/ssh/ssh_host_rsa_key"
-        "/etc/ssh/ssh_host_rsa_key.pub"
-      ];
-
-      users.player = {
         directories = [
-          "Data"
-          ".local/share/Steam"
-          ".steam"
-          ".config/vesktop"
-          ".config/discord"
-          ".config/Signal"
-          ".config/keepassxc"
-          ".local/share/keyrings"
-          ".gnupg"
-          ".ssh"
+          "/var/lib/nixos"
+          "/var/lib/systemd"
+          "/etc/NetworkManager/system-connections"
+          "/var/lib/bluetooth"
+          "/var/lib/flatpak"
+          "/var/lib/mullvad-vpn"
+          "/etc/mullvad-vpn"
         ];
-        files = [ ".zsh_history" ];
-      };
 
-      users."ghost" = {
-        directories = [
-          "Downloads"
-          "Documents"
-          ".config/Signal"
-          ".config/keepassxc"
-          ".gnupg"
-          ".ssh"
+        files = [
+          "/etc/machine-id"
+          "/etc/ssh/ssh_host_ed25519_key"
+          "/etc/ssh/ssh_host_ed25519_key.pub"
+          "/etc/ssh/ssh_host_rsa_key"
+          "/etc/ssh/ssh_host_rsa_key.pub"
         ];
-        files = [ ".zsh_history" ];
-      };
-    };
-  };
 
-  assertions = [
+        users.player = {
+          directories = [
+            "Data"
+            ".local/share/Steam"
+            ".steam"
+            ".config/vesktop"
+            ".config/discord"
+            ".config/Signal"
+            ".config/keepassxc"
+            ".local/share/keyrings"
+            ".gnupg"
+            ".ssh"
+          ];
+          files = [ ".zsh_history" ];
+        };
+
+        users."ghost" = {
+          directories = [
+            "Downloads"
+            "Documents"
+            ".config/Signal"
+            ".config/keepassxc"
+            ".gnupg"
+            ".ssh"
+          ];
+          files = [ ".zsh_history" ];
+        };
+      };
+    })
+    
     {
-      assertion = !config.myOS.security.impermanence.enable || config.fileSystems ? "${persistRoot}";
-      message = "Impermanence is enabled, but /persist is not mounted.";
+      assertions = [
+        {
+          assertion = !impermanenceEnabled || (config.fileSystems ? "${persistRoot}");
+          message = "Impermanence is enabled, but ${persistRoot} is not mounted.";
+        }
+      ];
     }
   ];
 }
