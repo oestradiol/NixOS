@@ -58,6 +58,21 @@
           default = true;
           description = "Blacklist dangerous kernel modules (dccp, sctp, rds, tipc, firewire).";
         };
+        
+        # Additional Madaidan-recommended kernel hardening (paranoid-tier)
+        pti = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Kernel Page Table Isolation (pti=on). Mitigates Meltdown, prevents some KASLR bypasses. Negligible impact.";
+        };
+        vsyscallNone = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Disable vsyscalls (vsyscall=none). Prevents ROP attacks via fixed-address syscalls. May break very old binaries.";
+        };
+        oopsPanic = lib.mkEnableOption "Panic on kernel oops (oops=panic). Prevents exploit continuation but may crash on bad drivers.";
+        moduleSigEnforce = lib.mkEnableOption "Only load signed kernel modules (module.sig_enforce=1). Breaks with custom/unsigned modules.";
+        disableIcmpEcho = lib.mkEnableOption "Ignore ICMP echo requests (ping). Prevents network enumeration. May break some diagnostics.";
       };
 
       # ── System hardening (tunable per profile) ──────────────────
