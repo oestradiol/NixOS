@@ -41,7 +41,7 @@ docs/                           # see below
 | `docs/TEST-PLAN.md` | Runtime verification checklist |
 | `docs/AUDIT.md` | Audit tutorial + failure modes + code map + remediation matrix |
 | `docs/RECOVERY.md` | Emergency recovery procedures |
-| `docs/PERFORMANCE-NOTES.md` | Old/ vs new daily comparison, per-knob impact, decision rules |
+| `docs/PERFORMANCE-NOTES.md` | Old vs new daily comparison, per-knob impact, decision rules |
 | `docs/audit/SOURCE-TOPIC-LEDGER.md` | Canonical hardening topic tracker |
 | `docs/audit/SOURCE-COVERAGE-MATRIX.md` | 18 external sources reviewed with audit provenance |
 
