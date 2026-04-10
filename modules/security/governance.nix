@@ -61,5 +61,53 @@ in {
       assertion = !isParanoid || !(builtins.elem "wheel" config.users.users."ghost".extraGroups);
       message = "Paranoid user must not be in the wheel group by default.";
     }
+    {
+      assertion = !isParanoid || config.myOS.security.disableSMT;
+      message = "Paranoid profile must enable disableSMT (nosmt=force).";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.usbRestrict;
+      message = "Paranoid profile must enable USB restriction (authorized_default=2).";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.auditd;
+      message = "Paranoid profile must enable audit daemon.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.vmIsolation.enable;
+      message = "Paranoid profile must enable VM isolation layer.";
+    }
+    {
+      assertion = !isParanoid || !config.myOS.gaming.sysctls;
+      message = "Paranoid profile must disable gaming sysctls.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.kernelHardening.initOnFree;
+      message = "Paranoid profile must enable initOnFree kernel hardening.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.kernelHardening.pageAllocShuffle;
+      message = "Paranoid profile must enable pageAllocShuffle kernel hardening.";
+    }
+    {
+      assertion = !isParanoid || !config.programs.gamescope.enable;
+      message = "Paranoid profile must not enable gamescope.";
+    }
+    {
+      assertion = !isParanoid || !config.programs.gamemode.enable;
+      message = "Paranoid profile must not enable gamemode.";
+    }
+    {
+      assertion = !isParanoid || !config.services.wivrn.enable;
+      message = "Paranoid profile must not enable wivrn.";
+    }
+    {
+      assertion = !isDaily || !config.myOS.security.hardenedMemory.enable;
+      message = "Daily profile must not enable hardened memory allocator.";
+    }
+    {
+      assertion = config.myOS.gpu == "nvidia" || config.myOS.gpu == "amd";
+      message = "GPU option must be set to either 'nvidia' or 'amd'.";
+    }
   ];
 }
