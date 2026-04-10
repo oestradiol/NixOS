@@ -20,10 +20,11 @@ hosts/nixos/                    # host config, hardware, disk layout
 profiles/                       # daily.nix, paranoid.nix
 modules/
   core/                         # boot, desktop (locale+audio+nix), options, users
-  security/                     # hardening, networking, browser, impermanence,
-                                # secure-boot (+ TPM), flatpak, scanners, secrets,
-                                # governance
-  desktop/                      # gaming, vr, theme, controllers, shell
+  security/                     # hardening, networking, browser (sandboxed),
+                                # impermanence, secure-boot (+ TPM), flatpak,
+                                # scanners, secrets, governance, vm-isolation
+  desktop/                      # gaming (steam, gamescope, controllers knob), vr,
+                                # theme, shell
   home/                         # HM modules: common, daily, paranoid
   gpu/                          # nvidia, amd, default router
 scripts/                        # install, post-install, audit helpers
