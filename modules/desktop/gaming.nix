@@ -1,46 +1,7 @@
 { config, lib, pkgs, ... }: {
-  imports = [ ./vr.nix ];
+  imports = [ ./vr.nix ./controllers.nix ];
 
   config = {
-    # Controller support (Bluetooth/Xbox) - disabled by default, enable with myOS.controllers.enable
-    hardware.xpadneo.enable = lib.mkIf config.myOS.gaming.controllers.enable true;
-    
-    hardware.bluetooth = lib.mkIf config.myOS.gaming.controllers.enable {
-      enable = true;
-      powerOnBoot = true;
-      settings = {
-        General = {
-          Experimental = true;
-          MultiProfile = "multiple";
-          FastConnectable = true;
-          KernelExperimental = "6fbaf188-05e0-496a-9885-d6ddfdb4e03e,330859bc-7506-492d-9370-9a6f0614037f";
-        };
-      };
-    };
-
-    boot.extraModprobeConfig = lib.mkIf config.myOS.gaming.controllers.enable ''
-      options bluetooth disable_ertm=1
-    '';
-
-    services.udev.packages = lib.mkIf config.myOS.gaming.controllers.enable [ pkgs.game-devices-udev-rules ];
-    
-    services.udev.extraRules = lib.mkIf config.myOS.gaming.controllers.enable ''
-      SUBSYSTEMS=="usb", TAG+="uaccess"
-      KERNEL=="hidraw*", TAG+="uaccess"
-      KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="028e", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="0719", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="02ea", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="0b12", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="05c4", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="09cc", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="2dc8", ATTRS{idProduct}=="310b", TAG+="uaccess"
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="2dc8", ATTRS{idProduct}=="6012", TAG+="uaccess"
-    '';
-
-    services.blueman.enable = lib.mkIf config.myOS.gaming.controllers.enable true;
-
     # Steam
     programs.steam = {
       enable = true;

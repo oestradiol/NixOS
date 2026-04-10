@@ -19,6 +19,12 @@
       description = "Bluetooth and Xbox controller support (xpadneo, game-devices-udev-rules).";
     };
 
+    gaming.sysctls = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "SteamOS-aligned scheduler tuning and RT scheduling.";
+    };
+
     persistence.root = lib.mkOption {
       type = lib.types.str;
       default = "/persist";
@@ -39,11 +45,6 @@
       # ── Profile policy ──────────────────────────────────────────
       browserLockdown.enable = lib.mkEnableOption "Paranoid browser policy set";
       disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
-      gamingSysctls = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "SteamOS-aligned scheduler tuning and RT scheduling.";
-      };
 
       # ── Kernel hardening (tunable per profile) ──────────────────
       kernelHardening = {

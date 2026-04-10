@@ -4,11 +4,11 @@
   # extendModules. Without mkForce, options that differ from daily.nix
   # trigger "conflicting definition values" (mergeEqualOption).
   myOS.profile = lib.mkForce "paranoid";
+  myOS.gaming.sysctls = lib.mkForce false;
   myOS.security = {
     mullvad.lockdown = lib.mkForce true;
     browserLockdown.enable = lib.mkForce true;
     disableSMT = lib.mkForce true;
-    gamingSysctls = lib.mkForce false;
     usbRestrict = lib.mkForce true;
     auditd = lib.mkForce true;
     vmIsolation.enable = lib.mkForce true;
