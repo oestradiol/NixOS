@@ -2,6 +2,7 @@
 let
   kh = config.myOS.security.kernelHardening;
   sec = config.myOS.security;
+  gaming = config.myOS.gaming;
 in {
   boot.loader = {
     systemd-boot.enable = lib.mkDefault (!sec.secureBoot.enable);
@@ -35,7 +36,7 @@ in {
     "net.ipv4.tcp_fin_timeout" = 5;
     # Madaidan-recommended: ignore ICMP echo (ping) requests
     "net.ipv4.icmp_echo_ignore_all" = lib.mkIf kh.disableIcmpEcho true;
-  } // lib.optionalAttrs sec.gamingSysctls {
+  } // lib.optionalAttrs gaming.sysctls {
     "kernel.sched_cfs_bandwidth_slice_u" = 3000;
     "kernel.sched_latency_ns" = 3000000;
     "kernel.sched_min_granularity_ns" = 300000;

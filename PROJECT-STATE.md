@@ -38,7 +38,7 @@
 ## Configurable myOS.security options
 All key hardening knobs are now tunable per-profile without code changes:
 - `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist, pti, vsyscallNone, oopsPanic, moduleSigEnforce, disableIcmpEcho}`
-- `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `gamingSysctls`, `vmIsolation.enable`
+- `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `vmIsolation.enable`
 - `disableSMT`, `browserLockdown.enable`, `hardenedMemory.enable`
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
 - `mullvad.{enable, lockdown}`
@@ -55,7 +55,7 @@ All key hardening knobs are now tunable per-profile without code changes:
 
 ## Gaming knobs
 - `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
-- `myOS.security.gamingSysctls` — SteamOS-aligned scheduler tuning (default: true)
+- `myOS.gaming.sysctls` — SteamOS-aligned scheduler tuning and RT scheduling (default: true)
 
 ## Browser security architecture (research-grounded)
 ### Sandboxing (bubblewrap)
