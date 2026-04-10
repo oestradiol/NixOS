@@ -51,6 +51,11 @@ All key hardening knobs are now tunable per-profile without code changes:
 - `init_on_free=1` and `page_alloc.shuffle=1`: paranoid-only (measurable impact).
 - `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
 - Browser sandboxing: national-level with UID isolation (100000), bubblewrap namespaces, arkenfox-grounded user.js.
+- VM isolation: implemented as knob, disabled by default, compatible with daily driver.
+
+## Gaming knobs
+- `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
+- `myOS.security.gamingSysctls` — SteamOS-aligned scheduler tuning (default: true)
 
 ## Browser security architecture (research-grounded)
 ### Sandboxing (bubblewrap)
