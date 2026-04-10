@@ -37,11 +37,14 @@
 
 ## Configurable myOS.security options
 All key hardening knobs are now tunable per-profile without code changes:
-- `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist}`
+- `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist, pti, vsyscallNone, oopsPanic, moduleSigEnforce, disableIcmpEcho}`
 - `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `gamingSysctls`
 - `disableSMT`, `browserLockdown.enable`, `hardenedMemory.enable`
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
 - `mullvad.{enable, lockdown}`
+
+## Gaming knobs
+- `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
 
 ## User decisions (this session)
 - Controllers (Bluetooth/Xbox): keep disabled, enable manually later.

@@ -46,7 +46,7 @@
 | Feature | Status | Action needed |
 |---|---|---|
 | GRUB + os-prober | Replaced by systemd-boot | **Faster** boot, no action needed |
-| Swap file (6GB) | **Replaced by zram + 8GB Btrfs swapfile** | zram for hot pages, Btrfs swap on `@swap` for cold; 8GB matches old size |
+| Swap file (8GB) | **Replaced by zram + 8GB Btrfs swapfile** | zram for hot pages, Btrfs swap on `@swap` for cold; 8GB matches old size |
 | WakeOnLAN | **Intentionally excluded** | Not needed for desktop; use `ethtool` manually if required |
 | CUPS printing | Explicitly disabled | Flip in `base-desktop.nix` if needed |
 | Controllers (Bluetooth/Xbox) | Implemented as `myOS.gaming.controllers.enable` knob | Set `myOS.gaming.controllers.enable = true` in profile |

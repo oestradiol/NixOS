@@ -37,9 +37,12 @@ Never trust a status line by itself. For each claim, check four layers:
 - `modules/home/paranoid.nix` — signal-desktop only; browsers via system wrappers
 
 ### Gaming
-- `modules/desktop/gaming.nix` — Steam, gamescope, gamemode
+- `modules/desktop/gaming.nix` — Steam, gamescope, gamemode, controllers knob
 - `modules/desktop/vr.nix` — WiVRn, PAM limits
 - `modules/gpu/nvidia.nix`
+
+### VM isolation
+- `modules/security/vm-isolation.nix` — KVM/QEMU, virt-manager, AMD/Intel IOMMU
 
 ### Governance
 - `modules/security/governance.nix` — 14 build-time assertions
