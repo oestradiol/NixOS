@@ -19,7 +19,7 @@ This is the concrete install path for the uploaded hardware:
 Use `scripts/install-nvme-rebuild.sh` or run equivalent commands manually.
 
 Target GPT layout on `/dev/nvme0n1`:
-- `NIXBOOT` EFI FAT32, 1 GiB
+- `NIXBOOT` EFI FAT32, 512 MiB
 - `NIXCRYPT` LUKS2, rest of disk
 
 Inside `cryptroot` Btrfs create:
