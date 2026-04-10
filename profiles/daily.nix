@@ -10,10 +10,8 @@
     hardenedMemory.enable = false;
     browserLockdown.enable = false;
     disableSMT = false;
+    vmIsolation.enable = true;
   };
 
   imports = [ ../modules/desktop/gaming.nix ];
-
-  virtualisation.libvirtd.enable = true;
-  programs.virt-manager.enable = true;
 }
