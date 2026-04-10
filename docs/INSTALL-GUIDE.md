@@ -83,5 +83,5 @@ Browser session junk, arbitrary root filesystem writes, most caches and temp fil
 
 ## Notes
 - Boot specialisations are chosen at boot.
-- SDDM user choice is separate from boot specialisation choice.
+- SDDM user choice is separate from boot specialisation choice (any user can log in on any boot spec).
 - Default boot is daily. The paranoid specialisation is a separate boot entry.

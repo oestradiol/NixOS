@@ -1,6 +1,6 @@
 # PERFORMANCE NOTES
 
-## Old/ config vs new daily — systematic comparison
+##  config vs new daily — systematic comparison
 
 ### Identical (zero performance delta)
 - SteamOS gaming sysctls (all 8 scheduler params: sched_cfs_bandwidth, sched_latency, sched_min_granularity, sched_wakeup_granularity, sched_migration_cost, sched_nr_migrate, split_lock_mitigate=0, sched_rt_runtime_us=-1) — daily-only
@@ -42,7 +42,7 @@
 | `usbcore.authorized_default=2` | Blocks unauthorized USB — could interfere with peripherals | Functional, not perf |
 | `nosmt=force` (via disableSMT) | Already daily=false | **30-40%** CPU throughput loss |
 
-### Missing from new daily (was in Old/)
+### Missing from new daily (compared to Old)
 | Feature | Status | Action needed |
 |---|---|---|
 | GRUB + os-prober | Replaced by systemd-boot | **Faster** boot, no action needed |
@@ -53,7 +53,7 @@
 
 ## Net assessment
 
-**Estimated total overhead on daily vs Old/: <2%**, dominated by `init_on_alloc=1` and AppArmor. Both are in the noise for GPU-bound gaming and VR. The gaming sysctls, driver config, and scheduling are identical.
+**Estimated total overhead on daily vs Old: <2%**, dominated by `init_on_alloc=1` and AppArmor. Both are in the noise for GPU-bound gaming and VR. The gaming sysctls, driver config, and scheduling are identical.
 
 ## What must be benchmarked after install
 1. Steam game frametime in 2-3 titles (before/after)
