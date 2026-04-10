@@ -15,7 +15,6 @@
   boot.initrd.luks.devices.cryptroot = {
     device = "/dev/disk/by-partlabel/NIXCRYPT";
     allowDiscards = true;
-    preLVM = false;
   };
 
   fileSystems."/boot" = {
