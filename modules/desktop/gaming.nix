@@ -3,9 +3,9 @@
 
   config = {
     # Controller support (Bluetooth/Xbox) - disabled by default, enable with myOS.controllers.enable
-    hardware.xpadneo.enable = lib.mkIf config.myOS.security.controllers.enable true;
+    hardware.xpadneo.enable = lib.mkIf config.myOS.gaming.controllers.enable true;
     
-    hardware.bluetooth = lib.mkIf config.myOS.security.controllers.enable {
+    hardware.bluetooth = lib.mkIf config.myOS.gaming.controllers.enable {
       enable = true;
       powerOnBoot = true;
       settings = {
@@ -18,13 +18,13 @@
       };
     };
 
-    boot.extraModprobeConfig = lib.mkIf config.myOS.security.controllers.enable ''
+    boot.extraModprobeConfig = lib.mkIf config.myOS.gaming.controllers.enable ''
       options bluetooth disable_ertm=1
     '';
 
-    services.udev.packages = lib.mkIf config.myOS.security.controllers.enable [ pkgs.game-devices-udev-rules ];
+    services.udev.packages = lib.mkIf config.myOS.gaming.controllers.enable [ pkgs.game-devices-udev-rules ];
     
-    services.udev.extraRules = lib.mkIf config.myOS.security.controllers.enable ''
+    services.udev.extraRules = lib.mkIf config.myOS.gaming.controllers.enable ''
       SUBSYSTEMS=="usb", TAG+="uaccess"
       KERNEL=="hidraw*", TAG+="uaccess"
       KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
@@ -39,7 +39,7 @@
       SUBSYSTEM=="usb", ATTRS{idVendor}=="2dc8", ATTRS{idProduct}=="6012", TAG+="uaccess"
     '';
 
-    services.blueman.enable = lib.mkIf config.myOS.security.controllers.enable true;
+    services.blueman.enable = lib.mkIf config.myOS.gaming.controllers.enable true;
 
     # Steam
     programs.steam = {

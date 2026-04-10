@@ -13,6 +13,12 @@
       description = "Current trust profile.";
     };
 
+    gaming.controllers.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Bluetooth and Xbox controller support (xpadneo, game-devices-udev-rules).";
+    };
+
     persistence.root = lib.mkOption {
       type = lib.types.str;
       default = "/persist";
@@ -33,11 +39,6 @@
       # ── Profile policy ──────────────────────────────────────────
       browserLockdown.enable = lib.mkEnableOption "Paranoid browser policy set";
       disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
-      controllers.enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "Bluetooth and Xbox controller support (xpadneo, game-devices-udev-rules).";
-      };
       gamingSysctls = lib.mkOption {
         type = lib.types.bool;
         default = true;
