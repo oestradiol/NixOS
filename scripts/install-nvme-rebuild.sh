@@ -8,7 +8,7 @@ MNT="/mnt"
 sgdisk --zap-all "$DISK"
 partprobe "$DISK"
 
-sgdisk -n 1:1MiB:+1GiB -t 1:EF00 -c 1:NIXBOOT "$DISK"
+sgdisk -n 1:1MiB:+512MiB -t 1:EF00 -c 1:NIXBOOT "$DISK"
 sgdisk -n 2:0:0      -t 2:8309 -c 2:NIXCRYPT "$DISK"
 partprobe "$DISK"
 

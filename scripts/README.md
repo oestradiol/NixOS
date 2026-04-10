@@ -28,7 +28,7 @@ sudo ./scripts/install-nvme-rebuild.sh /dev/nvme1n1
 
 **What it does:**
 1. Wipes disk with `sgdisk --zap-all`
-2. Creates GPT layout: 1GiB EFI (NIXBOOT), rest LUKS (NIXCRYPT)
+2. Creates GPT layout: 512MiB EFI (NIXBOOT), rest LUKS (NIXCRYPT)
 3. Formats EFI as FAT32
 4. Sets up LUKS2 encryption
 5. Creates Btrfs subvolumes: @nix, @persist, @log, @home-daily, @home-paranoid
