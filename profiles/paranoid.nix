@@ -11,7 +11,7 @@
     gamingSysctls = lib.mkForce false;
     usbRestrict = lib.mkForce true;
     auditd = lib.mkForce true;
-    vmIsolation.enable = lib.mkForce false;
+    vmIsolation.enable = lib.mkForce true;
     kernelHardening = {
       initOnFree = lib.mkForce true;
       pageAllocShuffle = lib.mkForce true;
