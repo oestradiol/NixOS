@@ -44,7 +44,7 @@ Status values:
 | Minimal installation | saylesss88 | Implemented+Manual | `docs/INSTALL-GUIDE.md` | install script + host layout | Execute with care |
 | LUKS / encrypted install | saylesss88 | Implemented+Manual | `docs/INSTALL-GUIDE.md`, `PROJECT-STATE.md` | `hosts/nixos/install-layout.nix` | Perform destructive encrypted install |
 | Guided encrypted Btrfs subvolumes | saylesss88 | Implemented+Manual | `docs/INSTALL-GUIDE.md`, `docs/PERSISTENCE-MAP.md` | `hosts/nixos/hardware-target.nix` | Same as above |
-| disco-based install | saylesss88 | Rejected | `PROJECT-STATE.md`, this ledger | — | Manual scripted install chosen instead |
+| disko-based install | saylesss88 | Rejected | `PROJECT-STATE.md`, this ledger | — | Manual scripted install chosen instead |
 | Installing software declaratively | saylesss88 | Implemented | `PROJECT-STATE.md`, `docs/IMPLEMENTATION-PLAN.md` | flake + modules | — |
 | Users and sudo | saylesss88 | Implemented+Manual | `PROJECT-STATE.md`, `docs/TRUST-MODEL.md` | `modules/core/users.nix`, `modules/security/governance.nix` | Confirm wheel membership and sudo policy |
 | SUID binaries / setuid danger | saylesss88 / Madaidan | Documented | this ledger, `docs/IMPLEMENTATION-PLAN.md` | `modules/security/base.nix` | Do post-install SUID audit and reduce where safe |

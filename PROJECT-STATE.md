@@ -99,7 +99,7 @@ All key hardening knobs are now tunable per-profile without code changes:
 - Choosing SELinux for wave one; AppArmor is the selected MAC path.
 - Choosing Firejail for wave one; Flatpak and bubblewrap wrappers are the selected path.
 - Choosing `doas`/`run0` for wave one; sudo remains in place for now.
-- Choosing `disco` for wave one; the install path remains manual/scripted.
+- Choosing `disko` for wave one; the install path remains manual/scripted.
 
 ## Trust model
 ### Daily
