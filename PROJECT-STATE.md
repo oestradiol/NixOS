@@ -50,6 +50,22 @@ All key hardening knobs are now tunable per-profile without code changes:
 - All negligible-impact hardening on daily: keep enabled, monitor post-install.
 - `init_on_free=1` and `page_alloc.shuffle=1`: paranoid-only (measurable impact).
 - `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
+- Browser sandboxing: national-level with UID isolation (100000), bubblewrap namespaces, arkenfox-grounded user.js.
+
+## Browser security architecture (research-grounded)
+### Sandboxing (bubblewrap)
+- UID namespace: browser runs as UID 100000 (unmapped on host)
+- IPC/PID/UTS namespaces for process isolation
+- Minimal filesystem: ro-bind system dirs, tmpfs for home/runtime
+- GPU/Wayland/PipeWire socket passthrough (read-only)
+- No capabilities (`--cap-drop ALL`)
+- Die-with-parent: auto-cleanup when launcher exits
+
+### Firefox hardening (arkenfox-grounded user.js)
+- 70+ hardened prefs covering: startup, geolocation, telemetry (Normandy/Shield), safe browsing, implicit outbound blocking, DNS/DoH, HTTPS-only mode, SSL/TLS hardening (safe negotiation, 0-RTT disabled, OCSP hard-fail), HPKP/CRLite, referer trimming, container tabs, WebRTC disabled, dFPI, RFP (resist fingerprinting), shutdown sanitizing
+- Auto-clears cookies/storage/cache/formdata on exit
+- WebRTC disabled (prevents IP leak)
+- Container tabs enabled for site isolation
 
 ## Needs live validation
 - Real destructive install on the NVMe.

@@ -23,8 +23,6 @@
     bat
     keepassxc
     signal-desktop
-    tor-browser
-    mullvad-browser
-    bubblewrap
+    # Browsers are system-wide sandboxed wrappers: safe-firefox, safe-tor-browser, safe-mullvad-browser
   ];
 }

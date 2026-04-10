@@ -30,9 +30,11 @@ Never trust a status line by itself. For each claim, check four layers:
 
 ### Networking / browser / privacy
 - `modules/security/networking.nix` — killswitch, nftables
-- `modules/security/browser.nix` — safe-firefox wrapper
+- `modules/security/browser.nix` — sandboxed browser wrappers (UID 100000, bubblewrap)
+  - `safe-firefox`: Hardened Firefox with arkenfox-grounded user.js (70+ prefs)
+  - `safe-tor-browser`, `safe-mullvad-browser`: Sandboxed Tor/Mullvad
 - `modules/security/flatpak.nix` — flatpak + xdg portals
-- `modules/home/paranoid.nix` — tor-browser, mullvad-browser only
+- `modules/home/paranoid.nix` — signal-desktop only; browsers via system wrappers
 
 ### Gaming
 - `modules/desktop/gaming.nix` — Steam, gamescope, gamemode
@@ -146,7 +148,31 @@ resolvectl status
 curl https://am.i.mullvad.net/connected
 ```
 
-Disconnect VPN → verify egress fails. Launch `safe-firefox` → verify process came through wrapper path.
+Disconnect VPN → verify egress fails.
+
+## Phase 6.5 — Browser sandboxing (new)
+
+### A. Verify sandboxed execution
+```bash
+# Check that safe-firefox runs in bwrap with UID 100000
+ps aux | grep -E 'safe-firefox|bwrap.*firefox' | head -5
+cat /proc/$(pgrep -f 'bwrap.*firefox' | head -1)/uid_map 2>/dev/null || echo "Not found"
+
+# Verify no capability
+getcap $(which safe-firefox) 2>/dev/null || echo "No capabilities (expected)"
+```
+
+### B. Verify hardened user.js
+```bash
+# Launch safe-firefox, check prefs are set
+grep -E 'privacy.resistFingerprinting|media.peerconnection.enabled|dom.security.https_only_mode' \
+  ~/.cache/safe-firefox/profile/user.js 2>/dev/null || echo "user.js in runtime profile"
+```
+
+### C. Leak tests
+- WebRTC leak test: https://browserleaks.com/webrtc (should show no IP, disabled)
+- Fingerprint: https://coveryourtracks.eff.org (RFP active)
+- DNS leak: https://dnsleaktest.com (should show Cloudflare if DoH active)
 
 ## Phase 7 — Gaming
 
