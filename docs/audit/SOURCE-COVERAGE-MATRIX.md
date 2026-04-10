@@ -498,20 +498,19 @@ How it was used:
 - as a checklist/diff target, not as a wholesale import
 
 What remains to do:
-- compare your manual implementation against nix-mineral feature families one by one
+- Compare manual implementation against nix-mineral feature families one by one (deferred to late game)
 
 Status:
-- `planned`
+- `deferred`
 
 ---
 
-## D. Sources explicitly named in the original numbered plan but not fully executed in repo yet
-- Hardened memory / hardened kernel — `planned`
-- Flatpak & browser sandboxes — `implemented` / `planned`
-- network killswitch — `scaffolded`
-- configure git declaratively — `planned`
-- KeepassXC permanence — `planned`
-- post-quantum “prepare everywhere” — `note-only` (handled by protocol/tool choice rather than a generic OS knob)
-- alternative home paths — `planned` investigation only
-- comms stack review (IRC / Signal / Matrix / Telegram) — `planned`
-- hardening tests / sudo killer / malware-chat review / AI final pass — `planned` and external to current repo state
+## D. Late-game / deferred items
+- Full nix-mineral diff — `deferred` (alpha software, different threat model)
+- NTS time sync replacement — `not yet implemented` (test on paranoid after stable)
+- Hardened memory allocator full rollout — `deferred` (enable after post-install testing)
+- Hardened compilation flags policy — `deferred` (rebuild times, GPU driver risk)
+- Dedicated entropy-hardening component — `deferred` (not critical for desktop)
+- Full SUID/capability pruning program — `deferred` (high breakage risk, paranoid-only candidate)
+- AI final review pass — `repeat after live install`
+- Malware Knowledge chat reconciliation — `missing external input`
