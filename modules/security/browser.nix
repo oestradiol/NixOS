@@ -257,8 +257,48 @@ let
     package = pkgs.mullvad-browser;
     binaryName = "mullvad-browser";
   };
+  # Desktop entries for sandboxed browsers
+  mkBrowserDesktop = { name, exec, icon, comment, genericName ? null }:
+    pkgs.makeDesktopItem {
+      name = "safe-${name}";
+      exec = "${exec} %U";
+      icon = icon;
+      comment = comment;
+      genericName = genericName;
+      desktopName = "${name} (Sandboxed)";
+      categories = [ "Network" "WebBrowser" ];
+      mimeTypes = [ "text/html" "application/xhtml+xml" "application/vnd.mozilla.xul+xml" "http" "https" ];
+      startupWMClass = name;
+      terminal = false;
+      type = "Application";
+    };
+
+  safeFirefoxDesktop = mkBrowserDesktop {
+    name = "Firefox";
+    exec = "safe-firefox";
+    icon = "firefox";
+    comment = "Hardened Firefox with UID isolation";
+    genericName = "Web Browser";
+  };
+
+  safeTorDesktop = mkBrowserDesktop {
+    name = "Tor Browser";
+    exec = "safe-tor-browser";
+    icon = "tor-browser";
+    comment = "Tor Browser with UID isolation";
+    genericName = "Web Browser";
+  };
+
+  safeMullvadDesktop = mkBrowserDesktop {
+    name = "Mullvad Browser";
+    exec = "safe-mullvad-browser";
+    icon = "mullvad-browser";
+    comment = "Mullvad Browser with UID isolation";
+    genericName = "Web Browser";
+  };
+
 in {
-  environment.systemPackages = [ safeFirefox safeTor safeMullvad ];
+  environment.systemPackages = [ safeFirefox safeTor safeMullvad safeFirefoxDesktop safeTorDesktop safeMullvadDesktop ];
 
   programs.firefox = {
     enable = true;
