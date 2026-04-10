@@ -97,6 +97,7 @@ What was not adopted as-is:
 - doas not adopted; repo kept a more conservative placeholder stance
 - Firejail not chosen as the main sandbox direction
 - SELinux/AppArmor treated as constrained/experimental on NixOS rather than a solved baseline
+- NTS time sync replacement deferred (may break KDE/Qt time APIs; test on paranoid after stable)
 
 Repo effect:
 - `modules/security/base.nix`
