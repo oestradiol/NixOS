@@ -1,6 +1,6 @@
 # PERFORMANCE NOTES
 
-##  config vs new daily — systematic comparison
+## Old config vs new daily — systematic comparison
 
 ### Identical (zero performance delta)
 - SteamOS gaming sysctls (all 8 scheduler params: sched_cfs_bandwidth, sched_latency, sched_min_granularity, sched_wakeup_granularity, sched_migration_cost, sched_nr_migrate, split_lock_mitigate=0, sched_rt_runtime_us=-1) — daily-only
@@ -46,10 +46,10 @@
 | Feature | Status | Action needed |
 |---|---|---|
 | GRUB + os-prober | Replaced by systemd-boot | **Faster** boot, no action needed |
-| Swap file (6GB) | Replaced by zram-only | Monitor for OOM under heavy load |
-| WakeOnLAN | Not ported | Add to `base-desktop.nix` if needed |
+| Swap file (6GB) | **Replaced by zram + 8GB Btrfs swapfile** | zram for hot pages, Btrfs swap on `@swap` for cold; 8GB matches old size |
+| WakeOnLAN | **Intentionally excluded** | Not needed for desktop; use `ethtool` manually if required |
 | CUPS printing | Explicitly disabled | Flip in `base-desktop.nix` if needed |
-| Controllers (Bluetooth/Xbox) | Import commented out in `desktop/gaming.nix` | **Uncomment** `./controllers.nix` import |
+| Controllers (Bluetooth/Xbox) | Implemented as `myOS.gaming.controllers.enable` knob | Set `myOS.gaming.controllers.enable = true` in profile |
 
 ## Net assessment
 

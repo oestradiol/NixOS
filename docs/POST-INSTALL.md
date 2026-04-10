@@ -66,7 +66,7 @@ Follow `docs/AUDIT.md` Phase 5 to verify:
 - Validate Mullvad interface names match nftables rules (adjust `vpnIfaces` in networking.nix if needed)
 - Create real `.age` files under `secrets/`
 - Verify USB peripherals work on paranoid (authorized_default=2 allows internal hub devices)
-- Uncomment `./controllers.nix` import in `modules/desktop/gaming.nix` if using Bluetooth controllers
+- Enable Bluetooth controllers: set `myOS.gaming.controllers.enable = true` in your profile
 - Run `lynis audit system` and address findings
 - Only then experiment with `hardenedMemory.enable = true`
 
