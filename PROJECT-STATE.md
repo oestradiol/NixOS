@@ -67,6 +67,33 @@ All key hardening knobs are now tunable per-profile without code changes:
 - WebRTC disabled (prevents IP leak)
 - Container tabs enabled for site isolation
 
+## VM isolation layer (strongest practical sandbox)
+- KVM/QEMU with hardware virtualization (AMD-V/VT-x)
+- Auto-detects AMD vs Intel KVM modules
+- IOMMU passthrough mode (`iommu=pt`, `amd_iommu=on`)
+- TPM emulation for VMs (swtpm)
+- QEMU hardening: seccomp sandbox, SPICE/VNC TLS
+- virt-manager GUI enabled when knob active
+- Users `player` and `ghost` added to `libvirtd` group
+- **Knob**: `myOS.security.vmIsolation.enable` (default: false)
+- **Compatible with daily driver**, significant resource overhead when enabled
+
+## Kernel hardening knobs (Madaidan-research grounded)
+All tunable via `myOS.security.kernelHardening.*`:
+
+**Enabled by default (daily):**
+- `initOnAlloc` — zero pages on allocation (init_on_alloc=1)
+- `slabNomerge` — prevent slab cache merging
+- `pti=on` — Kernel Page Table Isolation (Meltdown mitigation)
+- `vsyscall=none` — disable vsyscalls (ROP prevention)
+
+**Optional/paranoid-tier:**
+- `initOnFree` — zero pages on free (1-7% overhead)
+- `pageAllocShuffle` — randomize page allocator freelists
+- `oopsPanic` — panic on kernel oops (prevents exploit continuation)
+- `moduleSigEnforce` — only load signed kernel modules
+- `disableIcmpEcho` — ignore ping requests (network enumeration prevention)
+
 ## Needs live validation
 - Real destructive install on the NVMe.
 - Actual boot success on the target machine.

@@ -22,13 +22,23 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.myOS.security.vmIsolation;
+  
+  # Determine KVM module based on CPU - defaults to AMD for this hardware
+  kvmModule = if config.hardware.cpu.intel.updateMicrocode or false 
+                then "kvm-intel" 
+                else "kvm-amd";
 in {
   config = lib.mkIf cfg.enable {
     # Core virtualization stack
+    # NixOS Wiki: https://wiki.nixos.org/wiki/Libvirt
     virtualisation.libvirtd.enable = true;
     virtualisation.libvirtd.qemu.package = pkgs.qemu_kvm;
     
-    # QEMU with hardened options when available
+    # TPM emulation for VMs (optional but recommended)
+    virtualisation.libvirtd.qemu.swtpm.enable = true;
+    
+    # QEMU with hardened options
+    # MyNixOS: virtualisation.libvirtd.qemu.verbatimConfig
     virtualisation.libvirtd.qemu.verbatimConfig = ''
       # Hardened QEMU settings
       seccomp_sandbox = 1
@@ -37,32 +47,38 @@ in {
       vnc_tls_x509_verify = 1
     '';
     
-    # KVM kernel module loaded by libvirtd, but ensure it's available
-    boot.kernelModules = [ "kvm-amd" ]; # Adjust for Intel: "kvm-intel"
+    # virt-manager GUI (NixOS Wiki: programs.virt-manager.enable)
+    programs.virt-manager.enable = true;
+    
+    # KVM kernel module - auto-detect AMD vs Intel
+    boot.kernelModules = [ kvmModule ];
     
     # IOMMU for device passthrough (optional, advanced use)
-    boot.kernelParams = lib.optionals cfg.enable [
-      "iommu=pt" # Passthrough mode (no DMA remapping overhead for unused devices)
-      "intel_iommu=on" # For Intel; AMD enables by default with iommu=pt
-    ];
+    # AMD Ryzen 5 3600: AMD-V supported, AMD-Vi (IOMMU) limited for PCI passthrough
+    # NixOS typically enables AMD IOMMU by default; intel_iommu only for Intel CPUs
+    boot.kernelParams = lib.optionals cfg.enable (
+      if kvmModule == "kvm-intel" 
+      then [ "iommu=pt" "intel_iommu=on" ]
+      else [ "iommu=pt" "amd_iommu=on" ]  # AMD IOMMU explicit enable
+    );
     
-    # User access
-    users.groups.libvirtd.members = [ 
-      config.users.users.player.name 
-      config.users.users.ghost.name 
-    ];
+    # User access to libvirtd (NixOS Wiki requirement)
+    users.users.player.extraGroups = [ "libvirtd" ];
+    users.users.ghost.extraGroups = [ "libvirtd" ];
     
     # Tools for VM management
     environment.systemPackages = with pkgs; [
-      virt-manager        # GUI VM management
       virt-viewer         # SPICE/VNC viewer
       qemu_kvm            # QEMU with KVM support
-      OVMF                # UEFI firmware for VMs
-      swtpm               # Software TPM for VM testing
+      OVMF                # UEFI firmware for VMs (TianoCore)
+      # swtpm provided by virtualisation.libvirtd.qemu.swtpm.enable
     ];
     
     # SPICE for seamless VM display integration
     services.spice-vdagentd.enable = true;
+    
+    # USB redirection for VMs (optional, for USB device passthrough)
+    virtualisation.spiceUSBRedirection.enable = true;
     
     # Firejail not used (rejected in favor of bubblewrap + VMs)
     # Flatpak remains for application packaging, not primary isolation

@@ -21,13 +21,20 @@ in {
     ++ lib.optionals kh.initOnFree         [ "init_on_free=1" ]
     ++ lib.optionals kh.pageAllocShuffle   [ "page_alloc.shuffle=1" ]
     ++ lib.optionals sec.disableSMT        [ "nosmt=force" ]
-    ++ lib.optionals sec.usbRestrict       [ "usbcore.authorized_default=2" ];
+    ++ lib.optionals sec.usbRestrict       [ "usbcore.authorized_default=2" ]
+    # Madaidan-recommended kernel hardening
+    ++ lib.optionals kh.pti                [ "pti=on" ]
+    ++ lib.optionals kh.vsyscallNone       [ "vsyscall=none" ]
+    ++ lib.optionals kh.oopsPanic          [ "oops=panic" ]
+    ++ lib.optionals kh.moduleSigEnforce   [ "module.sig_enforce=1" ];
 
   boot.kernel.sysctl = {
     "vm.swappiness" = 30;
     "vm.max_map_count" = 2147483642;
     "net.ipv4.tcp_mtu_probing" = true;
     "net.ipv4.tcp_fin_timeout" = 5;
+    # Madaidan-recommended: ignore ICMP echo (ping) requests
+    "net.ipv4.icmp_echo_ignore_all" = lib.mkIf kh.disableIcmpEcho true;
   } // lib.optionalAttrs sec.gamingSysctls {
     "kernel.sched_cfs_bandwidth_slice_u" = 3000;
     "kernel.sched_latency_ns" = 3000000;
