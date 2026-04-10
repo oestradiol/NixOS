@@ -69,6 +69,7 @@ Follow `docs/AUDIT.md` Phase 5 to verify:
 - Enable Bluetooth controllers: set `myOS.gaming.controllers.enable = true` in your profile
 - Run `lynis audit system` and address findings
 - Only then experiment with `hardenedMemory.enable = true`
+- **Test NTS time sync**: Enable `myOS.security.ntsTimeSync.enable` on paranoid and verify no KDE/Flatpak breakage
 
 ## 11. Monitor these hardening knobs on daily
 All negligible-impact hardening is kept enabled on daily by decision. If specific issues arise, disable via `myOS.security.*` in `profiles/daily.nix`:

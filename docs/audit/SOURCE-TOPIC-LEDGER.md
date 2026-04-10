@@ -31,12 +31,12 @@ Status values:
 | Identifiers / machine-id / profile separation | Madaidan | Implemented+Manual | `docs/PERSISTENCE-MAP.md`, `docs/TRUST-MODEL.md` | `modules/security/impermanence.nix`, HM user modules | Verify machine-id persistence and no cross-user state bleed |
 | File permissions / ownership hygiene | Madaidan / Trimstray | Documented | `docs/PERSISTENCE-MAP.md`, this ledger | various modules | Run post-install permission audit |
 | Core dumps | Madaidan | Implemented | this ledger, `docs/TEST-PLAN.md` | `modules/security/base.nix` | `systemd.coredump.extraConfig` disables storage; verify with `coredumpctl` after install |
-| Swap strategy | Madaidan / saylesss88 | Implemented | `PROJECT-STATE.md`, `docs/PERSISTENCE-MAP.md` | `hosts/nixos/hardware-target.nix`, `modules/security/base.nix` | zram kept; no disk swap planned |
+| Swap strategy | Madaidan / saylesss88 | Implemented | `PROJECT-STATE.md`, `docs/PERSISTENCE-MAP.md` | `hosts/nixos/hardware-target.nix`, `modules/security/base.nix` | zram + 8GB Btrfs swapfile on `@swap` subvolume |
 | PAM hardening | Madaidan | Implemented+Manual | this ledger, `docs/TEST-PLAN.md` | `modules/security/base.nix`, `modules/vr.nix` | `su` restricted to wheel; verify PAM stack after install |
 | Microcode updates | Madaidan / Trimstray | Implemented | `PROJECT-STATE.md` | `hosts/nixos/hardware-target.nix` | Validate active microcode on rebuilt host |
 | IPv6 privacy extensions | Madaidan | Implemented | `PROJECT-STATE.md`, this ledger | `modules/security/base.nix` | sysctl `use_tempaddr=2` for all/default; verify with `ip -6 addr` after install |
 | Partitioning and mount options | Madaidan / Trimstray / saylesss88 | Implemented+Manual | `docs/INSTALL-GUIDE.md`, `docs/PERSISTENCE-MAP.md` | `hosts/nixos/hardware-target.nix`, `hosts/nixos/install-layout.nix` | Execute destructive install carefully |
-| Entropy hardening | Madaidan | Documented | `PROJECT-STATE.md`, this ledger | — | Keep as review item; not separately operationalized |
+| Entropy hardening | Madaidan | Not yet implemented | `PROJECT-STATE.md`, this ledger | — | Deferred to late-game; not separately operationalized |
 | Editing files as root / sudoedit discipline | Madaidan | Documented | this ledger, `docs/AUDIT-TUTORIAL.md` | — | Use documented admin workflow; not enforced in code |
 | Distribution-specific NixOS hardening | saylesss88 / nix-mineral | Implemented+Manual | `docs/audit/SOURCE-COVERAGE-MATRIX.md`, `docs/audit/RESEARCH-GROUNDING.md` | whole repo | Audit module-by-module after install |
 | Physical security | Madaidan / Trimstray | Implemented+Manual | `PROJECT-STATE.md`, `docs/RECOVERY.md` | Secure Boot / TPM modules | Requires firmware settings, passphrase discipline |
@@ -50,7 +50,7 @@ Status values:
 | SUID binaries / setuid danger | saylesss88 / Madaidan | Documented | this ledger, `docs/IMPLEMENTATION-PLAN.md` | `modules/security/base.nix` | Do post-install SUID audit and reduce where safe |
 | Capabilities | saylesss88 | Documented | this ledger | — | Review special capability needs for gaming/VR later |
 | Impermanence | saylesss88 | Implemented+Manual | `PROJECT-STATE.md`, `docs/PERSISTENCE-MAP.md` | `modules/security/impermanence.nix` | Validate exactly what persists |
-| NTS time sync replacement | saylesss88 | Documented | `PROJECT-STATE.md`, this ledger | — | Decide later whether to replace default time sync with NTS path |
+| NTS time sync replacement | saylesss88 | Not yet implemented | `PROJECT-STATE.md`, `docs/POST-INSTALL.md` | — | Test on paranoid after stable; may break KDE/Qt time APIs |
 | Secure Boot / Lanzaboote | saylesss88 | Implemented+Manual | `PROJECT-STATE.md`, `docs/POST-INSTALL.md` | `modules/security/secure-boot.nix` | Enroll keys only after first good boot |
 | Kernel choice / hardened kernel | saylesss88 | Deferred | `PROJECT-STATE.md`, `docs/PERFORMANCE-NOTES.md` | `modules/core/boot.nix` | Keep daily on compatibility-first path initially |
 | sysctl hardening | saylesss88 | Implemented+Manual | `docs/TEST-PLAN.md` | `modules/core/boot.nix`, `modules/security/base.nix` | Validate no regressions |
@@ -63,7 +63,7 @@ Status values:
 | USB port protection | saylesss88 | Implemented | `PROJECT-STATE.md`, this ledger | `modules/core/boot.nix` | `usbcore.authorized_default=2` on paranoid (internal hubs only); verify peripherals work |
 | Firejail | saylesss88 | Rejected | `PROJECT-STATE.md`, this ledger | — | Flatpak+bwrap chosen instead |
 | Flatpak | saylesss88 | Implemented | `PROJECT-STATE.md` | `modules/security/flatpak.nix` | — |
-| nix-mineral advanced hardening | nix-mineral / saylesss88 | Documented | `docs/audit/RESEARCH-GROUNDING.md`, this ledger | — | Full diff deferred |
+| nix-mineral advanced hardening | nix-mineral / saylesss88 | Deferred | `docs/audit/SOURCE-COVERAGE-MATRIX.md`, this ledger | — | Alpha software, different threat model; diff deferred to late game |
 | Trimstray general checklist | Trimstray | Documented | `docs/audit/SOURCE-COVERAGE-MATRIX.md`, this ledger | many | Use as audit overlay, not blind import |
 | Virtualization split | Original plan / Trimstray | Deferred | `PROJECT-STATE.md`, `docs/TRUST-MODEL.md` | libvirt retained daily-only where relevant | Optional later wave |
 | Development & packaging doctrine | Original plan | Documented | `docs/IMPLEMENTATION-PLAN.md`, this ledger | `modules/core/nix.nix`, Git HM | Not a wave-one focus |

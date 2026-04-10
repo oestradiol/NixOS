@@ -43,9 +43,6 @@ All key hardening knobs are now tunable per-profile without code changes:
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
 - `mullvad.{enable, lockdown}`
 
-## Gaming knobs
-- `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
-
 ## User decisions (this session)
 - Controllers (Bluetooth/Xbox): keep disabled, enable manually later.
 - Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
