@@ -21,6 +21,37 @@
 4. rebuild and re-enroll keys only after identifying the issue
 5. check `sbctl status` and `sbctl verify` for signature issues
 
+## If disabling Secure Boot still doesn't boot (Lanzaboote nuclear recovery)
+**Symptom**: Even with Secure Boot disabled in firmware, system won't boot.  
+**Cause**: Lanzaboote may have corrupted boot entries or ESP contents.
+```bash
+# 1. Boot NixOS installer USB
+# 2. Unlock and mount everything as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+sudo mount /dev/mapper/cryptroot /mnt
+sudo mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
+for subvol in nix persist var/log; do sudo mount /mnt/$subvol; done
+sudo nixos-enter
+
+# 3. Inside chroot, check signature status
+sbctl verify  # Shows which files have signature issues
+sbctl status    # Shows enrollment state
+
+# 4. Nuclear option: reset signature database
+sbctl reset     # Clears all custom keys (you'll need to re-enroll)
+
+# 5. If Lanzaboote itself is broken, temporarily switch to standard systemd-boot
+# Edit /etc/nixos/hosts/nixos/default.nix:
+#   boot.loader.systemd-boot.enable = true;
+#   boot.lanzaboote.enable = false;
+#   myOS.security.secureBoot.enable = false;
+nixos-rebuild switch
+
+# 6. Reboot - should boot with standard systemd-boot (no Secure Boot)
+# 7. Once stable, you can re-enable Lanzaboote if desired
+```
+**Prevention**: Keep `/persist/efi-backup-*.tar.gz` on external media before enabling Secure Boot.
+
 ## If TPM unlock breaks
 1. use recovery passphrase
 2. boot normally
@@ -48,7 +79,7 @@
 4. temporarily disable `usbRestrict` in paranoid profile if needed
 
 ## If gaming performance regresses
-1. check `swappiness` value: `sysctl vm.swappiness` (daily should be 20)
+1. check `swappiness` value: `sysctl vm.swappiness` (daily should be 150, paranoid 180)
 2. check `ptrace_scope`: `sysctl kernel.yama.ptrace_scope` (daily should be 1)
 3. disable AppArmor temporarily: `security.apparmor.enable = false` in daily profile
 4. disable `init_on_alloc`: `kernelHardening.initOnAlloc = false` in daily profile

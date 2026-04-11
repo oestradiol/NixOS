@@ -6,7 +6,7 @@ let
 in {
   assertions = [
     {
-      assertion = config.users.users ? player;
+      assertion = config.users.users ? "player";
       message = "Governance invariant: daily user 'player' must exist.";
     }
     {

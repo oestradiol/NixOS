@@ -32,6 +32,15 @@ in {
   boot.kernel.sysctl = {
     "vm.swappiness" = sec.swappiness;
     "vm.max_map_count" = 2147483642;
+
+    # Zram-optimized settings per Arch Wiki/Pop!_OS
+    # page-cluster=0: Read single pages from swap (better for zram compression)
+    "vm.page-cluster" = 0;
+    # watermark_scale_factor=125: More aggressive page reclaim to zram
+    "vm.watermark_scale_factor" = 125;
+    # watermark_boost_factor=0: Disable boost (not needed with zram)
+    "vm.watermark_boost_factor" = 0;
+
     "net.ipv4.tcp_mtu_probing" = true;
     "net.ipv4.tcp_fin_timeout" = 5;
     # Madaidan-recommended: ignore ICMP echo (ping) requests
