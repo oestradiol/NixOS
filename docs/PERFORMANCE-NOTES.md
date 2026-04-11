@@ -4,7 +4,8 @@
 
 ### Identical (zero performance delta)
 - SteamOS gaming sysctls (all 8 scheduler params: sched_cfs_bandwidth, sched_latency, sched_min_granularity, sched_wakeup_granularity, sched_migration_cost, sched_nr_migrate, split_lock_mitigate=0, sched_rt_runtime_us=-1) — daily-only
-- `vm.max_map_count`, `vm.swappiness`, `tcp_mtu_probing`, `tcp_fin_timeout`
+- `vm.max_map_count`, `tcp_mtu_probing`, `tcp_fin_timeout`
+- `vm.swappiness` tuned to 20 on daily (down from 30 default) for better gaming with 16GB RAM
 - `ntsync` kernel module + `PROTON_USE_NTSYNC=1`
 - Steam, Gamescope (capSysNice), GameMode — identical config
 - WiVRn (CUDA, nvenc h265, Nice=-10, RTPRIO=99, memlock=infinity)
