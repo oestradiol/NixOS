@@ -53,7 +53,7 @@ sudo ./scripts/post-install-secureboot-tpm.sh
 4. Provides commented TPM enrollment example
 
 **Before running:**
-- Review `docs/POST-INSTALL.md` Section 4 (Secure Boot)
+- Review `docs/POST-STABILITY.md` Section 4 (Secure Boot) and Section 5 (TPM)
 - Ensure daily profile boots successfully
 - Back up current working configuration
 

@@ -79,7 +79,7 @@ Status values:
 | sudo / SUDO_KILLER | Original plan | Documented | this ledger | — | Deferred but tracked |
 | Malware Knowledge chat reconciliation | Original plan | Missing external input | `PROJECT-STATE.md` | — | Need source content to complete |
 | Final AI review pass | Original plan | Implemented | `PROJECT-STATE.md`, audit docs | governance surfaces | Repeat after live install |
-| Remote wipe / dead-man switch | Original plan | Deferred | `PROJECT-STATE.md` | — | Optional later wave |
+| Browser fingerprinting protection | Arkenfox v140+ | Implemented+Manual | `docs/PRE-INSTALL.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | `modules/security/browser.nix` | Daily uses FPP (Fingerprinting Protection) with ETP Strict; Paranoid uses RFP (Resist Fingerprinting). Verify with https://coveryourtracks.eff.org |
 | AIDE / ClamAV | Original plan / Trimstray | Implemented+Manual | `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | `modules/security/scanners.nix` | Initialize DB and evaluate usefulness |
 | Full graphene-hardened after debug | Original plan | Deferred | `PROJECT-STATE.md`, `docs/PERFORMANCE-NOTES.md` | `modules/security/base.nix` | Enable only after stability/perf testing |
 | Mullvad / WebRTC / DNS / Tor Browser verification | Original plan | Documented | `docs/TEST-PLAN.md`, `docs/PRE-INSTALL.md` | networking/browser modules | Must be executed live |

@@ -16,7 +16,8 @@ else
 fi
 
 echo "== 2. Import/canonical surface review =="
-for f in PROJECT-STATE.md docs/governance/AUTHORITATIVE_INDEX.md docs/audit/POINT-BY-POINT-VERIFICATION.md docs/audit/CODE-MAP.md; do
+echo "Checking canonical documentation surfaces..."
+for f in PROJECT-STATE.md docs/PRE-INSTALL.md docs/INSTALL-GUIDE.md docs/TEST-PLAN.md docs/POST-STABILITY.md docs/RECOVERY.md docs/PERFORMANCE-NOTES.md docs/audit/SOURCE-TOPIC-LEDGER.md docs/audit/SOURCE-COVERAGE-MATRIX.md; do
   test -f "$f" && echo "present: $f" || echo "missing: $f"
 done
 
@@ -40,5 +41,5 @@ cat <<'RUNTIME'
 - mullvad status
 - systemctl --failed
 - journalctl -b -p warning
-- test WebRTC/DNS through the procedures in docs/AUDIT-TUTORIAL.md
+- test WebRTC/DNS through the procedures in docs/TEST-PLAN.md Section 15 (DNS/DoH)
 RUNTIME
