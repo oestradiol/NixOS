@@ -251,6 +251,7 @@ What was adopted:
 - leak testing must verify WebRTC and DNS behavior
 - arkenfox v140+ now uses FPP (Fingerprinting Protection) by default with ETP Strict; RFP is opt-in
 - daily Firefox uses FPP (less breakage), paranoid safe-firefox uses RFP (maximum protection)
+- DNS endpoint split: daily uses base.dns.mullvad.net (ads/trackers), paranoid uses all.dns.mullvad.net (ads/trackers/malware/gambling)
 
 Repo effect:
 - `modules/security/browser.nix` — 60+ prefs, FPP for daily, RFP for paranoid

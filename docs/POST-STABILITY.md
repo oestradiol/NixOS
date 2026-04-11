@@ -171,11 +171,44 @@ Test that browsers don't leak identifying information.
 
 **Fingerprinting test:**
 1. Visit https://coveryourtracks.eff.org
-2. Expected: 
-   - Daily Firefox: FPP (Fingerprinting Protection) active — "some protection" 
+2. Expected:
+   - Daily Firefox: FPP (Fingerprinting Protection) active — "some protection"
    - Paranoid safe-firefox: RFP (Resist Fingerprinting) active — "strong protection"
 
-## 16. External sources to review (checklist)
+## 16. Gaming/VR performance baseline (daily profile only)
+Verify hardening didn't break gaming performance. Compare against old config if possible.
+
+**Prerequisites:**
+- Enable controllers first: set `myOS.gaming.controllers.enable = true` in profile, rebuild
+- Install Steam, VRChat, VRCX through their respective methods (Flatpak/bubblewrap)
+
+**Performance tests:**
+1. **Steam/Proton baseline:**
+   - Launch a known-good game (e.g., CS2, Elden Ring, or your usual test)
+   - Record FPS and frametime (ms) with MangoHud or Steam overlay
+   - Compare to `PERFORMANCE-NOTES.md` baseline or your previous config
+   - Expected: Within 5% of previous performance (hardening has minimal gaming impact)
+
+2. **VR workload test:**
+   - Launch VRChat or other VR application
+   - Check for frame drops, stuttering, or tracking lag
+   - Verify controller binding works (may need manual bind if udev rules changed)
+
+3. **General desktop responsiveness:**
+   - Alt-tab between Steam, browser, Signal
+   - No visible lag or compositor stutter
+
+**If performance degraded:**
+- Check `PERFORMANCE-NOTES.md` for per-knob impact analysis
+- Suspects: `hardenedMemory`, `kernelHardening.initOnFree`, `apparmor` profiles
+- Temporarily disable knobs one-by-one to identify culprit
+
+**Success criteria:**
+- Gaming FPS ≥ 95% of pre-hardening baseline
+- VR tracking stable, no dropped frames
+- Desktop compositor smooth at 144Hz (if applicable)
+
+## 17. External sources to review (checklist)
 Review these sources post-stability to identify additional hardening opportunities:
 
 **Install & Impermanence:**
