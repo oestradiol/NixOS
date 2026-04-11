@@ -249,13 +249,15 @@ What was adopted:
 - browser plan should separate exploit resistance, privacy, and anonymity
 - role split across browsers is cleaner than trying to make one browser do everything
 - leak testing must verify WebRTC and DNS behavior
+- arkenfox v140+ now uses FPP (Fingerprinting Protection) by default with ETP Strict; RFP is opt-in
+- daily Firefox uses FPP (less breakage), paranoid safe-firefox uses RFP (maximum protection)
 
 Repo effect:
-- `modules/security/browser.nix`
-- daily/paranoid browser split documented
+- `modules/security/browser.nix` — 60+ prefs, FPP for daily, RFP for paranoid
+- daily/paranoid browser split documented in PRE-INSTALL.md, POST-STABILITY.md, TEST-PLAN.md
 
 Status:
-- `implemented` / `scaffolded`
+- `implemented` — arkenfox v140+ aligned with FPP/RFP profile split
 
 ### 9. GnuPG & gpg-agent
 Source:
@@ -515,3 +517,14 @@ Status:
 - Full SUID/capability pruning program — `deferred` (high breakage risk, paranoid-only candidate)
 - AI final review pass — `repeat after live install`
 - Malware Knowledge chat reconciliation — `missing external input`
+- Remote wipe / dead-man switch — `deferred` (signal service, secure wipe mechanism design)
+- Thunderbolt/DMA attack surface — `documented` (consider BIOS disable for paranoid; DMA bypasses all OS hardening)
+- Yubikey/FIDO2/Passkey support — `documented` (PAM config required, consider for paranoid tier)
+- SSH host key rotation policy — `documented+manual` (post-stability rotation procedure)
+- LUKS header backup procedure — `documented+manual` (execute after install; test restore)
+- EFI partition backup/verification — `documented+manual` (backup after first boot; external media)
+- fstrim/discard configuration — `documented` (decision needed: enable timer or discard)
+- Hibernation policy — `documented` (decision needed: disable or resize swap for 16GB RAM)
+- WireGuard module security audit — `documented` (monitor CVEs; nftables killswitch is defense-in-depth)
+- Lanzaboote nuclear recovery — `documented` (extended recovery procedure for SB lockout)
+- Bubblewrap GPU passthrough acknowledgment — `documented` (safe-firefox uses --dev-bind /dev/dri; GPU = known escape vector)
