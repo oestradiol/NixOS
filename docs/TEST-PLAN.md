@@ -81,6 +81,12 @@
 - [ ] `systemctl show flatpak-repo | grep NoNewPrivileges` returns yes
 - [ ] `systemctl show clamav-daily-scan | grep NoNewPrivileges` returns yes
 
+## VM isolation (paranoid only)
+- [ ] libvirtd service is running
+- [ ] KVM module is loaded
+- [ ] IOMMU is enabled in kernel logs
+- [ ] User has libvirtd group access
+
 ## Audit tools
 - [ ] `lynis audit system`
 - [ ] `aide --init` then follow-up check after baseline
