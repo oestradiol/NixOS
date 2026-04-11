@@ -30,9 +30,9 @@ Never trust a status line by itself. For each claim, check four layers:
 
 ### Networking / browser / privacy
 - `modules/security/networking.nix` — killswitch, nftables
-- `modules/security/browser.nix` — sandboxed browser wrappers (UID 100000, bubblewrap)
-  - `safe-firefox`: Hardened Firefox with arkenfox-grounded user.js (70+ prefs)
-  - `safe-tor-browser`, `safe-mullvad-browser`: Sandboxed Tor/Mullvad
+- `modules/security/browser.nix` — Firefox policies or sandboxed browser wrappers (UID 100000, bubblewrap)
+  - When `sandboxedBrowsers.enable = false` (daily): Base Firefox with moderate arkenfox-style hardening (geo disabled, Mullvad DoH with fallback, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail, password autofill disabled, download security, extension restrictions; aggressive prefs like network prefetch blocking, referer trimming, containers, clear on shutdown, RFP, captive portal disabled are commented out with explanations)
+  - When `sandboxedBrowsers.enable = true` (paranoid): Base Firefox disabled, only sandboxed wrappers available (safe-firefox with full hardened user.js v140 including RFP, network prefetch blocking, referer trimming, containers, clear on shutdown, captive portal disabled, no Sync, safe-tor-browser, safe-mullvad-browser)
 - `modules/security/flatpak.nix` — flatpak + xdg portals
 - `modules/security/sandboxed-apps.nix` — bubblewrap wrappers for non-Flatpak apps (VRCX, Windsurf)
 - `modules/home/ghost.nix` — Signal (Flatpak) only; browsers via system wrappers

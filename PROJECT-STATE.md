@@ -24,7 +24,7 @@
 - Dangerous kernel module blacklist (dccp, sctp, rds, tipc, firewire).
 - USB device authorization restricted on paranoid (`myOS.security.usbRestrict`).
 - `debugfs=off`, `randomize_kstack_offset=on` boot parameters.
-- Browser policy module with `safe-firefox` wrapper; plain Firefox removed from paranoid.
+- Browser policy module with two modes: base Firefox with moderate arkenfox-style hardening (geo disabled, Mullvad DoH with fallback, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail, password autofill disabled, download security, extension restrictions) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js v140 including RFP, network prefetch blocking, referer trimming, containers, clear on shutdown, captive portal disabled, no Sync) when `sandboxedBrowsers.enable = true` (paranoid).
 - Networking killswitch with DHCP/DNS exceptions for tunnel establishment.
 - Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
@@ -40,7 +40,7 @@
 All key hardening knobs are tunable per-profile without code changes:
 - `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist, pti, vsyscallNone, oopsPanic, moduleSigEnforce, disableIcmpEcho}`
 - `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `vmIsolation.enable`, `sandboxedApps.enable`
-- `disableSMT`, `browserLockdown.enable`, `hardenedMemory.enable`
+- `disableSMT`, `sandboxedBrowsers.enable`, `hardenedMemory.enable`
 - `ptraceScope` (kernel.yama.ptrace_scope: 1 for EAC compatibility, 2 for hardening)
 - `swappiness` (vm.swappiness: lower values for gaming, higher for systems with limited RAM)
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`

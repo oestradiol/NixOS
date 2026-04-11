@@ -43,7 +43,7 @@
       mullvad.lockdown = lib.mkEnableOption "Mullvad strict lockdown use-case";
 
       # ── Profile policy ──────────────────────────────────────────
-      browserLockdown.enable = lib.mkEnableOption "Paranoid browser policy set";
+      sandboxedBrowsers.enable = lib.mkEnableOption "Use sandboxed browser wrappers exclusively (disables base Firefox). When enabled, only safe-firefox, safe-tor-browser, and safe-mullvad-browser are available. When disabled, base Firefox with moderate hardening is used.";
       disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
       ptraceScope = lib.mkOption {
         type = lib.types.int;

@@ -8,7 +8,7 @@
     mullvad.enable = true;
     mullvad.lockdown = false;
     hardenedMemory.enable = false;
-    browserLockdown.enable = false;
+    sandboxedBrowsers.enable = false;  # Use base Firefox with moderate hardening
     disableSMT = false;
     ptraceScope = 1;  # Required for VRChat EAC
     swappiness = 20;  # Better for gaming with 16GB RAM (safety margin)
