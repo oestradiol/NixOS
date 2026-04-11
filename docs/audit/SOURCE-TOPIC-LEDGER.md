@@ -77,7 +77,6 @@ Status values:
 | IRC / Signal / Matrix / Telegram policy | Original plan | Implemented+Manual | `PROJECT-STATE.md` | home modules/profile policy | Validate package availability and profile rules |
 | Hardening tests | Original plan | Documented | `docs/TEST-PLAN.md` | — | Must be executed live |
 | sudo / SUDO_KILLER | Original plan | Documented | this ledger | — | Deferred but tracked |
-| Malware Knowledge chat reconciliation | Original plan | Missing external input | `PROJECT-STATE.md` | — | Need source content to complete |
 | Final AI review pass | Original plan | Implemented | `PROJECT-STATE.md`, audit docs | governance surfaces | Repeat after live install |
 | Browser fingerprinting protection | Arkenfox v140+ | Implemented+Manual | `docs/PRE-INSTALL.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | `modules/security/browser.nix` | Daily uses FPP (Fingerprinting Protection) with ETP Strict; Paranoid uses RFP (Resist Fingerprinting). Verify with https://coveryourtracks.eff.org |
 | AIDE / ClamAV | Original plan / Trimstray | Implemented+Manual | `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | `modules/security/scanners.nix` | Initialize DB and evaluate usefulness |

@@ -12,6 +12,15 @@
 - Daily keeps Steam, Vesktop, Firefox Sync, VR, Telegram, Matrix, Signal, Bitwarden.
 - Paranoid forbids Firefox Sync, Steam, Vesktop, Telegram, Matrix by default; Signal remains allowed.
 - Paranoid browser path uses `safe-firefox` and separate Tor Browser/Mullvad Browser roles.
+- Controllers (Bluetooth/Xbox): keep disabled, enable manually later.
+- Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
+- AppArmor on daily: keep enabled, monitor for breakage.
+- All negligible-impact hardening on daily: keep enabled, monitor post-install.
+- `init_on_free=1` and `page_alloc.shuffle=1`: paranoid-only (measurable impact).
+- `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
+- Browser sandboxing: national-level with UID isolation (100000), bubblewrap namespaces, arkenfox-grounded user.js.
+- VM isolation: implemented as knob, disabled by default, compatible with daily driver.
+- Application sandboxing: replace high-risk proprietary apps with Flatpak (sandboxed) or bubblewrap wrappers (UID isolation). Signal Desktop uses Flatpak on both profiles.
 
 ## Implemented in repo
 - Flake, host entrypoint, daily default profile, paranoid specialisation.
@@ -45,17 +54,6 @@ All key hardening knobs are tunable per-profile without code changes:
 - `swappiness` (vm.swappiness: lower values for gaming, higher for systems with limited RAM)
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
 - `mullvad.{enable, lockdown}`
-
-## User decisions (this session)
-- Controllers (Bluetooth/Xbox): keep disabled, enable manually later.
-- Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
-- AppArmor on daily: keep enabled, monitor for breakage.
-- All negligible-impact hardening on daily: keep enabled, monitor post-install.
-- `init_on_free=1` and `page_alloc.shuffle=1`: paranoid-only (measurable impact).
-- `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
-- Browser sandboxing: national-level with UID isolation (100000), bubblewrap namespaces, arkenfox-grounded user.js.
-- VM isolation: implemented as knob, disabled by default, compatible with daily driver.
-- Application sandboxing: replace high-risk proprietary apps with Flatpak (sandboxed) or bubblewrap wrappers (UID isolation). Signal Desktop uses Flatpak on both profiles.
 
 ## Gaming knobs
 - `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
@@ -137,7 +135,6 @@ All tunable via `myOS.security.kernelHardening.*`:
 - AIDE database initialization and usefulness on the rebuilt host.
 
 ## Not yet implemented
-- Malware Knowledge chat reconciliation (source content still absent).
 - Remote wipe / dead-man switch integration.
 - Full virtualization split (optional later wave).
 - Full `graphene-hardened` allocator rollout (keep off until post-install testing).

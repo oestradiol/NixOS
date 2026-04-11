@@ -516,7 +516,6 @@ Status:
 - Dedicated entropy-hardening component — `deferred` (not critical for desktop)
 - Full SUID/capability pruning program — `deferred` (high breakage risk, paranoid-only candidate)
 - AI final review pass — `repeat after live install`
-- Malware Knowledge chat reconciliation — `missing external input`
 - Remote wipe / dead-man switch — `deferred` (signal service, secure wipe mechanism design)
 - Thunderbolt/DMA attack surface — `documented` (consider BIOS disable for paranoid; DMA bypasses all OS hardening)
 - Yubikey/FIDO2/Passkey support — `documented` (PAM config required, consider for paranoid tier)

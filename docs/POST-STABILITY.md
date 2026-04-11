@@ -259,7 +259,7 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 | **Timezone spoofing** | Check `Date()` in browser console (FPP vs RFP differ) | FPP: your timezone; RFP: GMT/Atlantic/Reykjavik |
 | **Letterboxing** | Resize browser window | FPP: no margins; RFP (paranoid): stepped margins |
 | **WebRTC leak test** | https://browserleaks.com/webrtc on daily | Should show Mullvad IP if VPN active, not real IP |
-| **DoH is Mullvad** | https://www.dnsleaktest.com/ on daily | Should show `dns.mullvad.net` or Mullvad DNS servers |
+| **DoH is Mullvad** | https://www.dnsleaktest.com/ | Daily: `base.dns.mullvad.net` (ads/trackers). Paranoid: `all.dns.mullvad.net` (ads/trackers/malware/gambling) |
 | **Firefox Sync disabled** | about:preferences#sync on daily | Should show "Sign in to Sync" not your account |
 | **Cookie behavior** | Check lock icon on any site → Cookies | Should show dFPI/cross-site blocking active |
 | **ETP Strict active** | about:preferences#privacy → Enhanced Tracking Protection | Should show "Strict" selected |

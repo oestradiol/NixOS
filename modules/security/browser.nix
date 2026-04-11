@@ -114,10 +114,11 @@ let
     user_pref("network.proxy.socks_remote_dns", true);
     user_pref("network.file.disable_unc_paths", true);
     user_pref("network.gio.supported-protocols", "");
-    // Mullvad DNS over HTTPS (compatible with Mullvad VPN)
+    // Mullvad DNS over HTTPS - PARANOID PROFILE (all.dns.mullvad.net)
+    // Blocks ads, trackers, malware, and gambling. Maximum filtering.
     // When VPN is active, this routes through the tunnel. When VPN is down, fails closed.
     user_pref("network.trr.mode", 2); // DoH with system fallback
-    user_pref("network.trr.uri", "https://dns.mullvad.net/dns-query");
+    user_pref("network.trr.uri", "https://all.dns.mullvad.net/dns-query");
     user_pref("network.trr.bootstrapAddress", "194.242.2.2");
     
     // [SECTION 0800]: LOCATION BAR / SEARCH
@@ -370,12 +371,13 @@ in {
         "browser.places.speculativeConnect.enabled" = false;
         "browser.urlbar.speculativeConnect.enabled" = false;
 
-        # [SECTION 0700]: DNS - Mullvad DoH, proxy settings
+        # [SECTION 0700]: DNS - Mullvad DoH (base.dns.mullvad.net) - DAILY PROFILE
+        # Blocks ads and trackers only. Less restrictive than paranoid's all.dns.
         "network.proxy.socks_remote_dns" = true;
         "network.file.disable_unc_paths" = true;
         "network.gio.supported-protocols" = "";
         "network.trr.mode" = 2;  # DoH with system fallback
-        "network.trr.uri" = "https://dns.mullvad.net/dns-query";
+        "network.trr.uri" = "https://base.dns.mullvad.net/dns-query";
         "network.trr.bootstrapAddress" = "194.242.2.2";
 
         # [SECTION 0800]: LOCATION BAR / SEARCH - disable search suggestions (privacy leak)
