@@ -21,7 +21,7 @@ Never trust a status line by itself. For each claim, check four layers:
 ### User / session
 - `modules/core/users.nix` — player, ghost, sudo config
 - `modules/core/base-desktop.nix` — desktop env, locale, nix, audio, system health
-- `modules/home/daily.nix`, `modules/home/paranoid.nix`
+- `modules/home/player.nix`, `modules/home/ghost.nix`
 - `profiles/daily.nix`, `profiles/paranoid.nix`
 
 ### Storage / persistence / secrets
@@ -35,7 +35,7 @@ Never trust a status line by itself. For each claim, check four layers:
   - `safe-tor-browser`, `safe-mullvad-browser`: Sandboxed Tor/Mullvad
 - `modules/security/flatpak.nix` — flatpak + xdg portals
 - `modules/security/sandboxed-apps.nix` — bubblewrap wrappers for non-Flatpak apps (VRCX, Windsurf)
-- `modules/home/paranoid.nix` — Signal (Flatpak) only; browsers via system wrappers
+- `modules/home/ghost.nix` — Signal (Flatpak) only; browsers via system wrappers
 
 ### Gaming
 - `modules/desktop/gaming.nix` — Steam, gamescope, gamemode, controllers knob
