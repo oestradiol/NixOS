@@ -143,6 +143,21 @@ systemctl show flatpak-repo -p NoNewPrivileges,ProtectKernelTunables,LockPersona
 systemctl show clamav-daily-scan -p NoNewPrivileges,ProtectKernelTunables,LockPersonality
 ```
 
+### E. VM isolation (paranoid only)
+```bash
+# Check libvirtd is running
+systemctl status libvirtd
+
+# Check KVM module is loaded
+lsmod | grep kvm
+
+# Check IOMMU is enabled (for device passthrough)
+dmesg | grep -i iommu
+
+# Verify user has libvirtd group access
+groups player ghost
+```
+
 ## Phase 6 — Networking and privacy
 
 ```bash
@@ -257,4 +272,5 @@ grep -E 'privacy.resistFingerprinting|media.peerconnection.enabled|dom.security.
 | Impermanence mismatch | Persist mount assertion | Reboot-test persisted paths | File survives only where intended |
 | Browser sandbox bypass | `safe-firefox` wrapper | Verify wrapper path at runtime | Process tree shows bwrap/systemd-run |
 | Daily gaming regression | Stock kernel + gaming sysctls (daily only) | Benchmark games/VR | Compare FPS/frametime |
-| Governance drift | 14 build-time assertions | Keep `PROJECT-STATE.md` updated | Pick 3 random claims, trace to runtime |
+| VM isolation failure | KVM module + IOMMU + libvirtd | Verify hardware virtualization support | `lsmod | grep kvm`, `dmesg | grep iommu` |
+| Governance drift | 28 build-time assertions | Keep `PROJECT-STATE.md` updated | Pick 3 random claims, trace to runtime |
