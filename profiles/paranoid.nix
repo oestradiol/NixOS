@@ -12,6 +12,7 @@
     usbRestrict = lib.mkForce true;
     auditd = lib.mkForce true;
     vmIsolation.enable = lib.mkForce true;
+    sandboxedApps.enable = lib.mkForce true;
     kernelHardening = {
       initOnFree = lib.mkForce true;
       pageAllocShuffle = lib.mkForce true;

@@ -70,7 +70,26 @@ Follow `docs/AUDIT.md` Phase 5 to verify:
 - Run `lynis audit system` and address findings
 - Only then experiment with `hardenedMemory.enable = true`
 
-## 11. Monitor these hardening knobs on daily
+## 11. Install Flatpak applications (daily profile)
+The Flathub remote is configured automatically, but packages must be installed manually:
+```bash
+flatpak install -y flathub org.signal.Signal
+flatpak install -y flathub com.spotify.Client
+flatpak install -y flathub com.bitwarden.desktop
+flatpak install -y flathub dev.vencord.Vesktop
+flatpak install -y flathub md.obsidian.Obsidian
+flatpak install -y flathub org.telegram.desktop
+flatpak install -y flathub im.riot.Riot
+```
+
+## 12. Use sandboxed applications
+For apps not available as Flatpak, use the bubblewrap wrappers:
+- `safe-vrcx` — VRCX with UID isolation (daily profile)
+- `safe-windsurf` — Windsurf with UID isolation (daily profile)
+
+These wrappers provide UID isolation (100000:100000 unmapped from host), network namespace isolation, and minimal filesystem access.
+
+## 13. Monitor these hardening knobs on daily
 All negligible-impact hardening is kept enabled on daily by decision. If specific issues arise, disable via `myOS.security.*` in `profiles/daily.nix`:
 - **AppArmor** (`apparmor = false`) — if specific apps fail with permission errors
 - **init_on_alloc** (`kernelHardening.initOnAlloc = false`) — if allocation-heavy workloads show measurable regression

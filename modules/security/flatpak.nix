@@ -7,6 +7,14 @@
     path = [ pkgs.flatpak ];
     script = ''
       flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      # Flatpak packages must be installed manually after first boot:
+      # flatpak install -y flathub org.signal.Signal
+      # flatpak install -y flathub com.spotify.Client
+      # flatpak install -y flathub com.bitwarden.desktop
+      # flatpak install -y flathub dev.vencord.Vesktop
+      # flatpak install -y flathub md.obsidian.Obsidian
+      # flatpak install -y flathub org.telegram.desktop
+      # flatpak install -y flathub im.riot.Riot
     '';
     serviceConfig = {
       Type = "oneshot";
