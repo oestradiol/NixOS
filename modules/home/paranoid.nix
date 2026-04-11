@@ -22,7 +22,7 @@
     eza
     bat
     keepassxc
-    signal-desktop
+    # Signal Desktop uses Flatpak (org.signal.Signal)
     # Browsers are system-wide sandboxed wrappers: safe-firefox, safe-tor-browser, safe-mullvad-browser
   ];
 }

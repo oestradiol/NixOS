@@ -31,13 +31,20 @@ in {
             "Data"
             ".local/share/Steam"
             ".steam"
-            ".config/vesktop"
-            ".config/discord"
             ".config/Signal"
             ".config/keepassxc"
             ".local/share/keyrings"
             ".gnupg"
             ".ssh"
+            # Flatpak app data
+            ".local/share/flatpak"
+            ".var/app/org.signal.Signal"
+            ".var/app/com.spotify.Client"
+            ".var/app/com.bitwarden.desktop"
+            ".var/app/dev.vencord.Vesktop"
+            ".var/app/md.obsidian.Obsidian"
+            ".var/app/org.telegram.desktop"
+            ".var/app/im.riot.Riot"
           ];
           files = [ ".zsh_history" ];
         };
@@ -50,6 +57,8 @@ in {
             ".config/keepassxc"
             ".gnupg"
             ".ssh"
+            ".local/share/flatpak"
+            ".var/app/org.signal.Signal"
           ];
           files = [ ".zsh_history" ];
         };

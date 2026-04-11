@@ -109,5 +109,9 @@ in {
       assertion = config.myOS.gpu == "nvidia" || config.myOS.gpu == "amd";
       message = "GPU option must be set to either 'nvidia' or 'amd'.";
     }
+    {
+      assertion = !isParanoid || config.myOS.security.sandboxedApps.enable;
+      message = "Paranoid profile must enable sandboxed applications.";
+    }
   ];
 }

@@ -108,6 +108,9 @@
           WARNING: Significant resource overhead. daily driver: compatible but not enabled by default.
         '';
       };
+
+      # ── Sandboxed applications ─────────────────────────────────────
+      sandboxedApps.enable = lib.mkEnableOption "Bubblewrap sandboxed applications for high-risk proprietary apps";
     };
   };
 }

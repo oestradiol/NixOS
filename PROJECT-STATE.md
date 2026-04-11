@@ -38,7 +38,7 @@
 ## Configurable myOS.security options
 All key hardening knobs are now tunable per-profile without code changes:
 - `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist, pti, vsyscallNone, oopsPanic, moduleSigEnforce, disableIcmpEcho}`
-- `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `vmIsolation.enable`
+- `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `vmIsolation.enable`, `sandboxedApps.enable`
 - `disableSMT`, `browserLockdown.enable`, `hardenedMemory.enable`
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
 - `mullvad.{enable, lockdown}`
@@ -52,6 +52,7 @@ All key hardening knobs are now tunable per-profile without code changes:
 - `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
 - Browser sandboxing: national-level with UID isolation (100000), bubblewrap namespaces, arkenfox-grounded user.js.
 - VM isolation: implemented as knob, disabled by default, compatible with daily driver.
+- Application sandboxing: replace high-risk proprietary apps with Flatpak (sandboxed) or bubblewrap wrappers (UID isolation). Signal Desktop uses bubblewrap on paranoid profile.
 
 ## Gaming knobs
 - `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
@@ -71,6 +72,24 @@ All key hardening knobs are now tunable per-profile without code changes:
 - Auto-clears cookies/storage/cache/formdata on exit
 - WebRTC disabled (prevents IP leak)
 - Container tabs enabled for site isolation
+
+## Application sandboxing architecture
+### Flatpak (daily + paranoid profiles)
+- All high-risk proprietary apps replaced with Flatpak versions where available
+- Flatpak provides namespace isolation, capability dropping, read-only filesystem by default
+- Apps installed: Signal, Spotify, Bitwarden, Vesktop, Obsidian, Telegram, Element
+- Automatic installation via systemd service (flatpak-repo)
+- App data persisted via impermanence: `~/.var/app/com.example.App`
+
+### Bubblewrap wrappers (non-Flatpak apps)
+- UID isolation (100000:100000 unmapped from host)
+- Network namespace isolation
+- Minimal filesystem access (ro-bind system dirs)
+- GPU/Wayland/PipeWire socket passthrough (read-only)
+- Input device passthrough for keyboard/mouse
+- Capability dropping (`--cap-drop ALL`)
+- Die-with-parent for auto-cleanup
+- Apps wrapped: VRCX, Windsurf (daily)
 
 ## VM isolation layer (strongest practical sandbox)
 - KVM/QEMU with hardware virtualization (AMD-V/VT-x)
@@ -137,18 +156,21 @@ All tunable via `myOS.security.kernelHardening.*`:
 ### Daily
 - Broad desktop convenience: gaming, VR, sync, messenger sprawl allowed.
 - No hard VPN killswitch required.
+- All proprietary apps sandboxed via Flatpak or bubblewrap wrappers.
 
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
 - Discord, Telegram, Matrix, Steam, VR disabled by policy.
 - Mullvad intended as always-on; lockdown networking.
 - Lower persistence footprint.
+- Signal Desktop sandboxed via Flatpak.
 
 ### Isolation truth
 - Boot specialisations separate behavior, not compromise.
 - Separate users reduce accidental cross-contamination.
 - tmpfs root reduces simple persistence.
 - Flatpak + bubblewrap + systemd hardening reduce app blast radius.
+- All high-risk apps (Electron, proprietary) sandboxed with UID isolation.
 - Real containment still requires separate hardware, full VM, or Qubes-level isolation.
 
 ## Audit summary

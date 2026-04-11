@@ -19,6 +19,7 @@
     ../../modules/security/flatpak.nix
     ../../modules/security/scanners.nix
     ../../modules/security/vm-isolation.nix  # Disabled by default, knob: myOS.security.vmIsolation.enable
+    ../../modules/security/sandboxed-apps.nix
     # Desktop
     ../../modules/gpu
     ../../modules/desktop/theme.nix

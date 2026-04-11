@@ -21,18 +21,17 @@
   home.packages = with pkgs; [
     eza
     bat
-    spotify
-    bitwarden-desktop
-    vesktop
-    vscode
+    # Flatpak packages (installed via system.services.flatpak, not home.packages)
+    # These are listed here for reference; actual installation via flatpak command
+    # spotify → com.spotify.Client
+    # bitwarden-desktop → com.bitwarden.desktop
+    # vesktop → dev.vencord.Vesktop
+    # obsidian → md.obsidian.Obsidian
+    # telegram-desktop → org.telegram.desktop
+    # element-desktop → im.riot.Riot
     firefox
-    vrcx
-    obsidian
-    signal-desktop
-    windsurf
+    # Bubblewrap-wrapped apps (not available on Flathub)
+    # vrcx and windsurf are pulled in as dependencies of the wrappers
     keepassxc
-    telegram-desktop
-    element-desktop
-    discord
   ];
 }
