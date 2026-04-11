@@ -73,7 +73,7 @@ Follow `docs/POST-INSTALL.md` for:
 `/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth`, `/var/lib/flatpak`, `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn`, SSH host keys, `/etc/machine-id`
 
 ### Daily user persistence
-Data, Steam state, Vesktop/Discord/Signal state, KeePassXC config, keyrings, GPG, SSH, shell history
+Data, Steam state, Vesktop/Signal state, Bitwarden config, keyrings, GPG, SSH, shell history
 
 ### Paranoid user persistence
 Downloads, Documents, Signal state, KeePassXC config, GPG, SSH, shell history

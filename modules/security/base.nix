@@ -22,7 +22,7 @@ in {
   boot.kernel.sysctl = {
     "kernel.dmesg_restrict" = 1;
     "kernel.kptr_restrict" = 2;
-    "kernel.yama.ptrace_scope" = 2;
+    "kernel.yama.ptrace_scope" = sec.ptraceScope;
     "kernel.unprivileged_bpf_disabled" = 1;
     "net.core.bpf_jit_harden" = 2;
     "kernel.perf_event_paranoid" = 3;

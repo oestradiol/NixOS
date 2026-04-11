@@ -24,7 +24,7 @@
 | `randomize_kstack_offset=on` | **Negligible** | Per-syscall overhead unmeasurable |
 | `debugfs=off` | **Zero** | |
 | 20+ hardened sysctls | **Zero** | Restrict debug/admin paths, not gaming workloads |
-| `kernel.yama.ptrace_scope=2` | **Zero** | Breaks gdb/strace on non-root, not gaming |
+| `kernel.yama.ptrace_scope=1` | **Zero** | Daily uses 1 for EAC compatibility; paranoid uses 2 for hardening |
 | `kernel.perf_event_paranoid=3` | **Zero** | Breaks `perf` profiling, not gaming |
 | `net.core.bpf_jit_harden=2` | **Negligible** | Slightly less optimized BPF JIT |
 | AppArmor | **~1-3%** on syscall-heavy code | Games are GPU-bound, not syscall-bound |

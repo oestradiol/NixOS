@@ -1,6 +1,8 @@
 { pkgs, config, lib, ... }:
-{
-  users.mutableUsers = false;
+let
+  lockRoot = config.myOS.security.lockRoot;
+in {
+  users.mutableUsers = !lockRoot;
 
   users.users.player = {
     isNormalUser = true;
@@ -20,7 +22,7 @@
       "kvm"
       "flatpak"
     ];
-    initialHashedPassword = lib.mkDefault "!";
+    initialHashedPassword = lib.mkIf lockRoot (lib.mkDefault "!");
   };
 
   users.users."ghost" = {
@@ -36,10 +38,10 @@
       "render"
       "flatpak"
     ];
-    initialHashedPassword = lib.mkDefault "!";
+    initialHashedPassword = lib.mkIf lockRoot (lib.mkDefault "!");
   };
 
-  security.sudo = {
+  security.sudo = lib.mkIf lockRoot {
     enable = true;
     wheelNeedsPassword = true;
     execWheelOnly = true;

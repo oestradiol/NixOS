@@ -14,7 +14,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    impermanence.url = "github:nix-community/impermanence";
+    impermanence = {
+      url = "github:nix-community/impermanence";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     agenix = {
       url = "github:ryantm/agenix";
@@ -39,7 +42,17 @@
         agenix.nixosModules.default
         lanzaboote.nixosModules.lanzaboote
         {
-          nixpkgs.config.allowUnfree = true;
+          nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (pkg.pname or pkg.name) [
+            # NVIDIA drivers (unfree, required for GTX 1060)
+            "nvidia-x11"
+            "nvidia-settings"
+            # Steam (unfree, daily profile gaming)
+            "steam"
+            "steam-original"
+            "steam-run"
+            # Gamescope (unfree, Steam compositor)
+            "gamescope"
+          ];
 
           home-manager = {
             backupFileExtension = "bkp";

@@ -21,7 +21,8 @@
     ../../modules/security/vm-isolation.nix  # Disabled by default, knob: myOS.security.vmIsolation.enable
     ../../modules/security/sandboxed-apps.nix
     # Desktop
-    ../../modules/gpu
+    ../../modules/gpu/nvidia.nix
+    ../../modules/gpu/amd.nix
     ../../modules/desktop/theme.nix
     # Profile
     ../../profiles/daily.nix
