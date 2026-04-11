@@ -30,7 +30,7 @@ in {
     ++ lib.optionals kh.moduleSigEnforce   [ "module.sig_enforce=1" ];
 
   boot.kernel.sysctl = {
-    "vm.swappiness" = 30;
+    "vm.swappiness" = sec.swappiness;
     "vm.max_map_count" = 2147483642;
     "net.ipv4.tcp_mtu_probing" = true;
     "net.ipv4.tcp_fin_timeout" = 5;

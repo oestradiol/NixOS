@@ -21,6 +21,8 @@
   home.packages = with pkgs; [
     eza
     bat
+    firefox
+    kdePackages.kate
     # Flatpak packages (installed via system.services.flatpak, not home.packages)
     # These are listed here for reference; actual installation via flatpak command
     # spotify → com.spotify.Client
@@ -29,9 +31,7 @@
     # obsidian → md.obsidian.Obsidian
     # telegram-desktop → org.telegram.desktop
     # element-desktop → im.riot.Riot
-    firefox
     # Bubblewrap-wrapped apps (not available on Flathub)
     # vrcx and windsurf are pulled in as dependencies of the wrappers
-    keepassxc
   ];
 }

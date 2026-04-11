@@ -26,7 +26,7 @@ modules/
   desktop/                      # gaming (steam, gamescope, controllers knob), vr,
                                 # theme, shell
   home/                         # HM modules: common, daily, paranoid
-  gpu/                          # nvidia, amd, default router
+  gpu/                          # nvidia, amd
 scripts/                        # install, post-install, audit helpers
 docs/                           # see below
 ```

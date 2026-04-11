@@ -17,20 +17,27 @@
 - [ ] Steam starts
 - [ ] Gamescope starts
 - [ ] VR services work
-- [ ] Discord / Telegram / Matrix run if installed
+- [ ] Vesktop / Telegram / Matrix run if installed
 - [ ] Firefox Sync can be used manually
 - [ ] no obvious gaming regression versus current setup baseline
 
 ## Paranoid profile
 - [ ] Steam absent/disabled
 - [ ] VR absent/disabled
-- [ ] Discord absent/disabled
+- [ ] Vesktop absent/disabled
 - [ ] Telegram absent/disabled
 - [ ] Matrix absent/disabled
 - [ ] `safe-firefox` launches
 - [ ] Tor Browser launches
-- [ ] Signal launches
+- [ ] Signal (Flatpak) launches
 - [ ] separate user home is respected
+
+## Application sandboxing
+- [ ] Signal Flatpak runs on both profiles
+- [ ] VRCX (safe-vrcx) runs on daily profile
+- [ ] Windsurf (safe-windsurf) runs on daily profile
+- [ ] Flatpak apps have desktop entries in KDE menu
+- [ ] Sandboxed apps have desktop entries in KDE menu
 
 ## Mullvad and leak testing
 - [ ] daily can connect to Mullvad
@@ -49,7 +56,7 @@
 ## Kernel and sysctl hardening
 - [ ] `sysctl kernel.dmesg_restrict` returns 1
 - [ ] `sysctl kernel.kptr_restrict` returns 2
-- [ ] `sysctl kernel.yama.ptrace_scope` returns 2
+- [ ] `sysctl kernel.yama.ptrace_scope` returns 1 on daily, 2 on paranoid
 - [ ] `sysctl kernel.unprivileged_bpf_disabled` returns 1
 - [ ] `sysctl fs.suid_dumpable` returns 0
 - [ ] `sysctl net.ipv6.conf.all.use_tempaddr` returns 2

@@ -34,7 +34,8 @@ Never trust a status line by itself. For each claim, check four layers:
   - `safe-firefox`: Hardened Firefox with arkenfox-grounded user.js (70+ prefs)
   - `safe-tor-browser`, `safe-mullvad-browser`: Sandboxed Tor/Mullvad
 - `modules/security/flatpak.nix` — flatpak + xdg portals
-- `modules/home/paranoid.nix` — signal-desktop only; browsers via system wrappers
+- `modules/security/sandboxed-apps.nix` — bubblewrap wrappers for non-Flatpak apps (VRCX, Windsurf)
+- `modules/home/paranoid.nix` — Signal (Flatpak) only; browsers via system wrappers
 
 ### Gaming
 - `modules/desktop/gaming.nix` — Steam, gamescope, gamemode, controllers knob
@@ -45,7 +46,7 @@ Never trust a status line by itself. For each claim, check four layers:
 - `modules/security/vm-isolation.nix` — KVM/QEMU, virt-manager, AMD/Intel IOMMU
 
 ### Governance
-- `modules/security/governance.nix` — 14 build-time assertions
+- `modules/security/governance.nix` — 28 build-time assertions
 - `modules/security/scanners.nix` — ClamAV, AIDE timers
 
 ---
@@ -153,7 +154,33 @@ curl https://am.i.mullvad.net/connected
 
 Disconnect VPN → verify egress fails.
 
-## Phase 6.5 — Browser sandboxing (new)
+## Phase 6.5 — Application sandboxing
+
+### A. Verify Flatpak remote configured
+```bash
+flatpak remotes
+# Should show flathub
+```
+
+### B. Verify Flatpak apps installed
+```bash
+flatpak list
+# Should show: Signal, Spotify, Bitwarden, Vesktop, Obsidian, Telegram, Element
+```
+
+### C. Verify bubblewrap wrappers available
+```bash
+which safe-vrcx safe-windsurf
+# Should show paths to wrapper scripts
+```
+
+### D. Verify desktop entries exist
+```bash
+ls /run/current-system/sw/share/applications/safe-*.desktop
+# Should show safe-vrcx and safe-windsurf desktop entries
+```
+
+## Phase 6.6 — Browser sandboxing
 
 ### A. Verify sandboxed execution
 ```bash

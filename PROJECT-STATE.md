@@ -9,8 +9,8 @@
 - Windows may be removed. The separate SATA disk is intentionally left unused.
 - LUKS2 + Btrfs + tmpfs root + explicit `/persist` model.
 - Secure Boot + TPM2 are staged after the first known-good encrypted boot.
-- Daily keeps Steam, Discord, Firefox Sync, VR, Telegram, Matrix, Signal, KeePassXC.
-- Paranoid forbids Firefox Sync, Steam, Discord, Telegram, Matrix by default; Signal remains allowed.
+- Daily keeps Steam, Vesktop, Firefox Sync, VR, Telegram, Matrix, Signal, Bitwarden.
+- Paranoid forbids Firefox Sync, Steam, Vesktop, Telegram, Matrix by default; Signal remains allowed.
 - Paranoid browser path uses `safe-firefox` and separate Tor Browser/Mullvad Browser roles.
 
 ## Implemented in repo
@@ -29,17 +29,20 @@
 - Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
 - Daily-only scanner timers for ClamAV and AIDE checks.
-- 14 governance assertions with correct list-membership checks.
+- 28 governance assertions with correct list-membership checks.
+- **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
 - **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
-- **Module structure minimized**: `core/` (4 files), `security/` (9 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (3 files).
-- **Docs minimized**: 11 surviving docs (down from 28), single front-door README, merged AUDIT.md.
+- **Module structure minimized**: `core/` (4 files), `security/` (11 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (2 files).
+- **Docs minimized**: 12 surviving docs (down from 28), single front-door README, merged AUDIT.md.
 - All hardening topics tracked in `docs/audit/SOURCE-TOPIC-LEDGER.md`.
 
 ## Configurable myOS.security options
-All key hardening knobs are now tunable per-profile without code changes:
+All key hardening knobs are tunable per-profile without code changes:
 - `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist, pti, vsyscallNone, oopsPanic, moduleSigEnforce, disableIcmpEcho}`
 - `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `vmIsolation.enable`, `sandboxedApps.enable`
 - `disableSMT`, `browserLockdown.enable`, `hardenedMemory.enable`
+- `ptraceScope` (kernel.yama.ptrace_scope: 1 for EAC compatibility, 2 for hardening)
+- `swappiness` (vm.swappiness: lower values for gaming, higher for systems with limited RAM)
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
 - `mullvad.{enable, lockdown}`
 
@@ -52,7 +55,7 @@ All key hardening knobs are now tunable per-profile without code changes:
 - `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
 - Browser sandboxing: national-level with UID isolation (100000), bubblewrap namespaces, arkenfox-grounded user.js.
 - VM isolation: implemented as knob, disabled by default, compatible with daily driver.
-- Application sandboxing: replace high-risk proprietary apps with Flatpak (sandboxed) or bubblewrap wrappers (UID isolation). Signal Desktop uses bubblewrap on paranoid profile.
+- Application sandboxing: replace high-risk proprietary apps with Flatpak (sandboxed) or bubblewrap wrappers (UID isolation). Signal Desktop uses Flatpak on both profiles.
 
 ## Gaming knobs
 - `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
@@ -78,7 +81,8 @@ All key hardening knobs are now tunable per-profile without code changes:
 - All high-risk proprietary apps replaced with Flatpak versions where available
 - Flatpak provides namespace isolation, capability dropping, read-only filesystem by default
 - Apps installed: Signal, Spotify, Bitwarden, Vesktop, Obsidian, Telegram, Element
-- Automatic installation via systemd service (flatpak-repo)
+- Flathub remote configured automatically via systemd service (flatpak-repo)
+- Packages installed manually after first boot (see POST-INSTALL.md)
 - App data persisted via impermanence: `~/.var/app/com.example.App`
 
 ### Bubblewrap wrappers (non-Flatpak apps)
@@ -108,6 +112,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 **Enabled by default (daily):**
 - `initOnAlloc` — zero pages on allocation (init_on_alloc=1)
 - `slabNomerge` — prevent slab cache merging
+- `moduleBlacklist` — blacklist dangerous kernel modules (dccp, sctp, rds, tipc, firewire)
 - `pti=on` — Kernel Page Table Isolation (Meltdown mitigation)
 - `vsyscall=none` — disable vsyscalls (ROP prevention)
 
@@ -140,6 +145,10 @@ All tunable via `myOS.security.kernelHardening.*`:
 - Root-editing discipline enforcement in code (documented only).
 - NTS time sync replacement.
 - Broad SUID/capabilities pruning program.
+- Wayland-only display manager (three-phase roadmap):
+  - Phase 1 (current): X11 server runs for SDDM/NVIDIA compatibility, user sessions are Wayland-only, X apps use XWayland automatically
+  - Phase 2 (post-stability): Evaluate greetd + tuigreet for Wayland-native DM (experimental, may break NVIDIA)
+  - Phase 3 (October 2026): Plasma 6.8 Wayland-exclusive release (drops X11 session support entirely)
 
 ## Rejected or intentionally deferred
 - Treating boot specialisations as strong compromise isolation.
@@ -160,7 +169,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
-- Discord, Telegram, Matrix, Steam, VR disabled by policy.
+- Vesktop, Telegram, Matrix, Steam, VR disabled by policy.
 - Mullvad intended as always-on; lockdown networking.
 - Lower persistence footprint.
 - Signal Desktop sandboxed via Flatpak.

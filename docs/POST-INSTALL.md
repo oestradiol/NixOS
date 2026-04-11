@@ -70,6 +70,13 @@ Follow `docs/AUDIT.md` Phase 5 to verify:
 - Run `lynis audit system` and address findings
 - Only then experiment with `hardenedMemory.enable = true`
 
+## Wayland-only display manager roadmap
+**Phase 1 (current):** X11 server runs for SDDM/NVIDIA compatibility, user sessions are Wayland-only, X apps use XWayland automatically. Acceptable tradeoff for NVIDIA compatibility.
+
+**Phase 2 (post-stability):** After system is stable and tested, evaluate greetd + tuigreet for Wayland-native display manager. This would eliminate X11 server entirely but is experimental and may break NVIDIA compatibility. See https://wiki.nixos.org/wiki/Greetd.
+
+**Phase 3 (October 2026):** Plasma 6.8 Wayland-exclusive release drops X11 session support entirely. At that point, switch to Plasma 6.8 and evaluate SDDM Wayland greeter (currently experimental). See https://blogs.kde.org/2025/11/26/going-all-in-on-a-wayland-future/
+
 ## 11. Install Flatpak applications (daily profile)
 The Flathub remote is configured automatically, but packages must be installed manually:
 ```bash

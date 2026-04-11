@@ -45,6 +45,16 @@
       # ── Profile policy ──────────────────────────────────────────
       browserLockdown.enable = lib.mkEnableOption "Paranoid browser policy set";
       disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
+      ptraceScope = lib.mkOption {
+        type = lib.types.int;
+        default = 2;
+        description = "kernel.yama.ptrace_scope (0=classic, 1=restricted, 2=attached-only, 3=no-attach). Daily uses 1 for EAC compatibility, paranoid uses 2 for hardening.";
+      };
+      swappiness = lib.mkOption {
+        type = lib.types.int;
+        default = 30;
+        description = "vm.swappiness (0-100). Lower values swap less aggressively. 16GB RAM: recommend 10-20 for gaming.";
+      };
 
       # ── Kernel hardening (tunable per profile) ──────────────────
       kernelHardening = {
