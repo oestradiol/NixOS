@@ -9,7 +9,7 @@ Goal: keep code, docs, and audit surfaces aligned.
 ## Read in this order
 1. `PROJECT-STATE.md`
 2. `docs/audit/SOURCE-TOPIC-LEDGER.md`
-3. `docs/AUDIT.md`
+3. `docs/PRE-INSTALL.md`
 
 ## Canonical rules
 - Frozen decisions live in `PROJECT-STATE.md`.
@@ -42,5 +42,5 @@ Goal: keep code, docs, and audit surfaces aligned.
 ## Review checklist
 - Did code change behavior? → update `PROJECT-STATE.md`
 - Did topic coverage change? → update `docs/audit/SOURCE-TOPIC-LEDGER.md`
-- Did manual steps change? → update `docs/POST-INSTALL.md` and `docs/TEST-PLAN.md`
-- Did failure modes change? → update `docs/AUDIT.md`
+- Did manual steps change? → update `docs/POST-STABILITY.md` and `docs/TEST-PLAN.md`
+- Did failure modes change? → update `docs/PRE-INSTALL.md`
