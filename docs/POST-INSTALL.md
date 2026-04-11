@@ -1,5 +1,11 @@
 # POST-INSTALL
 
+## Recommended workflow after first boot
+After completing the install and first boot, follow this order:
+1. **AUDIT.md Phase 5** — Verify hardening is applied correctly at runtime
+2. **TEST-PLAN.md** — Complete the runtime verification checklist
+3. **POST-INSTALL.md** — Follow the steps below for Secure Boot, TPM, and configuration
+
 ## 1. Passwords and users
 - set passwords for `player` and `ghost`
 - decide whether `ghost` should remain non-wheel
@@ -113,3 +119,25 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 - Full hardened compilation-flag policy
 - Dedicated entropy-hardening component
 - Full nix-mineral diff
+
+## Post-stability experimental testing (after system is stable)
+Only attempt these after the system is fully stable and all AUDIT.md and TEST-PLAN.md checks pass.
+
+### Wayland-only display manager (Phase 2)
+Experimental: Replace SDDM with greetd + tuigreet for Wayland-native DM.
+- This would eliminate X11 server entirely but is experimental
+- May break NVIDIA compatibility
+- See: https://wiki.nixos.org/wiki/Greetd
+- Enable in your profile by replacing the SDDM service with greetd configuration
+
+### Optional paranoid-tier kernel hardening
+These options are available but not enabled by default. Enable one at a time and test:
+- `kernelHardening.oopsPanic = true` — Panic on kernel oops (may crash on bad drivers)
+- `kernelHardening.moduleSigEnforce = true` — Only load signed kernel modules (breaks custom modules)
+- `kernelHardening.disableIcmpEcho = true` — Ignore ping requests (breaks some diagnostics)
+
+### Full graphene-hardened allocator
+Enable only after extensive stability and performance testing:
+- `myOS.security.hardenedMemory.enable = true`
+- May cause stability issues with some applications
+- See PERFORMANCE-NOTES.md for impact assessment
