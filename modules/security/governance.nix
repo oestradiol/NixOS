@@ -14,8 +14,8 @@ in {
       message = "Governance invariant: paranoid user 'ghost' must exist.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.browserLockdown.enable;
-      message = "Paranoid profile must enable browser lockdown.";
+      assertion = !isParanoid || config.myOS.security.sandboxedBrowsers.enable;
+      message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox).";
     }
     {
       assertion = !isParanoid || config.myOS.security.mullvad.enable;
