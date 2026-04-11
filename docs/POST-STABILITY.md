@@ -20,6 +20,14 @@ For recovery procedures if issues occur, see [`RECOVERY.md`](./RECOVERY.md).
 
 ## 4. Secure Boot / Lanzaboote sequence
 Do this only after a normal encrypted boot is known-good.
+
+**Option A: Use the helper script (recommended)**
+```bash
+sudo ./scripts/post-install-secureboot-tpm.sh
+```
+This runs `sbctl create-keys` and `sbctl enroll-keys --microsoft` for you.
+
+**Option B: Manual steps**
 1. Edit `hosts/nixos/default.nix`: set `myOS.security.secureBoot.enable = true;`
 2. `sudo nixos-rebuild switch --flake /etc/nixos#nixos`
 3. `sudo sbctl create-keys`
