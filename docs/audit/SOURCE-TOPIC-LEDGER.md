@@ -81,7 +81,7 @@ Status values:
 | Browser fingerprinting protection | Arkenfox v140+ | Implemented+Manual | `docs/PRE-INSTALL.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | `modules/security/browser.nix` | Daily uses FPP (Fingerprinting Protection) with ETP Strict; Paranoid uses RFP (Resist Fingerprinting). Verify with https://coveryourtracks.eff.org |
 | AIDE / ClamAV | Original plan / Trimstray | Implemented+Manual | `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | `modules/security/scanners.nix` | Initialize DB and evaluate usefulness |
 | Full graphene-hardened after debug | Original plan | Deferred | `PROJECT-STATE.md`, `docs/PERFORMANCE-NOTES.md` | `modules/security/base.nix` | Enable only after stability/perf testing |
-| Mullvad / WebRTC / DNS / Tor Browser verification | Original plan | Documented | `docs/TEST-PLAN.md`, `docs/PRE-INSTALL.md` | networking/browser modules | Must be executed live |
+| Mullvad / WebRTC / DNS / Tor Browser verification | Original plan | Documented | `docs/TEST-PLAN.md`, `docs/PRE-INSTALL.md` | networking/browser modules | DNS split: daily=base.dns.mullvad.net (ads/trackers), paranoid=all.dns.mullvad.net (+malware/gambling). Verify with dnsleaktest.com |
 | LUKS header backup procedure | Audit finding (blind spot) | Documented+Manual | `docs/POST-STABILITY.md` | — | Execute after install; test restore on spare container |
 | EFI partition backup/verification | Audit finding (blind spot) | Documented+Manual | `docs/POST-STABILITY.md`, `docs/RECOVERY.md` | — | Backup after first boot; keep on external media |
 | fstrim/discard configuration | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md` | — | Decision needed: enable fstrim timer or discard |
