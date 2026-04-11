@@ -61,6 +61,7 @@ Follow `docs/AUDIT.md` Phase 5 to verify:
 - kernel modules are blacklisted
 - systemd service hardening is active
 - USB authorization is correct on paranoid
+- VM isolation is working on paranoid
 
 ## 10. Manual follow-ups
 - Validate Mullvad interface names match nftables rules (adjust `vpnIfaces` in networking.nix if needed)
@@ -102,7 +103,9 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 - **init_on_alloc** (`kernelHardening.initOnAlloc = false`) — if allocation-heavy workloads show measurable regression
 - **slab_nomerge** (`kernelHardening.slabNomerge = false`) — if RAM is critically tight
 - **Module blacklist** (`kernelHardening.moduleBlacklist = false`) — if you need dccp/sctp/firewire for some reason
-- **Root lock** (`lockRoot = false`) — only if you need direct root login (not recommended)
+- **Root lock** (`lockRoot = false`) — only if you need direct root login (not recommended, default=true)
+- **ptraceScope** (`ptraceScope = 2`) — if VRChat EAC issues occur, daily uses 1 for compatibility
+- **swappiness** (`swappiness = 30`) — if swap behavior needs tuning, daily uses 20 for gaming
 
 ## Deferred items
 - Full SUID/capability pruning program
