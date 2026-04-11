@@ -24,16 +24,16 @@
 - Dangerous kernel module blacklist (dccp, sctp, rds, tipc, firewire).
 - USB device authorization restricted on paranoid (`myOS.security.usbRestrict`).
 - `debugfs=off`, `randomize_kstack_offset=on` boot parameters.
-- Browser policy module with two modes: base Firefox with moderate arkenfox-style hardening (geo disabled, Mullvad DoH with fallback, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail, password autofill disabled, download security, extension restrictions) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js v140 including RFP, network prefetch blocking, referer trimming, containers, clear on shutdown, captive portal disabled, no Sync) when `sandboxedBrowsers.enable = true` (paranoid).
+- Browser policy module with two modes: base Firefox with moderate arkenfox-style hardening (geo disabled, DoH, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandboxedBrowsers.enable = true` (paranoid).
 - Networking killswitch with DHCP/DNS exceptions for tunnel establishment.
 - Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
 - Daily-only scanner timers for ClamAV and AIDE checks.
-- 28 governance assertions with correct list-membership checks.
+- 27 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
 - **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
 - **Module structure minimized**: `core/` (4 files), `security/` (11 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (2 files).
-- **Docs minimized**: 12 surviving docs (down from 28), single front-door README, merged AUDIT.md.
+- **Docs minimized**: 8 surviving docs (down from 28), single front-door README.
 - All hardening topics tracked in `docs/audit/SOURCE-TOPIC-LEDGER.md`.
 
 ## Configurable myOS.security options
@@ -116,12 +116,15 @@ All tunable via `myOS.security.kernelHardening.*`:
 - `pti=on` — Kernel Page Table Isolation (Meltdown mitigation)
 - `vsyscall=none` — disable vsyscalls (ROP prevention)
 
-**Optional/paranoid-tier:**
+**Enabled on paranoid (explicit with mkForce):**
 - `initOnFree` — zero pages on free (1-7% overhead)
 - `pageAllocShuffle` — randomize page allocator freelists
 - `oopsPanic` — panic on kernel oops (prevents exploit continuation)
 - `moduleSigEnforce` — only load signed kernel modules
 - `disableIcmpEcho` — ignore ping requests (network enumeration prevention)
+
+**Intentionally disabled (deferred):**
+- `hardenedMemory` — Graphene hardened allocator (stability risk, enable only after post-install testing)
 
 ## Needs live validation
 - Real destructive install on the NVMe.

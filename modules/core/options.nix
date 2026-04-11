@@ -53,7 +53,15 @@
       swappiness = lib.mkOption {
         type = lib.types.int;
         default = 30;
-        description = "vm.swappiness (0-100). Lower values swap less aggressively. 16GB RAM: recommend 10-20 for gaming.";
+        description = ''
+          vm.swappiness (0-200, default 30). Controls swap aggressiveness.
+          With zram (RAM-compressed swap), HIGHER values are recommended
+          because zram is fast (compression, not disk I/O).
+          - zram setups: 150-180 recommended (Pop!_OS uses 180)
+          - daily (gaming): 150 to balance zram use with avoiding compression overhead
+          - paranoid (workstation): 180 for maximum zram benefit
+          - traditional disk swap: 10-60 depending on RAM pressure
+        '';
       };
 
       # ── Kernel hardening (tunable per profile) ──────────────────
@@ -95,8 +103,8 @@
       # ── System hardening (tunable per profile) ──────────────────
       apparmor = lib.mkOption {
         type = lib.types.bool;
-        default = true;
-        description = "AppArmor MAC framework. ~1-3% syscall overhead.";
+        default = false;
+        description = "AppArmor MAC framework. ~1-3% syscall overhead. Can break proprietary applications.";
       };
       auditd = lib.mkEnableOption "Audit daemon (resource overhead, useful for forensics)";
       lockRoot = lib.mkOption {

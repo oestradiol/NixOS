@@ -5,7 +5,7 @@
 ### Identical (zero performance delta)
 - SteamOS gaming sysctls (all 8 scheduler params: sched_cfs_bandwidth, sched_latency, sched_min_granularity, sched_wakeup_granularity, sched_migration_cost, sched_nr_migrate, split_lock_mitigate=0, sched_rt_runtime_us=-1) — daily-only
 - `vm.max_map_count`, `tcp_mtu_probing`, `tcp_fin_timeout`
-- `vm.swappiness` tuned to 20 on daily (down from 30 default) for better gaming with 16GB RAM
+- `vm.swappiness` tuned to 150 on daily (up from 30 default) for zram optimization with 16GB RAM
 - `ntsync` kernel module + `PROTON_USE_NTSYNC=1`
 - Steam, Gamescope (capSysNice), GameMode — identical config
 - WiVRn (CUDA, nvenc h265, Nice=-10, RTPRIO=99, memlock=infinity)
@@ -39,7 +39,7 @@
 | Knob | Why moved | Impact if kept |
 |---|---|---|
 | `init_on_free=1` | Zeroes ALL freed pages — expensive in alloc-heavy workloads | **1-7%** in microbenchmarks |
-| `page_alloc.shuffle=1` | Randomizes free page list — small but unnecessary for daily | **<1%** |
+| `page_alloc.shuffle=1` | Randomizes free page list — enabled on both profiles now | **<1%** |
 | `usbcore.authorized_default=2` | Blocks unauthorized USB — could interfere with peripherals | Functional, not perf |
 | `nosmt=force` (via disableSMT) | Already daily=false | **30-40%** CPU throughput loss |
 
@@ -48,7 +48,7 @@
 |---|---|---|
 | GRUB + os-prober | Replaced by systemd-boot | **Faster** boot, no action needed |
 | Swap file (8GB) | **Replaced by zram + 8GB Btrfs swapfile** | zram for hot pages, Btrfs swap on `@swap` for cold; 8GB matches old size |
-| WakeOnLAN | **Intentionally excluded** | Not needed for desktop; use `ethtool` manually if required |
+| WakeOnLAN | **Implemented daily-only** | Enabled on `enp5s0` for daily profile; excluded from paranoid |
 | CUPS printing | Explicitly disabled | Flip in `base-desktop.nix` if needed |
 | Controllers (Bluetooth/Xbox) | Implemented as `myOS.gaming.controllers.enable` knob | Set `myOS.gaming.controllers.enable = true` in profile |
 
@@ -65,6 +65,6 @@
 
 ## Decision rule
 If daily is measurably worse in gaming benchmarks, the first knobs to disable are:
-1. AppArmor (`security.apparmor.enable = false` in base.nix)
-2. `init_on_alloc=1` (remove from boot.nix kernel params)
-3. `slab_nomerge` (remove from boot.nix kernel params)
+1. AppArmor (`myOS.security.apparmor = false` in daily.nix)
+2. `init_on_alloc=1` (`myOS.security.kernelHardening.initOnAlloc = false` in daily.nix)
+3. `slab_nomerge` (`myOS.security.kernelHardening.slabNomerge = false` in daily.nix)

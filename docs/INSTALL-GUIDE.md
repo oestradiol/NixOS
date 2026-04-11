@@ -50,12 +50,18 @@ Inside `cryptroot` Btrfs create:
 - confirm NVIDIA stack works
 - confirm Steam/VR not yet re-enabled by user data migration, only by config
 
+**If first boot fails**: See [`RECOVERY.md`](./RECOVERY.md) "If the new system does not boot" section.
+
 ## Phase 5 — only after first clean boot
-Follow `docs/POST-INSTALL.md` for:
+Follow [`TEST-PLAN.md`](./TEST-PLAN.md) for immediate runtime verification.
+
+Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 - Secure Boot / Lanzaboote
 - TPM2 enrollment
 - Mullvad setup
 - agenix secrets creation
+
+**If issues occur during Phase 5**: See [`RECOVERY.md`](./RECOVERY.md) for troubleshooting.
 
 ## Persistence map
 

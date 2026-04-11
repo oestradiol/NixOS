@@ -37,9 +37,9 @@ docs/                           # see below
 |---|---|
 | `PROJECT-STATE.md` | Frozen decisions, implemented/deferred/rejected items, trust model, user decisions |
 | `docs/INSTALL-GUIDE.md` | Destructive install + persistence map |
-| `docs/POST-INSTALL.md` | Post-install steps, manual follow-ups, monitoring notes, deferred items |
+| `docs/POST-STABILITY.md` | Post-stability steps, manual follow-ups, monitoring notes, deferred items |
 | `docs/TEST-PLAN.md` | Runtime verification checklist |
-| `docs/AUDIT.md` | Audit tutorial + failure modes + code map + remediation matrix |
+| `docs/PRE-INSTALL.md` | Pre-install checks, code map, failure modes |
 | `docs/RECOVERY.md` | Emergency recovery procedures |
 | `docs/PERFORMANCE-NOTES.md` | Old vs new daily comparison, per-knob impact, decision rules |
 | `docs/audit/SOURCE-TOPIC-LEDGER.md` | Canonical hardening topic tracker |
@@ -49,8 +49,8 @@ docs/                           # see below
 
 1. `PROJECT-STATE.md` — current state, decisions, trust model
 2. `docs/audit/SOURCE-TOPIC-LEDGER.md` — topic coverage
-3. `docs/INSTALL-GUIDE.md` → `docs/POST-INSTALL.md` → `docs/TEST-PLAN.md`
-4. `docs/AUDIT.md` — runtime verification + failure modes
+3. `docs/PRE-INSTALL.md` → `docs/INSTALL-GUIDE.md` → `docs/TEST-PLAN.md` → `docs/POST-STABILITY.md`
+4. `docs/RECOVERY.md` — emergency recovery procedures
 5. Code: `profiles/` → `modules/security/` → `modules/security/governance.nix`
 
 ## Rules
