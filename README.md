@@ -25,7 +25,7 @@ modules/
                                 # scanners, secrets, governance, vm-isolation
   desktop/                      # gaming (steam, gamescope, controllers knob), vr,
                                 # theme, shell
-  home/                         # HM modules: common, daily, paranoid
+  home/                         # HM modules: common, player, ghost
   gpu/                          # nvidia, amd
 scripts/                        # install, post-install, audit helpers
 docs/                           # see below
