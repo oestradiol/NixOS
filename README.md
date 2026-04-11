@@ -7,10 +7,14 @@ Public-safe: no real secrets, `secrets/` is scaffolding only.
 ## Scope
 
 - 20+ hardened sysctls, kernel module blacklist, coredump off, root locked, su wheel-only
-- Defense-in-depth nftables killswitch with DHCP/DNS exceptions
-- Plain Firefox removed from paranoid; `safe-firefox` is the only browser path
-- Systemd service hardening for flatpak-repo, ClamAV, AIDE
-- Governance assertions catch config drift at build time
+- zram (zstd 50%) + 8GB Btrfs swap file on `@swap` subvolume
+- tmpfs root + impermanence with explicit `/persist` model
+- Defense-in-depth nftables killswitch with DHCP/DNS exceptions; USB restricted on paranoid
+- Browser policy split: FPP-hardened Firefox (daily) vs sandboxed UID-isolated wrappers (paranoid)
+- Systemd service hardening for flatpak-repo, ClamAV, AIDE with daily-only timers
+- Agenix secrets scaffold, Secure Boot + TPM staged after first boot
+- 27 governance assertions catch config drift at build time
+- All hardening knobs configurable via `myOS.security.*` options per-profile
 
 ## Repository layout
 
