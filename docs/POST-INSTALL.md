@@ -130,14 +130,53 @@ Experimental: Replace SDDM with greetd + tuigreet for Wayland-native DM.
 - See: https://wiki.nixos.org/wiki/Greetd
 - Enable in your profile by replacing the SDDM service with greetd configuration
 
+**Testing after enabling:**
+- Reboot and verify greetd starts
+- Verify you can log in to both player and ghost
+- Verify Plasma 6 Wayland session works
+- Verify NVIDIA driver still loads correctly
+- Verify VR stack still works (if testing on daily)
+- Check `dmesg | grep -i nvidia` for driver errors
+- If NVIDIA breaks, revert to SDDM immediately
+
 ### Optional paranoid-tier kernel hardening
 These options are available but not enabled by default. Enable one at a time and test:
-- `kernelHardening.oopsPanic = true` — Panic on kernel oops (may crash on bad drivers)
-- `kernelHardening.moduleSigEnforce = true` — Only load signed kernel modules (breaks custom modules)
-- `kernelHardening.disableIcmpEcho = true` — Ignore ping requests (breaks some diagnostics)
+
+**`kernelHardening.oopsPanic = true`** (Panic on kernel oops)
+- May crash system on bad driver errors
+- Testing after enabling:
+  - Reboot and check system boots successfully
+  - Check `journalctl -b -p err` for kernel oops
+  - Test gaming/VR workload to ensure no crashes
+  - If system crashes on boot, revert immediately
+
+**`kernelHardening.moduleSigEnforce = true`** (Only load signed modules)
+- Breaks custom/unsigned kernel modules
+- Testing after enabling:
+  - Reboot and check system boots successfully
+  - Verify NVIDIA driver loads: `nvidia-smi`
+  - Verify VR stack works: WiVRn status
+  - Check `dmesg | grep -i module` for module load failures
+  - If GPU/VR breaks, revert immediately
+
+**`kernelHardening.disableIcmpEcho = true`** (Ignore ping requests)
+- Breaks some network diagnostics
+- Testing after enabling:
+  - Verify normal network operations still work
+  - Test Mullvad VPN connectivity
+  - Test ping to known hosts (should fail)
+  - If network diagnostics are needed, disable temporarily
 
 ### Full graphene-hardened allocator
 Enable only after extensive stability and performance testing:
 - `myOS.security.hardenedMemory.enable = true`
 - May cause stability issues with some applications
 - See PERFORMANCE-NOTES.md for impact assessment
+
+**Testing after enabling:**
+- Reboot and check system boots successfully
+- Test all applications you use regularly (browser, Steam, VR, etc.)
+- Check for application crashes or segfaults: `journalctl -b -p err`
+- Benchmark gaming performance (frametime, FPS) to measure impact
+- Monitor RAM usage for unexpected increases
+- If any application crashes or performance degrades significantly, revert immediately
