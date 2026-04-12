@@ -251,14 +251,17 @@ What was adopted:
 - leak testing must verify WebRTC and DNS behavior
 - arkenfox v140+ now uses FPP (Fingerprinting Protection) by default with ETP Strict; RFP is opt-in
 - daily Firefox uses FPP (less breakage), paranoid safe-firefox uses RFP (maximum protection)
-- DNS endpoint split: daily uses base.dns.mullvad.net (ads/trackers), paranoid uses all.dns.mullvad.net (ads/trackers/malware/gambling)
+- DNS endpoint split: daily uses base.dns.mullvad.net DoH (ads/trackers/malware), paranoid uses VPN server DNS (no DoH)
+- Cookie isolation: daily uses ETP Strict + TCP (arkenfox-aligned), paranoid uses FPI (stronger, not aligned)
 
 Repo effect:
 - `modules/security/browser.nix` — 60+ prefs, FPP for daily, RFP for paranoid
+- daily: arkenfox-aligned (FPI disabled, ETP Strict + TCP, DoH enabled)
+- paranoid: FPI enabled (security over alignment), VPN server DNS only (follows Mullvad guidance)
 - daily/paranoid browser split documented in PRE-INSTALL.md, POST-STABILITY.md, TEST-PLAN.md
 
 Status:
-- `implemented` — arkenfox v140+ inspired (FPP for daily, RFP for paranoid)
+- `implemented` — daily: arkenfox-aligned (FPP, ETP Strict + TCP, DoH). paranoid: FPI + RFP (security over alignment, VPN DNS only)
 
 ### 9. GnuPG & gpg-agent
 Source:

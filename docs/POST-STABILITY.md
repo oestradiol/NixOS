@@ -49,6 +49,7 @@ Keep the recovery passphrase forever.
 **If TPM unlock breaks**: See [`RECOVERY.md`](./RECOVERY.md) "If TPM unlock breaks" section.
 
 ## 6. Mullvad
+
 Daily:
 - service installed and available
 - not required as a hard kill-switch path
@@ -60,12 +61,14 @@ Paranoid:
 - treat lockdown behavior as expected, not a bug
 - validate killswitch: `sudo nft list ruleset`
 
-**Killswitch IP ranges (verify current at https://mullvad.net/en/servers):**
-The nftables rules constrain pre-tunnel traffic to Mullvad infrastructure only:
-- WireGuard relays: UDP 51820 to 185.65.134.0/24, 185.65.135.0/24, 193.138.219.0/24
-- API/Bridge: TCP 443/1401 to specific Mullvad servers (185.65.134.66, 185.65.135.1, 193.138.219.228)
+**Killswitch architecture (DEFERRED MAINTENANCE RISK):**
+The nftables rules hardcode Mullvad infrastructure IPs that were current as of 2024.
+Mullvad's server infrastructure is dynamic — these IPs may become stale.
 
-If Mullvad rotates IPs, update `modules/security/networking.nix` and rebuild.
+**IP Maintenance:** See [`RECOVERY.md`](./RECOVERY.md) "If Mullvad VPN fails to connect (stale IP ranges)" for the recovery procedure when hardcoded IPs rotate.
+
+**Recommendation:** Rely primarily on Mullvad's built-in lockdown-mode killswitch.
+The nftables rules are defense-in-depth only and require manual maintenance.
 
 **If network issues occur**: See [`RECOVERY.md`](./RECOVERY.md) "If the paranoid profile blocks too much network" section.
 
@@ -81,9 +84,9 @@ Examples:
 - Initialize AIDE database: `sudo aideinit`
 - Verify timers are active: `systemctl list-timers | grep -E 'clamav|aide'`
 - Test scans manually:
-  - `sudo systemctl start clamav-shallow-scan` (quick daily check)
+  - `sudo systemctl start clamav-impermanence-scan` (daily impermanence check)
   - `sudo systemctl start clamav-deep-scan` (comprehensive weekly check)
-- Review logs: `/var/log/clamav-shallow-scan.log`, `/var/log/clamav-deep-scan.log`
+- Review logs: `/var/log/clamav-impermanence-scan.log`, `/var/log/clamav-deep-scan.log`
 
 ## 9. Manual follow-ups
 - Validate Mullvad interface names match nftables rules (adjust `vpnIfaces` in networking.nix if needed)
@@ -106,11 +109,26 @@ flatpak install -y flathub im.riot.Riot
 ```
 
 ## 11. Use sandboxed applications
+
 For apps not available as Flatpak, use the bubblewrap wrappers:
 - `safe-vrcx` — VRCX with UID isolation (daily profile)
 - `safe-windsurf` — Windsurf with UID isolation (daily profile)
 
-These wrappers provide UID isolation (100000:100000 unmapped from host), process namespace isolation, and minimal filesystem access. Note: Network namespace is NOT isolated — these apps need host network access for VPN/Tor connectivity.
+**Isolation provided:**
+- UID isolation (100000:100000 unmapped from host)
+- Process namespace isolation (IPC, PID, UTS)
+- Capability dropping (`--cap-drop ALL`)
+- Minimal tmpfs home and /tmp
+
+**Isolation limitations (read carefully):**
+- **Network namespace is NOT isolated** — apps have full host network access
+- **Broad host paths bound read-only**: `/run`, `/etc` — this exposes some host runtime state
+  - Daily profile: `/var` is also bound for compatibility with some apps
+  - Paranoid profile: `/var` is NOT bound (stricter isolation) — apps use `/run` for runtime state
+- **GPU passthrough** (`--dev-bind /dev/dri`) — GPU drivers are a known escape vector via DMA attacks
+- These wrappers provide **helpful containment**, not "trustworthy hostile-content isolation"
+
+**For maximum isolation of untrusted content**, use VM isolation (`vmIsolation.enable`) instead of bubblewrap.
 
 ## 12. Setup KeePassXC with permanence
 KeePassXC is available in both profiles. The configuration is persisted via impermanence:
@@ -320,7 +338,7 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 | **Timezone spoofing** | Check `Date()` in browser console (FPP vs RFP differ) | FPP: your timezone; RFP: GMT/Atlantic/Reykjavik |
 | **Letterboxing** | Resize browser window | FPP: no margins; RFP (paranoid): stepped margins |
 | **WebRTC leak test** | https://browserleaks.com/webrtc on daily | Should show Mullvad IP if VPN active, not real IP |
-| **DoH is Mullvad** | https://www.dnsleaktest.com/ | Daily: `base.dns.mullvad.net` (ads/trackers). Paranoid: `all.dns.mullvad.net` (ads/trackers/malware/gambling) |
+| **DoH is Mullvad** | https://www.dnsleaktest.com/ | Daily: `base.dns.mullvad.net` (ads/trackers/malware). Paranoid: `all.dns.mullvad.net` (ads/trackers/malware/gambling) |
 | **Firefox Sync disabled** | about:preferences#sync on daily | Should show "Sign in to Sync" not your account |
 | **Cookie behavior** | Check lock icon on any site → Cookies | Should show dFPI/cross-site blocking active |
 | **ETP Strict active** | about:preferences#privacy → Enhanced Tracking Protection | Should show "Strict" selected |
@@ -597,6 +615,36 @@ lsusb | grep -i -E "(yubi|fido|u2f)"
 **Current claim**: "National-level" isolation is overstated for GPU-bound apps.  
 **Actual isolation**: UID namespace + process namespace + FS isolation = strong, but GPU passthrough is a known escape vector (historical GPU driver bugs allow DMA attacks). Network namespace is NOT isolated for browsers.  
 **Recommendation**: For maximum isolation of untrusted content, use VM isolation (`vmIsolation.enable`) instead of bubblewrap, or run `safe-firefox` on a system without GPU passthrough (software rendering).
+
+### [TRIAL] Test Browser Without GPU Passthrough
+**Purpose**: Evaluate usability of software rendering for maximum isolation.  
+**Trade-off**: Removes GPU attack surface (DMA attacks) but significantly slower performance.
+**Profile**: Test on **paranoid** — daily needs GPU acceleration for gaming/VR.
+
+**Quick test (temporary):**
+```bash
+# Launch safe-firefox with GPU disabled (software rendering)
+safe-firefox --safe-mode &
+# Then in about:config set: layers.acceleration.disabled = true
+```
+
+**Persistent test (session-wide):**
+```bash
+# Create a wrapper script without /dev/dri bind
+# Copy safe-firefox script, remove: --dev-bind /dev/dri /dev/dri
+# Save as ~/bin/safe-firefox-software and use instead
+```
+
+**What to test:**
+1. Video playback (YouTube, etc.) - expect higher CPU usage
+2. Scrolling smoothness on complex pages
+3. General responsiveness
+4. Battery life (on laptops)
+
+**Decision criteria:**
+- If performance is acceptable: consider creating custom wrapper without GPU passthrough
+- If unusable: stay with GPU passthrough and rely on VM isolation for untrusted content
+- Critical: For high-risk content (untrusted PDFs, suspicious sites), prefer VM isolation regardless
 
 ### [FIXED] SSH Host Key Rotation Policy
 **Risk**: Impermanence wipes machine identity; host keys persist but no rotation procedure documented.  

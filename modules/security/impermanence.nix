@@ -20,18 +20,36 @@ in {
           "/etc/mullvad-vpn"
         ];
 
+        # CRITICAL: /etc identity files must persist with tmpfs root + mutableUsers
+        # Without these, imperative password changes are lost on reboot
+        # See: https://nixos.org/manual/nixos/stable/options#opt-users.mutableUsers
         files = [
-          # machine-id: daily gets persistence (operational stability)
-          # paranoid gets random (privacy - less fingerprintable)
-        ] ++ lib.optionals persistMachineId [
+          "/etc/passwd"
+          "/etc/group"
+          "/etc/shadow"
+          "/etc/gshadow"
+          "/etc/subuid"
+          "/etc/subgid"
+        ]
+        # machine-id: daily gets persistence (operational stability)
+        # paranoid gets random (privacy - less fingerprintable)
+        ++ lib.optionals persistMachineId [
           "/etc/machine-id"
-        ] ++ [
+        ]
+        ++ [
           "/etc/ssh/ssh_host_ed25519_key"
           "/etc/ssh/ssh_host_ed25519_key.pub"
           "/etc/ssh/ssh_host_rsa_key"
           "/etc/ssh/ssh_host_rsa_key.pub"
         ];
 
+        # NOTE: Daily profile (/home/player): fully persistent Btrfs subvolume (@home-daily)
+        # These allowlists manage dotfiles within an already-persistent home.
+        #
+        # NOTE: Paranoid profile (/home/ghost): selective impermanence (tmpfs + allowlist)
+        # @home-paranoid is mounted to /persist/home-ghost, and only allowlisted items
+        # are persisted. The home directory itself is tmpfs - wiped on every boot.
+        # This is "ephemeral root + selective home persistence" for paranoid.
         users.player = {
           directories = [
             "Data"
@@ -58,6 +76,7 @@ in {
         };
 
         users."ghost" = {
+          home = "/persist/home-ghost";  # Selective impermanence: tmpfs home + allowlist
           directories = [
             "Downloads"
             "Documents"

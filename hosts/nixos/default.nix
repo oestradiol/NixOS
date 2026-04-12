@@ -34,7 +34,7 @@
 
   # System-wide staged controls — these affect the bootloader and initrd,
   # which are shared across all specialisations. Flip to true only after
-  # the first successful encrypted boot. See docs/POST-INSTALL.md.
+  # the first successful encrypted boot. See docs/POST-STABILITY.md.
   myOS.security.secureBoot.enable = false;
   myOS.security.tpm.enable = false;
 

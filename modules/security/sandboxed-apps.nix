@@ -5,10 +5,11 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.myOS.security.sandboxedApps;
+  inherit (config.myOS) profile;
 
   # Generic bubblewrap wrapper for GUI applications
   # Similar to browser.nix mkSandboxedBrowser but for general apps
-  mkSandboxedApp = { name, package, binaryName ? name, extraBinds ? [], extraArgs ? "" }: 
+  mkSandboxedApp = { name, package, binaryName ? name, extraBinds ? [], extraArgs ? "", bindVar ? true }: 
     pkgs.writeShellScriptBin "safe-${name}" ''
       set -eu
       
@@ -41,7 +42,7 @@ let
         --ro-bind /lib /lib \
         --ro-bind /lib64 /lib64 \
         --ro-bind /run /run \
-        --ro-bind /var /var \
+        ''${lib.optionalString bindVar "--ro-bind /var /var \\"} \
         --bind "$RUNTIME" "$HOME" \
         --tmpfs /tmp \
         ''${WAYLAND_SOCK:+--ro-bind "$WAYLAND_SOCK" "$WAYLAND_SOCK"} \
@@ -63,17 +64,19 @@ let
     '';
 
   # VRCX (VRChat utility) - not on Flathub
-  safeVrcx = mkSandboxedApp {
+  # Daily profile apps: bind /var for compatibility
+  safeVrcxDaily = mkSandboxedApp {
     name = "vrcx";
     package = pkgs.vrcx;
     binaryName = "VRCX";
+    bindVar = true;
   };
 
-  # Windsurf (Code editor) - not on Flathub
-  safeWindsurf = mkSandboxedApp {
+  safeWindsurfDaily = mkSandboxedApp {
     name = "windsurf";
     package = pkgs.windsurf;
     binaryName = "windsurf";
+    bindVar = true;
     extraBinds = [
       { from = "$HOME/.config/Windsurf"; to = "$HOME/.config/Windsurf"; }
       { from = "$HOME/.local/share/Windsurf"; to = "$HOME/.local/share/Windsurf"; }
@@ -116,11 +119,16 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = [
-      safeVrcx
-      safeWindsurf
-      safeVrcxDesktop
-      safeWindsurfDesktop
+    environment.systemPackages = lib.mkMerge [
+      # Daily profile: VRCX and Windsurf with /var bind for compatibility
+      (lib.mkIf (profile == "daily") [
+        safeVrcxDaily
+        safeWindsurfDaily
+        safeVrcxDesktop
+        safeWindsurfDesktop
+      ])
+      # Paranoid profile: no sandboxed apps (uses Flatpak and VM isolation instead)
+      (lib.mkIf (profile == "paranoid") [])
     ];
   };
 }

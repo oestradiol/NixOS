@@ -51,10 +51,13 @@
     options = [ "subvol=@home-daily" "compress=zstd" "noatime" ];
   };
 
-  fileSystems."/home/ghost" = {
+  # Paranoid profile: selective home impermanence (tmpfs root + allowlist)
+  # @home-paranoid subvolume mounted to /persist/home-ghost for impermanence
+  # /home/ghost itself is tmpfs - only allowlisted items persist
+  fileSystems."/persist/home-ghost" = {
     device = "/dev/mapper/cryptroot";
     fsType = "btrfs";
-    neededForBoot = true; # Required for impermanence
+    neededForBoot = true;
     options = [ "subvol=@home-paranoid" "compress=zstd" "noatime" ];
   };
 

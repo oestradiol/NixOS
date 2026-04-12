@@ -1,11 +1,20 @@
 { config, lib, pkgs, ... }:
 let
   # Browser sandboxing: UID isolation (100000:100000), process namespace, minimal FS access
-  # Note: Network namespace is NOT isolated (--unshare-net not used) because:
-  #   - safe-tor-browser needs host Tor daemon access
-  #   - safe-mullvad-browser needs host Mullvad VPN
-  #   - safe-firefox uses host network for VPN connectivity
-  # If browser is compromised, host UID is unmapped (UID 100000 not mapped to host)
+  #
+  # ISOLATION PROVIDED:
+  # - UID namespace: browser runs as UID 100000 (unmapped on host)
+  # - IPC/PID/UTS namespaces for process isolation
+  # - Capability dropping (--cap-drop ALL)
+  #
+  # ISOLATION LIMITATIONS (read carefully):
+  # - Network namespace is NOT isolated (--unshare-net not used) because browsers
+  #   need host network for VPN/Tor connectivity
+  # - Broad host paths bound read-only: /run, /var, /etc — exposes host runtime state
+  # - GPU passthrough (--dev-bind /dev/dri) — GPU drivers are known escape vectors
+  # - These wrappers provide HELPFUL CONTAINMENT, not "trustworthy hostile-content isolation"
+  #
+  # For maximum isolation of untrusted content, use VM isolation instead.
   mkSandboxedBrowser = { name, package, binaryName ? name, extraBinds ? [] }: 
     pkgs.writeShellScriptBin "safe-${name}" ''
       set -eu
@@ -118,12 +127,14 @@ let
     user_pref("network.proxy.socks_remote_dns", true);
     user_pref("network.file.disable_unc_paths", true);
     user_pref("network.gio.supported-protocols", "");
-    // Mullvad DNS over HTTPS - PARANOID PROFILE (all.dns.mullvad.net)
-    // Blocks ads, trackers, malware, and gambling. Maximum filtering.
-    // When VPN is active, this routes through the tunnel. When VPN is down, fails closed.
-    user_pref("network.trr.mode", 2); // DoH with system fallback
-    user_pref("network.trr.uri", "https://all.dns.mullvad.net/dns-query");
-    user_pref("network.trr.bootstrapAddress", "194.242.2.2");
+    // PARANOID PROFILE: Use Mullvad VPN server DNS (no DoH)
+    // Mullvad's VPN server DNS provides same filtering (all.dns) without double-hop latency.
+    // This follows vendor guidance and ensures DNS always goes through VPN tunnel.
+    // DoH is disabled (TRR mode 0) to prevent any external DoH leaks.
+    //
+    // NOTE: When VPN is connected, Mullvad's server DNS is used automatically.
+    // When VPN is disconnected, no DNS leaks due to nftables killswitch.
+    user_pref("network.trr.mode", 0); // DoH disabled - use VPN server DNS only
     
     // [SECTION 0800]: LOCATION BAR / SEARCH
     user_pref("browser.search.suggest.enabled", false);
@@ -156,8 +167,10 @@ let
     user_pref("media.peerconnection.ice.proxy_only_if_behind_proxy", true);
     user_pref("media.peerconnection.ice.default_address_only", true);
     
-    // [SECTION 2400]: DOM
-    user_pref("privacy.firstparty.isolate", true); // dFPI
+    // [SECTION 2400]: DOM - FPI enabled for maximum isolation
+    // FPI (First-Party Isolate) provides stronger cookie isolation than ETP Strict + TCP alone.
+    // This is an intentional hardening choice for paranoid profile - security over alignment.
+    user_pref("privacy.firstparty.isolate", true);
     user_pref("privacy.firstparty.isolate.restrict_opener_access", true);
     
     // [SECTION 2600]: MISC
@@ -323,8 +336,9 @@ in {
         Fingerprinting = true;
       };
       Preferences = {
-        # === MAXIMAL DAILY HARDENING (Arkenfox v140+ aligned) ===
-        # Uses FPP (Fingerprinting Protection) with ETP Strict per arkenfox latest.
+        # === MAXIMAL DAILY HARDENING (Arkenfox-aligned) ===
+        # Uses FPP (Fingerprinting Protection) with ETP Strict per arkenfox v140+.
+        # Aligned preferences: FPI disabled, ETP Strict + TCP enabled, DoH optional
         # Gaming happens in Steam/VRCX, not browser. RFP disabled to reduce breakage.
 
         # [SECTION 0100]: STARTUP - reduce fingerprinting/telemetry surface
@@ -376,7 +390,12 @@ in {
         "browser.urlbar.speculativeConnect.enabled" = false;
 
         # [SECTION 0700]: DNS - Mullvad DoH (base.dns.mullvad.net) - DAILY PROFILE
-        # Blocks ads and trackers only. Less restrictive than paranoid's all.dns.
+        # Blocks ads, trackers, and malware. Less restrictive than paranoid's all.dns.
+        #
+        # NOTE: Mullvad recommends using VPN server DNS when connected to VPN.
+        # Using external DoH when VPN is active adds latency with negligible security benefit.
+        # This is an explicit design choice that conflicts with current vendor guidance since we might have VPN off.
+        # See: https://mullvad.net/en/help/dns-over-https-and-dns-over-tls
         "network.proxy.socks_remote_dns" = true;
         "network.file.disable_unc_paths" = true;
         "network.gio.supported-protocols" = "";
@@ -415,13 +434,17 @@ in {
         "media.peerconnection.ice.proxy_only_if_behind_proxy" = true;
         "media.peerconnection.ice.default_address_only" = true;
 
-        # [SECTION 2400]: DOM - first-party isolation
-        "privacy.firstparty.isolate" = true;
+        # [SECTION 2400]: DOM - arkenfox-aligned: ETP Strict + Total Cookie Protection
+        # FPI disabled per arkenfox v96+ guidance. ETP Strict + TCP provides good isolation
+        # with less site breakage than FPI. This aligns with upstream recommendations.
+        # See: https://github.com/arkenfox/user.js/issues/1345
+        "privacy.firstparty.isolate" = false;  # Disabled per arkenfox - use TCP instead
+        "browser.contentblocking.category" = "strict";  # ETP Strict
         "privacy.firstparty.isolate.restrict_opener_access" = true;
 
         # [SECTION 2600]: MISC - various privacy settings
         "network.cookie.cookieBehavior" = 5;  # dFPI + reject cross-site
-        "browser.contentblocking.category" = "strict";
+        # Note: browser.contentblocking.category already set to "strict" above
         "extensions.pocket.enabled" = false;
         "identity.fxaccounts.enabled" = false;  # Firefox Sync
         "extensions.enabledScopes" = 5;  # Limit extension sources
