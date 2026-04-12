@@ -40,9 +40,11 @@ in {
 
   users.users."ghost" = {
     isNormalUser = true;
+    uid = 1001;  # Explicit for hardware-target.nix tmpfs mount
     description = "Hardened workspace";
     home = "/home/ghost";
     shell = pkgs.zsh;
+    group = "users";  # Use standard users group (GID typically 100)
     extraGroups = [
       "networkmanager"
       "video"

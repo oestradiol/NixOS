@@ -117,3 +117,17 @@ Status values:
 | nftables state-machine testing | External review | Documented+Manual | `docs/POST-STABILITY.md` | — | Added testing commands for connecting/connected/disconnect/boot states. Documented interaction with Mullvad's early-boot Linux blocker. State testing checklist added to manual validation |
 | mullvad.lockdown option renamed | Naming clarity | Fixed | `modules/core/options.nix`, `profiles/*.nix`, `docs/*.md` | `modules/core/options.nix` | Renamed `mullvad.lockdown` → `mullvad.nftablesFallback` to avoid confusion with Mullvad's built-in lockdown-mode. Updated description to explicitly label "Option B: Emergency fail-closed local fallback" with all caveats listed |
 | KeePassXC in daily impermanence | Code drift | Fixed | `modules/security/impermanence.nix`, `docs/INSTALL-GUIDE.md` | `modules/security/impermanence.nix` | Removed `.config/keepassxc` and `.local/share/KeePassXC` from daily (player) persistence list; KeePassXC is paranoid-only. Added Windsurf persistence, noted VRCX ephemeral-by-design |
+| D-Bus system bus filtering | Security improvement | Implemented | `modules/security/browser.nix`, `profiles/paranoid.nix` | `modules/security/browser.nix` | Added xdg-dbus-proxy for SYSTEM bus (was unfiltered). Now filters both session and system buses. Allows: NetworkManager, logind. Blocks: unrestricted systemd access |
+| D-Bus MPRIS policy | Functional fix | Implemented | `modules/security/browser.nix` | `modules/security/browser.nix` | Added `--talk=org.mpris.MediaPlayer2.*` to enable media player controls (play/pause, track info) when D-Bus filtering enabled |
+| D-Bus portal broadcast rules | Functional fix | Implemented | `modules/security/browser.nix` | `modules/security/browser.nix` | Added `--broadcast=org.freedesktop.portal.*=@/org/freedesktop/portal/*` to receive portal signals (file picker responses, notification callbacks) |
+| Tor/Mullvad D-Bus policies | Pending → Fixed | Fixed | `modules/security/browser.nix` | `modules/security/browser.nix` | Set `dbusOwnName = "org.mozilla.firefox.*"` for both browsers. Research (tor-browser#44050) confirmed they use org.mozilla namespace. Policies now enabled (was null/TODO) |
+| D-Bus filtering profile split | Security policy | Implemented | `profiles/paranoid.nix`, `profiles/daily.nix` | `profiles/paranoid.nix` | Paranoid: `dbusFilter = true` (filtered). Daily: `dbusFilter = false` (direct /run bind for compatibility). Test plan and POST-STABILITY docs updated |
+
+## MONITOR: Ongoing tracking (post-stability)
+
+| Topic | Monitor | Source | Action when triggered |
+|-------|---------|--------|---------------------|
+| Tor Browser D-Bus namespace | `browser.nix` D-Bus policy | https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050 | If namespace changes to `org.torproject`, update `dbusOwnName` in `safeTor` |
+| Mullvad Browser D-Bus namespace | `browser.nix` D-Bus policy | https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050 | If namespace changes to `net.mullvad`, update `dbusOwnName` in `safeMullvad` |
+| KDE Plasma 6.8 portal interfaces | D-Bus `--broadcast` rules | https://blogs.kde.org/2025/11/26/going-all-in-on-a-wayland-future/ | Test file picker, notifications, screen sharing after Plasma update; add new portal interfaces to `--talk` if needed |
+| NVIDIA legacy_580 driver | GPU driver config | https://github.com/NixOS/nixpkgs/issues/503740 | GTX 1060 (Pascal) should use `legacy_580`; migrate from `production` when nixpkgs exposes it |

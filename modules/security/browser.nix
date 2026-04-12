@@ -13,11 +13,16 @@ let
   #
   # ISOLATION LIMITATIONS (read carefully):
   # - Network namespace is NOT isolated (--unshare-net not used) — browser has full host network
-  # - Broad host paths bound read-only: /run, /var, /etc — exposes host runtime state
+  # - Selective /run binds: XDG runtime, D-Bus system socket (not full /run)
   # - GPU passthrough (--dev-bind /dev/dri) — GPU drivers are known escape vectors via DMA
   # - D-Bus filtering is OPTIONAL (disabled by default) — enable via myOS.security.sandboxedBrowsers.dbusFilter
-  #   When disabled: /run binding exposes D-Bus, Pulse/PipeWire sockets — potential breakout paths
+  #   When disabled: D-Bus system socket still exposed — potential breakout path
   # - Even with D-Bus filtering, these wrappers provide DAMAGE REDUCTION, not strong isolation
+  #
+  # COMPATIBILITY TRADE-OFFS (daily profile):
+  # - Full /var access for system state compatibility (Flatpak, systemd user sessions)
+  # - /etc read-only for system configuration
+  # - /dev/dri for GPU rendering (no software rendering fallback)
   #
   # SECURITY REALITY CHECK:
   # These wrappers provide DAMAGE REDUCTION for accidental misclicks and basic containment.
@@ -25,7 +30,23 @@ let
   # For malicious PDFs, suspicious executables, or untrusted web content: use VM isolation.
   #
   # For maximum isolation: enable myOS.security.vmIsolation and run browsers in a VM.
-  mkSandboxedBrowser = { name, package, binaryName ? name, extraBinds ? [], dbusOwnName ? null }: 
+  #
+  # References:
+  # - Tor Browser D-Bus namespace: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
+  # - xdg-dbus-proxy man page: https://man.archlinux.org/man/xdg-dbus-proxy.1.en
+  # - bubblewrap D-Bus security: https://github.com/containers/bubblewrap/blob/main/README.md
+  mkSandboxedBrowser = { 
+    name, 
+    package, 
+    binaryName ? name, 
+    # CONSERVATIVE DEFAULT: no extra binds (add only what's needed per-app)
+    extraBinds ? [], 
+    # CONSERVATIVE DEFAULT: no D-Bus own-name (null = no --own policy)
+    # Set to "org.mozilla.firefox.*" or browser-specific namespace
+    dbusOwnName ? null,
+    # CONSERVATIVE DEFAULT: false (don't add user.js - only Firefox needs this)
+    injectUserJS ? false,
+  }: 
     let
       dbusOwnArg = if dbusOwnName != null then "--own=${dbusOwnName}" else "";
     in
@@ -37,6 +58,13 @@ let
       CACHE="$RUNTIME/cache"
       mkdir -p "$PROFILE" "$CACHE"
       
+      # Inject hardened user.js if requested (Firefox only)
+      ${if injectUserJS then ''
+      if [[ ! -f "$PROFILE/user.js" ]]; then
+        cp ${hardenedUserJS} "$PROFILE/user.js"
+      fi
+      '' else "# No user.js injection for this browser\n      :"}
+      
       # GPU and display sockets
       DISPLAY_SOCK="''${WAYLAND_DISPLAY:-$DISPLAY}"
       [[ -n "''${WAYLAND_DISPLAY:-}" ]] && WAYLAND_SOCK="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
@@ -45,20 +73,40 @@ let
       
       # D-Bus filtering setup (when enabled)
       DBUS_PROXY_SOCK=""
+      DBUS_SYSTEM_PROXY_SOCK=""
       ${if cfg.dbusFilter then ''
       DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
-      # Start xdg-dbus-proxy for filtered D-Bus access
-      # Allows: own name (browser-specific), talk to portal, talk to a11y bus
-      # Blocks: unrestricted system/session bus access
+      DBUS_SYSTEM_PROXY_SOCK="$RUNTIME/dbus-system-proxy.sock"
+      
+      # Start xdg-dbus-proxy for filtered SESSION bus access
+      # Allows: own name, talk to portal, a11y, MPRIS, receive portal signals
+      # Blocks: unrestricted session bus access
       ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
         "$DBUS_SESSION_BUS_ADDRESS" \
         "$DBUS_PROXY_SOCK" \
         --filter \
         ${dbusOwnArg} \
         --talk=org.freedesktop.portal.* \
-        --talk=org.a11y.Bus &
+        --talk=org.a11y.Bus \
+        --talk=org.mpris.MediaPlayer2.* \
+        --broadcast=org.freedesktop.portal.*=@/org/freedesktop/portal/* &
       DBUS_PID=$!
-      cleanup() { kill $DBUS_PID 2>/dev/null || true; }
+      
+      # Start xdg-dbus-proxy for filtered SYSTEM bus access
+      # Allows: limited system services (NetworkManager for captive portal, systemd for logind)
+      # Blocks: unrestricted system bus access (systemd exploitation risk)
+      ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
+        "unix:path=/run/dbus/system_bus_socket" \
+        "$DBUS_SYSTEM_PROXY_SOCK" \
+        --filter \
+        --talk=org.freedesktop.NetworkManager \
+        --talk=org.freedesktop.login1 &
+      DBUS_SYSTEM_PID=$!
+      
+      cleanup() { 
+        kill $DBUS_PID 2>/dev/null || true
+        kill $DBUS_SYSTEM_PID 2>/dev/null || true
+      }
       trap cleanup EXIT
       '' else "# D-Bus filtering disabled — direct /run access allows full D-Bus access (breakage risk)\n      :"}
       
@@ -79,7 +127,10 @@ let
         --ro-bind /sbin /sbin \
         --ro-bind /lib /lib \
         --ro-bind /lib64 /lib64 \
-        ${if cfg.dbusFilter then "# D-Bus filtered via proxy — limited access\n        --ro-bind \"$DBUS_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/bus\"" else "--ro-bind /run /run"} \
+        # Selective /run binds (not full /run) — daily compatibility profile
+        --ro-bind /run/user/$(id -u) /run/user/$(id -u) \
+        ${if cfg.dbusFilter then "# D-Bus filtered via proxy — session + system bus\n        --ro-bind \"$DBUS_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/bus\" \\ 
+        --ro-bind \"$DBUS_SYSTEM_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/system-bus-proxy.sock\"" else "--ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"} \\
         --ro-bind /var /var \
         --bind "$RUNTIME" "$HOME" \
         --tmpfs /tmp \
@@ -96,7 +147,7 @@ let
         --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR" \
         --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
         --setenv DISPLAY "$DISPLAY" \
-        ${if cfg.dbusFilter then "--setenv DBUS_SESSION_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/bus\"" else ""} \
+        ${if cfg.dbusFilter then "--setenv DBUS_SESSION_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/bus\" --setenv DBUS_SYSTEM_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/system-bus-proxy.sock\"" else ""} \\
         --cap-drop ALL \
         ${package}/bin/${binaryName} --no-remote --profile "$PROFILE" "$@"
     '';
@@ -243,95 +294,36 @@ let
     user_pref("network.connectivity-service.enabled", false);
   '';
   
-  safeFirefox = pkgs.writeShellScriptBin "safe-firefox" ''
-    set -eu
-    
-    RUNTIME="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/safe-firefox"
-    PROFILE="$RUNTIME/profile"
-    CACHE="$RUNTIME/cache"
-    mkdir -p "$PROFILE" "$CACHE"
-    
-    # Inject hardened user.js if not present
-    if [[ ! -f "$PROFILE/user.js" ]]; then
-      cp ${hardenedUserJS} "$PROFILE/user.js"
-    fi
-    
-    # GPU and display sockets
-    DISPLAY_SOCK="''${WAYLAND_DISPLAY:-$DISPLAY}"
-    [[ -n "''${WAYLAND_DISPLAY:-}" ]] && WAYLAND_SOCK="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
-    [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]] && PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
-    [[ -d /dev/dri ]] && GPU_DEV="/dev/dri"
-    
-    # D-Bus filtering setup (when enabled)
-    DBUS_PROXY_SOCK=""
-    ${if cfg.dbusFilter then ''
-    DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
-    ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
-      "$DBUS_SESSION_BUS_ADDRESS" \
-      "$DBUS_PROXY_SOCK" \
-      --filter \
-      --own=org.mozilla.firefox.* \
-      --talk=org.freedesktop.portal.* \
-      --talk=org.a11y.Bus &
-    DBUS_PID=$!
-    cleanup() { kill $DBUS_PID 2>/dev/null || true; }
-    trap cleanup EXIT
-    '' else "# D-Bus filtering disabled\n    :"}
-    
-    exec ${pkgs.bubblewrap}/bin/bwrap \
-      --new-session \
-      --die-with-parent \
-      --unshare-user \
-      --uid 100000 --gid 100000 \
-      --unshare-ipc \
-      --unshare-pid \
-      --unshare-uts \
-      --proc /proc \
-      --dev /dev \
-      --ro-bind /nix /nix \
-      --ro-bind /etc /etc \
-      --ro-bind /usr /usr \
-      --ro-bind /bin /bin \
-      --ro-bind /sbin /sbin \
-      --ro-bind /lib /lib \
-      --ro-bind /lib64 /lib64 \
-      ${if cfg.dbusFilter then "--ro-bind \"$DBUS_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/bus\"" else "--ro-bind /run /run"} \
-      --ro-bind /var /var \
-      --bind "$RUNTIME" "$HOME" \
-      --tmpfs /tmp \
-      ''${WAYLAND_SOCK:+--ro-bind "$WAYLAND_SOCK" "$WAYLAND_SOCK"} \
-      ''${PIPEWIRE_SOCK:+--ro-bind "$PIPEWIRE_SOCK" "$PIPEWIRE_SOCK"} \
-      ''${GPU_DEV:+--dev-bind /dev/dri /dev/dri} \
-      --dev-bind /dev/null /dev/null \
-      --dev-bind /dev/zero /dev/zero \
-      --dev-bind /dev/random /dev/random \
-      --dev-bind /dev/urandom /dev/urandom \
-      --dev-bind /dev/tty /dev/tty \
-      ${if cfg.dbusFilter then "--setenv DBUS_SESSION_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/bus\"" else ""} \
-      --setenv HOME "$HOME" \
-      --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR" \
-      --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
-      --setenv DISPLAY "$DISPLAY" \
-      --cap-drop ALL \
-      ${pkgs.firefox}/bin/firefox --no-remote --profile "$PROFILE" "$@"
-  '';
+  # Firefox: hardened with user.js injection (only difference from generic)
+  safeFirefox = mkSandboxedBrowser {
+    name = "firefox";
+    package = pkgs.firefox;
+    binaryName = "firefox";
+    dbusOwnName = "org.mozilla.firefox.*";
+    injectUserJS = true;  # Firefox-specific: inject hardened user.js
+  };
   
+  # Tor Browser: minimal differences from Firefox
+  # D-Bus namespace: uses org.mozilla (not org.torproject yet)
+  # GitLab issue: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
+  # MONITOR: Check if Tor Browser changes D-Bus namespace in future releases
   safeTor = mkSandboxedBrowser {
     name = "tor-browser";
     package = pkgs.tor-browser;
     binaryName = "tor-browser";
-    # Tor Browser uses its own D-Bus namespace, not Firefox's
-    # TODO: Verify actual Tor Browser D-Bus names at runtime
-    dbusOwnName = null;  # Disabled until verified: Tor Browser D-Bus policy needs live testing
+    dbusOwnName = "org.mozilla.firefox.*";  # Same as Firefox until GitLab issue resolved
   };
   
+  # Mullvad Browser: minimal differences from Firefox
+  # D-Bus namespace: uses org.mozilla (not net.mullvad yet)
+  # GitLab issue: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
+  # MONITOR: Check if Mullvad Browser changes D-Bus namespace in future releases
+  # MONITOR: KDE Plasma 6.8+ may introduce new portal interfaces - verify compatibility
   safeMullvad = mkSandboxedBrowser {
     name = "mullvad-browser";
     package = pkgs.mullvad-browser;
     binaryName = "mullvad-browser";
-    # Mullvad Browser is Firefox-based but uses its own D-Bus namespace
-    # TODO: Verify actual Mullvad Browser D-Bus names at runtime
-    dbusOwnName = null;  # Disabled until verified: Mullvad Browser D-Bus policy needs live testing
+    dbusOwnName = "org.mozilla.firefox.*";  # Same as Firefox until GitLab issue resolved
   };
   # Desktop entries for sandboxed browsers
   mkBrowserDesktop = { name, exec, icon, comment, genericName ? null }:

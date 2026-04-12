@@ -61,6 +61,15 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Flatpak apps have desktop entries in KDE menu
 - [ ] Sandboxed apps have desktop entries in KDE menu
 
+## D-Bus filtering (paranoid profile)
+- [ ] `safe-firefox` launches with D-Bus filtering enabled
+- [ ] Browser extensions load correctly
+- [ ] File pickers (portal) work via xdg-dbus-proxy
+- [ ] Desktop notifications work (if enabled)
+- [ ] No D-Bus errors in `journalctl --user -u xdg-dbus-proxy`
+
+**If D-Bus filtering breaks functionality**: Disable in paranoid.nix: `sandboxedBrowsers.dbusFilter = lib.mkForce false`
+
 ## Mullvad and leak testing
 - [ ] daily can connect to Mullvad (`mullvad status`)
 - [ ] paranoid can connect to Mullvad

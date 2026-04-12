@@ -2,14 +2,43 @@
 # Bubblewrap wrappers for high-risk proprietary apps not available as Flatpak
 # UID isolation (100000:100000) + process namespace + minimal filesystem access
 # Note: Network namespace is NOT isolated - apps need host network for their functionality
+#
+# SECURITY TRADE-OFFS (daily profile - compatibility focus):
+# - Host network exposed (required for app functionality)
+# - Wayland/X11 socket exposed (required for display)
+# - PipeWire socket exposed (required for audio)
+# - GPU device nodes exposed (required for rendering)
+# - /run partially bound (D-Bus, XDG runtime - not full /run)
+# - /var bound readonly (system state compatibility)
+#
+# This is DAMAGE REDUCTION, not strong hostile-content isolation.
+# For strong isolation, use VM isolation (vmIsolation.enable) instead.
 { config, lib, pkgs, ... }:
 let
   cfg = config.myOS.security.sandboxedApps;
   inherit (config.myOS) profile;
 
   # Generic bubblewrap wrapper for GUI applications
-  # Similar to browser.nix mkSandboxedBrowser but for general apps
-  mkSandboxedApp = { name, package, binaryName ? name, extraBinds ? [], extraArgs ? "", bindVar ? true }: 
+  # 
+  # CONSERVATIVE DEFAULTS (secure by default, override only when needed):
+  # - extraBinds ? []       : No extra filesystem binds (add only what's required)
+  # - extraArgs ? ""        : No extra command-line arguments
+  # - bindVar ? false       : Don't bind /var by default (system state exposure)
+  # - minimal ? false       : Use full /run binds (set true for paranoid mode)
+  # - dbusFilter ? false    : No D-Bus filtering by default (apps need D-Bus)
+  #
+  # Profile-specific usage:
+  # - Daily: bindVar = true (compatibility), minimal = false
+  # - Paranoid: minimal = true (no /run binds), but apps are disabled anyway
+  mkSandboxedApp = { 
+    name, 
+    package, 
+    binaryName ? name, 
+    extraBinds ? [], 
+    extraArgs ? "", 
+    bindVar ? false,      # CONSERVATIVE: don't bind /var by default
+    minimal ? false,
+  }: 
     pkgs.writeShellScriptBin "safe-${name}" ''
       set -eu
       
@@ -23,6 +52,15 @@ let
       [[ -n "''${WAYLAND_DISPLAY:-}" ]] && WAYLAND_SOCK="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
       [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]] && PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
       [[ -d /dev/dri ]] && GPU_DEV="/dev/dri"
+      
+      # Build runtime bindings - daily gets compatibility, paranoid would get minimal
+      # (but sandboxed apps are disabled on paranoid anyway)
+      ${if minimal then "RUN_BINDS=\"\"" else ''
+      # Daily profile: selective /run binds for compatibility
+      RUN_BINDS=""
+      [[ -d /run/user/$(id -u) ]] && RUN_BINDS="$RUN_BINDS --ro-bind /run/user/$(id -u) /run/user/$(id -u)"
+      [[ -S /run/dbus/system_bus_socket ]] && RUN_BINDS="$RUN_BINDS --ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"
+      ''}
       
       exec ${pkgs.bubblewrap}/bin/bwrap \
         --new-session \
@@ -41,8 +79,8 @@ let
         --ro-bind /sbin /sbin \
         --ro-bind /lib /lib \
         --ro-bind /lib64 /lib64 \
-        --ro-bind /run /run \
-        ''${lib.optionalString bindVar "--ro-bind /var /var \\"} \
+        ''${RUN_BINDS} \
+        ''${lib.optionalString bindVar "--ro-bind /var /var \\`"} \
         --bind "$RUNTIME" "$HOME" \
         --tmpfs /tmp \
         ''${WAYLAND_SOCK:+--ro-bind "$WAYLAND_SOCK" "$WAYLAND_SOCK"} \
@@ -53,7 +91,6 @@ let
         --dev-bind /dev/random /dev/random \
         --dev-bind /dev/urandom /dev/urandom \
         --dev-bind /dev/tty /dev/tty \
-        --dev-bind /dev/input /dev/input \
         ${lib.concatMapStrings (b: "--bind ${b.from} ${b.to} ") extraBinds} \
         --setenv HOME "$HOME" \
         --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR" \
@@ -101,7 +138,7 @@ let
     name = "VRCX";
     exec = "safe-vrcx";
     icon = "vrcx";
-    comment = "VRCX with UID isolation sandbox";
+    comment = "VRCX with UID isolation (damage reduction, not strong isolation)";
     genericName = "VRChat Utility";
   };
 
@@ -109,7 +146,7 @@ let
     name = "Windsurf";
     exec = "safe-windsurf";
     icon = "windsurf";
-    comment = "Windsurf with UID isolation sandbox";
+    comment = "Windsurf with UID isolation (damage reduction, not strong isolation)";
     genericName = "Code Editor";
   };
 

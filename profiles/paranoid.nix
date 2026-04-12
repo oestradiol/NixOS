@@ -27,8 +27,9 @@
     mullvad.enable = lib.mkForce true;
     mullvad.nftablesFallback = lib.mkForce true;  # Option B: Emergency fail-closed local fallback
 
-    # Browser security (sandboxed only)
+    # Browser security (sandboxed only, with D-Bus filtering)
     sandboxedBrowsers.enable = lib.mkForce true;
+    sandboxedBrowsers.dbusFilter = lib.mkForce true;  # Filtered D-Bus for stronger isolation
 
     # CPU/System hardening
     disableSMT = lib.mkForce true;
@@ -48,7 +49,8 @@
     # Debug and privilege restrictions
     ptraceScope = lib.mkForce 2;  # Strictest: attached-only
 
-    # VM and app sandboxing
+    # VM tooling enabled (libvirtd, QEMU, KVM) — capability available, not automatic enforcement
+    # To actually isolate browsers/apps in VMs: manually create VMs and run workloads there
     vmIsolation.enable = lib.mkForce true;
     sandboxedApps.enable = lib.mkForce true;
 
