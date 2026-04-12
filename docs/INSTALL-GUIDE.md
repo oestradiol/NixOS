@@ -76,7 +76,11 @@ Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 `/` is tmpfs — everything not allowlisted is discarded on reboot.
 
 ### System persistence allowlist
-`/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth`, `/var/lib/flatpak`, `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn`, SSH host keys, `/etc/machine-id`
+`/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth`, `/var/lib/flatpak`, `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn`, SSH host keys
+
+**Note**: `/etc/machine-id` is **profile-dependent**:
+- **daily**: persisted (operational stability for D-Bus, Steam, network)
+- **paranoid**: ephemeral (randomized each boot for privacy)
 
 ### Daily user persistence
 Data, Steam state, Vesktop/Signal state, Bitwarden config, keyrings, GPG, SSH, shell history

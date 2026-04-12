@@ -2,6 +2,7 @@
 let
   persistRoot = config.myOS.persistence.root;
   impermanenceEnabled = config.myOS.security.impermanence.enable;
+  persistMachineId = config.myOS.security.persistMachineId;
 in {
   config = lib.mkMerge [
     (lib.mkIf impermanenceEnabled {
@@ -19,7 +20,11 @@ in {
         ];
 
         files = [
+          # machine-id: daily gets persistence (operational stability)
+          # paranoid gets random (privacy - less fingerprintable)
+        ] ++ lib.optionals persistMachineId [
           "/etc/machine-id"
+        ] ++ [
           "/etc/ssh/ssh_host_ed25519_key"
           "/etc/ssh/ssh_host_ed25519_key.pub"
           "/etc/ssh/ssh_host_rsa_key"

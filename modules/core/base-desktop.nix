@@ -101,4 +101,11 @@
     device = "/swap/swapfile";
     size = 8192;
   }];
+
+  # SSD TRIM: periodic fstrim (safer than real-time discard for LUKS)
+  services.fstrim.enable = true;
+
+  # Sleep states (suspend/hibernate) controlled by security option (disabled by default)
+  # Rationale: 16GB RAM + 8GB swap insufficient; NVIDIA suspend issues; tmpfs+LUKS complexity
+  powerManagement.enable = config.myOS.security.allowSleep;
 }

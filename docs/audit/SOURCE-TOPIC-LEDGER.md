@@ -28,7 +28,7 @@ Status values:
 | Memory-safe languages policy | Madaidan | Documented | `PROJECT-STATE.md`, this ledger | — | Keep as doctrine/research note; not enforceable here |
 | Root account hardening doctrine | Madaidan / Trimstray | Implemented+Manual | `PROJECT-STATE.md`, `docs/PRE-INSTALL.md` | `modules/security/base.nix`, `modules/core/users.nix`, `modules/security/governance.nix` | Root locked (`!`), su wheel-only; verify after install |
 | Firewalls / nftables | Madaidan / Trimstray / saylesss88 | Implemented+Manual | `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | `modules/security/networking.nix` | Validate real Mullvad/WireGuard interface behavior |
-| Identifiers / machine-id / profile separation | Madaidan | Implemented+Manual | `PROJECT-STATE.md`, `docs/INSTALL-GUIDE.md` | `modules/security/impermanence.nix`, HM user modules | Verify machine-id persistence and no cross-user state bleed |
+| Identifiers / machine-id / profile separation | Madaidan | Implemented+Manual | `PROJECT-STATE.md`, `docs/INSTALL-GUIDE.md` | `modules/security/impermanence.nix`, `modules/security/governance.nix` | daily: persistent (stability); paranoid: randomized (privacy); verify with `cat /etc/machine-id` before/after reboot |
 | File permissions / ownership hygiene | Madaidan / Trimstray | Documented | `PROJECT-STATE.md`, this ledger | various modules | Run post-install permission audit |
 | Core dumps | Madaidan | Implemented | this ledger, `docs/TEST-PLAN.md` | `modules/security/base.nix` | `systemd.coredump.extraConfig` disables storage; verify with `coredumpctl` after install |
 | Swap strategy | Madaidan / saylesss88 | Implemented | `PROJECT-STATE.md`, `docs/INSTALL-GUIDE.md` | `hosts/nixos/hardware-target.nix`, `modules/security/base.nix` | zram + 8GB Btrfs swapfile on `@swap` subvolume |
@@ -59,7 +59,7 @@ Status values:
 | Lynis | saylesss88 | Implemented+Manual | `docs/TEST-PLAN.md` | `modules/security/base.nix` | Run on rebuilt host |
 | SSH hardening / keygen guidance | saylesss88 | Documented | `docs/POST-STABILITY.md`, this ledger | — | Apply only if enabling SSH later |
 | Encrypted secrets | saylesss88 | Implemented+Manual | `PROJECT-STATE.md`, `docs/POST-STABILITY.md` | `modules/security/secrets.nix` | Create real `.age` files |
-| doas / run0 over sudo | saylesss88 | Rejected | `PROJECT-STATE.md`, this ledger | — | sudo retained for wave one; revisit later |
+| doas / run0 over sudo | saylesss88 | Deferred | `PROJECT-STATE.md`, `docs/POST-STABILITY.md` | — | sudo retained for wave one; post-stability analysis required (doas vs run0 vs keep sudo) |
 | USB port protection | saylesss88 | Implemented | `PROJECT-STATE.md`, this ledger | `modules/core/boot.nix` | `usbcore.authorized_default=2` on paranoid (internal hubs only); verify peripherals work |
 | Firejail | saylesss88 | Rejected | `PROJECT-STATE.md`, this ledger | — | Flatpak+bwrap chosen instead |
 | Flatpak | saylesss88 | Implemented | `PROJECT-STATE.md` | `modules/security/flatpak.nix` | — |
@@ -84,8 +84,8 @@ Status values:
 | Mullvad / WebRTC / DNS / Tor Browser verification | Original plan | Documented | `docs/TEST-PLAN.md`, `docs/PRE-INSTALL.md` | networking/browser modules | DNS split: daily=base.dns.mullvad.net (ads/trackers), paranoid=all.dns.mullvad.net (+malware/gambling). Verify with dnsleaktest.com |
 | LUKS header backup procedure | Audit finding (blind spot) | Documented+Manual | `docs/POST-STABILITY.md` | — | Execute after install; test restore on spare container |
 | EFI partition backup/verification | Audit finding (blind spot) | Documented+Manual | `docs/POST-STABILITY.md`, `docs/RECOVERY.md` | — | Backup after first boot; keep on external media |
-| fstrim/discard configuration | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md` | — | Decision needed: enable fstrim timer or discard |
-| Hibernation policy | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md` | — | Decision needed: disable hibernation or resize swap |
+| fstrim/discard configuration | Audit finding (blind spot) | Implemented | `docs/POST-STABILITY.md` | `modules/core/base-desktop.nix` | Option A (fstrim timer) chosen; allowDiscards disabled for LUKS safety |
+| Sleep states (suspend/hibernate) | Audit finding (blind spot) | Implemented | `docs/POST-STABILITY.md` | `modules/core/options.nix`, `modules/core/base-desktop.nix`, `profiles/*.nix` | `myOS.security.allowSleep` option (default: false); both profiles explicitly disable |
 | Yubikey/FIDO2/Passkey support | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md` | — | Consider for paranoid tier; requires PAM config |
 | WireGuard module security audit | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md` | — | Monitor CVEs; defense-in-depth via nftables killswitch |
 | Lanzaboote nuclear recovery | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md`, `docs/RECOVERY.md` | — | Extended recovery procedure for SB lockout |

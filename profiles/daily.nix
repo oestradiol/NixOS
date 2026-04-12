@@ -42,6 +42,12 @@
     impermanence.enable = true;
     agenix.enable = true;
 
+    # Machine ID: persistent on daily for operational stability (D-Bus, Steam, network)
+    persistMachineId = true;
+
+    # Sleep states disabled (16GB RAM + 8GB swap insufficient; NVIDIA issues)
+    allowSleep = false;
+
     # Staged enablement (disabled until post-install enrollment)
     # These require manual key enrollment after first successful boot
     secureBoot.enable = false;

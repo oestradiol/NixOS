@@ -484,38 +484,43 @@ dmesg | grep -i efi | grep -i -E "(error|corrupt|fail)"
 ```
 **Storage**: Keep `/persist/efi-backup-*.tar.gz` on external media, not just `@persist`.
 
-### [TODO] fstrim/discard Configuration
-**Risk**: SSD performance degradation on LUKS+Btrfs without discard.  
-**Decision needed**: Enable periodic fstrim timer?
-```bash
-# Check current discard support
-lsblk -D /dev/nvme0n1
+### [FIXED] fstrim/discard Configuration
+**Decision**: Option A implemented (periodic fstrim timer).  
+**Rationale**: Safer for LUKS — no real-time info-leak side channels from discard.  
+**Code**: `services.fstrim.enable = true;` in `base-desktop.nix`; `allowDiscards` removed from LUKS config.  
+**Verification**: Check timer is active: `systemctl list-timers | grep fstrim`
 
-# Option A: Enable periodic fstrim (safer, no real-time security implications)
-# services.fstrim.enable = true; in your config
+### [FIXED] Sleep States (Suspend/Hibernate) Policy
+**Decision**: Sleep states disabled via configurable `allowSleep` option.  
+**Rationale**: 16GB RAM + 8GB swap = insufficient for hibernation; NVIDIA proprietary drivers often have suspend/resume issues; tmpfs+LUKS adds complexity.  
+**Code**: `myOS.security.allowSleep` option (default: false), wired to `powerManagement.enable`.  
+**Current**: Both daily and paranoid explicitly set `allowSleep = false`.  
+**Verification**: `systemctl status systemd-hibernate.service` should show disabled state.  
+**To enable** (test carefully): Set `myOS.security.allowSleep = true` in your profile and verify on your hardware.
 
-# Option B: Enable real-time discard (dm-crypt has security considerations)
-# boot.initrd.luks.devices.cryptroot.allowDiscards = true;
-# Risk: Discard may leak some information about filesystem structure
-```
-**Tradeoff**: fstrim timer has no security risk but is less timely; discard enables TRIM immediately but has theoretical info-leak side channels.
+### [TODO] doas/run0 vs sudo Analysis
+**Status**: Deferred from wave one; revisit post-stability.  
+**Research question**: Should sudo be replaced with `doas` (OpenBSD, ~500 lines) or `run0` (systemd/polkit)?
 
-### [TODO] Hibernation Policy
-**Risk**: swap file + tmpfs root + encryption = hibernation complexity. 16GB RAM + 8GB swap = hibernation will fail or be unreliable.  
-**Decision needed**: Explicitly disable hibernation or resize swap?
-```bash
-# Current: check if hibernation could even work
-swapon -s  # Shows swap file size
-free -h    # Shows RAM size
-# If RAM > swap, hibernation will fail
+**Current**: sudo remains in place as conservative choice. It's battle-tested on NixOS, well-documented, and changing it adds risk without immediate security benefit for wave one.
 
-# Option A: Disable hibernation explicitly
-# powerManagement.enable = false; in config
+**Arguments for doas**:
+- Smaller attack surface (~500 lines vs sudo's 10k+)
+- Simpler configuration syntax
+- No CVE history comparable to sudo's complexity
 
-# Option B: Increase swap to RAM size + 2GB (~18GB for your system)
-# Requires recreating @swap subvolume with larger swapfile
-```
-**Note**: NVIDIA proprietary drivers often have hibernation issues regardless. Documented tradeoff in `PERFORMANCE-NOTES.md`.
+**Arguments for run0**:
+- Native systemd integration
+- Polkit-based (graphical auth dialogs possible)
+- No setuid binary (uses D-Bus activation)
+
+**Arguments against switching**:
+- sudo is standard on NixOS; community knowledge/tooling assumes it
+- doas feature gap: no per-command env vars, limited logging
+- run0: relatively new, less battle-tested in desktop scenarios
+- Both require updating all documentation and muscle memory
+
+**Post-stability task**: After system is stable, test doas or run0 in a VM/specialisation. Evaluate: (1) compatibility with existing workflows, (2) security benefit measurable vs placebo, (3) NixOS community direction. Only switch if benefit is clear and well-tested.
 
 ### [TODO] Yubikey/FIDO2/Passkey Support
 **Risk**: Modern authentication standards absent from PAM configuration.  

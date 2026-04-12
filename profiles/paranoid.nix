@@ -16,6 +16,13 @@
     impermanence.enable = lib.mkForce true;
     agenix.enable = lib.mkForce true;
 
+    # Machine ID: random on paranoid for privacy (less fingerprintable to local software)
+    # daily keeps it persistent for operational stability (D-Bus, systemd state)
+    persistMachineId = lib.mkForce false;
+
+    # Sleep states disabled (16GB RAM + 8GB swap insufficient; NVIDIA issues)
+    allowSleep = lib.mkForce false;
+
     # VPN and networking (strict)
     mullvad.enable = lib.mkForce true;
     mullvad.lockdown = lib.mkForce true;

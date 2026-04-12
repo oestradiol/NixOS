@@ -129,6 +129,33 @@
 
       # ── Sandboxed applications ─────────────────────────────────────
       sandboxedApps.enable = lib.mkEnableOption "Bubblewrap sandboxed applications for high-risk proprietary apps";
+
+      # ── Machine ID persistence ────────────────────────────────────
+      persistMachineId = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Persist /etc/machine-id across reboots via impermanence.
+          When true (default), machine-id is stable (daily: operational stability).
+          When false, machine-id is ephemeral and regenerated each boot
+          (paranoid: less fingerprintable to local software).
+        '';
+      };
+
+      # ── Sleep states (suspend/hibernate) ─────────────────────────
+      allowSleep = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Allow system sleep states: suspend, hibernate, hybrid-sleep.
+          Default is false (sleep disabled) because:
+          - 16GB RAM + 8GB swap is insufficient for hibernation
+          - NVIDIA proprietary drivers have known suspend/resume issues
+          - tmpfs root + LUKS + sleep = complexity and potential data loss
+          Both daily and paranoid profiles explicitly disable this.
+          Enable only after testing on your specific hardware.
+        '';
+      };
     };
   };
 }

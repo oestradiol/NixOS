@@ -10,7 +10,9 @@ lib.mkIf (config.myOS.gpu == "nvidia") {
 
   hardware.nvidia = {
     modesetting.enable = true;
-    powerManagement.enable = true;
+    # NVIDIA powerManagement follows allowSleep: only enable if sleep states are allowed
+    # This avoids suspend/resume issues when sleep is disabled
+    powerManagement.enable = config.myOS.security.allowSleep;
     open = lib.mkDefault false;
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
