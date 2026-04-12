@@ -174,9 +174,12 @@ nc -vzu us-nyc-wg-001.mullvad.net 51820
 findmnt /etc/shadow
 # Expected: should show /persist/etc/shadow as the source
 
-# If not mounted from persist, impermanence is broken
-# Check impermanence status
-systemctl status impermanence-daemon
+# If not mounted from persist, impermanence bind mounts may have failed
+# Check impermanence mount units
+systemctl status impermanence-persist-etc-shadow.mount 2>/dev/null || echo "Mount unit not found (may use different naming)"
+
+# Alternative: list all active impermanence-related mounts
+systemctl list-units --type=mount | grep -E "(persist|impermanence)"
 ```
 
 **Critical identity files** (must persist):

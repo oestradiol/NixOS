@@ -3,7 +3,7 @@
 **Purpose**: Verify every configuration option and security feature is tested in TEST-PLAN.md, deferred to POST-STABILITY.md, or explicitly rejected.
 
 **Date**: 2026-04-12
-**Status**: In Progress
+**Status**: Complete
 
 ## Legend
 - ✅ TEST-PLAN.md - Tested immediately after first boot
@@ -188,7 +188,7 @@ All features now have coverage in TEST-PLAN.md, POST-STABILITY.md, or are explic
 | **Implementation** | ❌ NOT IMPLEMENTED |
 | **LSM Parameter** | Not set (no `lsm=lockdown` or `lockdown=integrity/confidentiality`) |
 | **Auto-enable** | May activate via Secure Boot if `CONFIG_SECURITY_LOCKDOWN_LSM=y` |
-| **Documentation** | ❌ Not documented in POST-STABILITY.md |
+| **Documentation** | ✅ POST-STABILITY.md Section 17 (optional end-state) |
 | **Coverage** | Missing from audit ledger |
 
 **What it blocks**:
@@ -214,7 +214,7 @@ All features now have coverage in TEST-PLAN.md, POST-STABILITY.md, or are explic
 | **Implementation** | ❌ NOT IMPLEMENTED |
 | **Sysctl** | `kernel.unprivileged_userns_clone` not set (defaults to enabled) |
 | **User Limit** | `user.max_user_namespaces` not restricted |
-| **Documentation** | ❌ Not in any docs |
+| **Documentation** | ✅ SOURCE-TOPIC-LEDGER.md (rejected - conflicts with sandboxing) |
 | **Coverage** | Missing from audit ledger |
 
 **What it blocks**:

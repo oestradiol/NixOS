@@ -112,7 +112,11 @@ Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 `/` is tmpfs — everything not allowlisted is discarded on reboot.
 
 ### System persistence allowlist
-`/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth`, `/var/lib/flatpak`, `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn`, SSH host keys, `/etc/{passwd,shadow,group,gshadow,subuid,subgid}`
+`/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/flatpak`, SSH host keys, `/etc/{passwd,shadow,group,gshadow,subuid,subgid}`
+
+**Daily-only persistence** (not persisted on paranoid):
+- `/var/lib/bluetooth` — paired controllers (daily gaming use)
+- `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn` — Mullvad app state (daily VPN mode)
 
 **Note**: `/etc/machine-id` is **persisted on both profiles**:
 - **daily**: systemd-generated unique stable ID (operational stability for D-Bus, Steam, network)
