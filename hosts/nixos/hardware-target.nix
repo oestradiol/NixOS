@@ -14,7 +14,7 @@
   boot.initrd.systemd.enable = true;
   boot.initrd.luks.devices.cryptroot = {
     device = "/dev/disk/by-partlabel/NIXCRYPT";
-    allowDiscards = true;
+    # Note: allowDiscards disabled; using periodic fstrim instead (safer, no info-leak risk)
   };
 
   fileSystems."/boot" = {

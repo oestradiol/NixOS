@@ -404,6 +404,8 @@ Main use:
 - treat hardening advice as contested in places
 - avoid turning one guide into dogma
 - keep VMs as the strongest practical sandbox boundary
+- Doas over sudo
+  - `deferred` — sudo retained for wave one; post-stability analysis of doas vs run0 vs keep sudo (see POST-STABILITY.md)
 
 Repo effect:
 - more conservative “adopt selectively, test locally” stance
@@ -524,7 +526,7 @@ Status:
 - LUKS header backup procedure — `documented+manual` (execute after install; test restore)
 - EFI partition backup/verification — `documented+manual` (backup after first boot; external media)
 - fstrim/discard configuration — `documented` (decision needed: enable timer or discard)
-- Hibernation policy — `documented` (decision needed: disable or resize swap for 16GB RAM)
+- Sleep states (suspend/hibernate) — `implemented` (`myOS.security.allowSleep` option, default false; both profiles explicitly disable)
 - WireGuard module security audit — `documented` (monitor CVEs; nftables killswitch is defense-in-depth)
 - Lanzaboote nuclear recovery — `documented` (extended recovery procedure for SB lockout)
 - Bubblewrap GPU passthrough acknowledgment — `documented` (safe-firefox uses --dev-bind /dev/dri; GPU = known escape vector)

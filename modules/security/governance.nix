@@ -113,5 +113,9 @@ in {
       assertion = !isParanoid || config.myOS.security.sandboxedApps.enable;
       message = "Paranoid profile must enable sandboxed applications.";
     }
+    {
+      assertion = !isParanoid || !config.myOS.security.persistMachineId;
+      message = "Paranoid profile must NOT persist machine-id (privacy: randomized each boot).";
+    }
   ];
 }
