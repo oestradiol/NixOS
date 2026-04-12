@@ -5,12 +5,8 @@ echo "== 1. Static repo checks =="
 if command -v nix >/dev/null 2>&1; then
   echo "-- nix flake show"
   nix flake show
-  echo "-- nix flake check"
-  nix flake check || true
-  echo "-- build daily"
-  nix build .#nixosConfigurations.nixos.config.system.build.toplevel || true
-  echo "-- build paranoid specialisation"
-  nix build .#nixosConfigurations.nixos.config.specialisation.paranoid.configuration.system.build.toplevel || true
+  echo "-- nix flake check (evaluates NixOS configs)"
+  nix flake check
 else
   echo "Nix not found; skip static checks."
 fi

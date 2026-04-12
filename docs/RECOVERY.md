@@ -145,3 +145,33 @@ nc -vzu us-nyc-wg-001.mullvad.net 51820
 3. check the profile setting in `profiles/daily.nix` or `profiles/paranoid.nix`
 4. update either the option default or the profile setting
 5. ensure `PROJECT-STATE.md` reflects the intended behavior
+
+## If D-Bus filtering breaks browser functionality (paranoid)
+**Symptom**: safe-firefox, safe-tor, or safe-mullvad-browser fail to start, file picker doesn't work, or portals break after browser/KDE update.
+
+**Common causes**:
+- Tor/Mullvad Browser changed D-Bus namespace (MONITOR: gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050)
+- xdg-dbus-proxy failing to start
+- KDE portal interface changes after Plasma updates
+
+**Recovery steps**:
+```bash
+# 1. Check D-Bus proxy errors in logs
+journalctl --user -u xdg-dbus-proxy
+journalctl -xe | grep -i dbus
+
+# 2. Test browser without D-Bus filtering (temporary)
+# Edit profiles/paranoid.nix:
+myOS.security.sandboxedBrowsers.dbusFilter = lib.mkForce false;
+nixos-rebuild switch
+
+# 3. If browser works without filtering, the D-Bus policy needs updating
+# Check browser.nix for the dbusOwnName setting and compare with:
+grep dbusOwnName modules/security/browser.nix
+
+# 4. For KDE portal issues, check what interfaces changed:
+grep -r "org.freedesktop.portal" /usr/share/dbus-1/
+# Update browser.nix --talk and --broadcast rules as needed
+```
+
+**Prevention**: Test safe-* browsers after every KDE Plasma or browser update before rebooting into paranoid profile permanently.

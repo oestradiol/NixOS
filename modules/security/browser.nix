@@ -129,8 +129,8 @@ let
         --ro-bind /lib64 /lib64 \
         # Selective /run binds (not full /run) — daily compatibility profile
         --ro-bind /run/user/$(id -u) /run/user/$(id -u) \
-        ${if cfg.dbusFilter then "# D-Bus filtered via proxy — session + system bus\n        --ro-bind \"$DBUS_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/bus\" \\ 
-        --ro-bind \"$DBUS_SYSTEM_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/system-bus-proxy.sock\"" else "--ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"} \\
+        ${if cfg.dbusFilter then "# D-Bus filtered via proxy — session + system bus\n        --ro-bind \"$DBUS_PROXY_SOCK\" \"/run/user/$(id -u)/bus\" \\ 
+        --ro-bind \"$DBUS_SYSTEM_PROXY_SOCK\" \"/run/user/$(id -u)/system-bus-proxy.sock\"" else "--ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"} \\
         --ro-bind /var /var \
         --bind "$RUNTIME" "$HOME" \
         --tmpfs /tmp \
@@ -147,7 +147,7 @@ let
         --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR" \
         --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
         --setenv DISPLAY "$DISPLAY" \
-        ${if cfg.dbusFilter then "--setenv DBUS_SESSION_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/bus\" --setenv DBUS_SYSTEM_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/system-bus-proxy.sock\"" else ""} \\
+        ${if cfg.dbusFilter then "--setenv DBUS_SESSION_BUS_ADDRESS \"unix:path=/run/user/$(id -u)/bus\" --setenv DBUS_SYSTEM_BUS_ADDRESS \"unix:path=/run/user/$(id -u)/system-bus-proxy.sock\"" else ""} \\
         --cap-drop ALL \
         ${package}/bin/${binaryName} --no-remote --profile "$PROFILE" "$@"
     '';
@@ -318,7 +318,7 @@ let
   # D-Bus namespace: uses org.mozilla (not net.mullvad yet)
   # GitLab issue: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
   # MONITOR: Check if Mullvad Browser changes D-Bus namespace in future releases
-  # MONITOR: KDE Plasma 6.8+ may introduce new portal interfaces - verify compatibility
+  # MONITOR: Plasma 6.8+ drops X11 - verify XWayland compatibility, plan X disable
   safeMullvad = mkSandboxedBrowser {
     name = "mullvad-browser";
     package = pkgs.mullvad-browser;

@@ -402,6 +402,31 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 
 **Phase 3 (October 2026):** Plasma 6.8 Wayland-exclusive release drops X11 session support entirely. At that point, switch to Plasma 6.8 and evaluate SDDM Wayland greeter (currently experimental). See https://blogs.kde.org/2025/11/26/going-all-in-on-a-wayland-future/
 
+### XWayland compatibility testing (pre-Plasma 6.8)
+Before Plasma 6.8 release, test all critical applications under XWayland:
+```bash
+# Verify XWayland is handling X apps
+ps aux | grep Xwayland
+
+# Test specific apps that may have X dependencies
+xeyes        # Should display via XWayland
+xev          # Should capture events
+steam        # Should run (Proton games use XWayland)
+vrchat       # Should run via XWayland or native Wayland
+```
+
+**If apps fail under XWayland:**
+1. Check `WAYLAND_DISPLAY` environment variable is set
+2. Verify `XWAYLAND` is running: `pgrep -a Xwayland`
+3. Test with explicit X backend: `GDK_BACKEND=x11 firefox`
+4. Document workarounds in `PROJECT-STATE.md`
+
+**To disable X server (Phase 2/3 goal):**
+1. Set `services.xserver.enable = false`
+2. Enable native Wayland display manager (greetd/experimental SDDM Wayland)
+3. Verify all apps still function
+4. Remove X11-related packages from system
+
 ---
 
 ## Deferred items (post-stability decisions needed)
