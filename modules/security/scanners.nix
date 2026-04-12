@@ -14,7 +14,7 @@ let
     # Plus /tmp and /var/tmp (common malware drop zones)
     # EFI partition: bootkit target, must be scanned
     # Scan both daily and paranoid persisted directories
-    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot/efi"
+    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot"
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
       --exclude-dir='^/persist/home/ghost/etc/ssh$' \
@@ -36,7 +36,7 @@ let
     # Deep scan: comprehensive check of all persisted locations
     # Higher limits for thoroughness, runs weekly when system is idle
     # Deep scan both daily and paranoid persisted directories
-    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot/efi"
+    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot"
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
       --exclude-dir='^/persist/home/ghost/etc/ssh$' \

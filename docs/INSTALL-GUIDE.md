@@ -26,7 +26,7 @@ Inside `cryptroot` Btrfs create:
 - `@nix`
 - `@persist`
 - `@log`
-- `@swap` (then `chattr +C /mnt/swap` — nocow required for Btrfs swap)
+- `@swap` (NOCOW required — `chattr +C` applied to subvolume before mounting as `/swap`)
 - `@home-daily`
 - `@home-paranoid`
 

@@ -1,5 +1,13 @@
 # PERFORMANCE NOTES
 
+**Status**: These are *theoretical estimates* based on kernel documentation and community reports. **No systematic measurement has been performed on this hardware.**
+
+- Numbers like "<1%" and "~1-3%" are educated guesses, not benchmark results
+- Actual impact requires measurement on your specific hardware and workloads
+- See "What must be benchmarked after install" section for required validation
+
+---
+
 ## Old config vs new daily — systematic comparison
 
 ### Identical (zero performance delta)
@@ -55,7 +63,15 @@
 
 ## Net assessment
 
-**Estimated total overhead on daily vs Old: <2%**, dominated by `init_on_alloc=1` and AppArmor. Both are in the noise for GPU-bound gaming and VR. The gaming sysctls, driver config, and scheduling are identical.
+**Estimated total overhead on daily vs Old: <2%** (theoretical, unmeasured).
+
+Dominant factors in this estimate:
+- `init_on_alloc=1` — page zeroing overhead
+- AppArmor — syscall mediation overhead
+
+Both are expected to be in the noise for GPU-bound gaming, but this is **not validated by measurement**.
+
+**The gaming sysctls, driver config, and scheduling are identical between old and new configs.**
 
 ## What must be benchmarked after install
 1. Steam game frametime in 2-3 titles (before/after)

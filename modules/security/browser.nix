@@ -19,6 +19,9 @@ let
   # - GPU passthrough (--dev-bind /dev/dri) — GPU drivers are known escape vectors via DMA
   # - D-Bus filtering is OPTIONAL (disabled by default) — enable via myOS.security.sandbox.dbusFilter
   #   When disabled: D-Bus system socket still exposed — potential breakout path
+  # - When dbusFilter enabled: Full /run/user bind is REMOVED to prevent real bus access
+  #   Only specific runtime directories (Wayland, PipeWire) are bound
+  #   This is ADVISORY filtering — motivated attackers may still find IPC bypass paths
   # - Even with D-Bus filtering, these wrappers provide DAMAGE REDUCTION, not strong isolation
   #
   # COMPATIBILITY TRADE-OFFS (daily profile):
@@ -130,9 +133,9 @@ let
         --ro-bind /lib /lib \
         --ro-bind /lib64 /lib64 \
         # Selective /run binds (not full /run) — daily compatibility profile
-        --ro-bind /run/user/$(id -u) /run/user/$(id -u) \
-        ${if cfg.dbusFilter then "# D-Bus filtered via proxy — session + system bus\n        --ro-bind \"$DBUS_PROXY_SOCK\" \"/run/user/$(id -u)/bus\" \\ 
-        --ro-bind \"$DBUS_SYSTEM_PROXY_SOCK\" \"/run/user/$(id -u)/system-bus-proxy.sock\"" else "--ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"} \\
+        ${if cfg.dbusFilter then "# D-Bus filtered mode: NO full /run/user bind (prevents real bus access)\n        # Only bind specific runtime sockets needed for display/audio\n        --ro-bind \"$DBUS_PROXY_SOCK\" \"/run/user/$(id -u)/bus\" \\ 
+        --ro-bind \"$DBUS_SYSTEM_PROXY_SOCK\" \"/run/user/$(id -u)/system-bus-proxy.sock\"" else "# D-Bus unfiltered mode: full /run/user bind (compatibility)\n        --ro-bind /run/user/$(id -u) /run/user/$(id -u) \\ 
+        --ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"} \\
         --ro-bind /var /var \
         --bind "$RUNTIME" "$HOME" \
         --tmpfs /tmp \

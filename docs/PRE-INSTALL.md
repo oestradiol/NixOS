@@ -302,8 +302,8 @@ myOS.security = {
 
   wireguardMullvad = {
     enable = lib.mkForce true;
-    privateKey = config.age.secrets.wg-private-key.path;
-    presharedKey = config.age.secrets.wg-preshared-key.path;  # optional
+    privateKeyFile = config.age.secrets.wg-private-key.path;
+    presharedKeyFile = config.age.secrets.wg-preshared-key.path;  # optional
     address = "10.64.123.45/32";  # Your Mullvad-assigned tunnel IP
     endpoint = "us-nyc-wg-001.mullvad.net:51820";  # Your chosen server
     serverPublicKey = "<server-public-key-here>";  # From Mullvad config

@@ -11,6 +11,8 @@
 # - /run partially bound (D-Bus, XDG runtime - not full /run)
 # - /var bound readonly (system state compatibility)
 # - D-Bus: filtered via xdg-dbus-proxy when sandbox.dbusFilter = true
+#   When dbusFilter enabled: Full /run/user bind is REMOVED to prevent real bus access
+#   This is ADVISORY filtering — motivated attackers may still find IPC bypass paths
 #
 # This is DAMAGE REDUCTION, not strong hostile-content isolation.
 # For strong isolation, use VM isolation (sandbox.vms) instead.
@@ -92,15 +94,17 @@ let
       
       # Build runtime bindings - daily gets compatibility, paranoid would get minimal
       # (but sandboxed apps are disabled on paranoid anyway)
-      ${if minimal then "RUN_BINDS=\"\"" else ''
-      # Daily profile: selective /run binds for compatibility
+      ${if minimal then "RUN_BINDS=\"\"" else if sandbox.dbusFilter then '''
+      # D-Bus filtered mode: NO full /run/user bind (prevents real bus access)
+      RUN_BINDS=""
+      [[ -S "$DBUS_PROXY_SOCK" ]] && RUN_BINDS="$RUN_BINDS --ro-bind \"$DBUS_PROXY_SOCK\" \"/run/user/$(id -u)/bus\""
+      [[ -S "$DBUS_SYSTEM_PROXY_SOCK" ]] && RUN_BINDS="$RUN_BINDS --ro-bind \"$DBUS_SYSTEM_PROXY_SOCK\" \"/run/user/$(id -u)/system-bus-proxy.sock\""
+      ''' else '''
+      # D-Bus unfiltered mode: full /run/user bind (compatibility)
       RUN_BINDS=""
       [[ -d /run/user/$(id -u) ]] && RUN_BINDS="$RUN_BINDS --ro-bind /run/user/$(id -u) /run/user/$(id -u)"
-      ''}
-      # Only bind D-Bus socket directly if NOT using filtered proxy
-      ${lib.optionalString (!minimal && !sandbox.dbusFilter) ''
       [[ -S /run/dbus/system_bus_socket ]] && RUN_BINDS="$RUN_BINDS --ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"
-      ''}
+      '''
       
       exec ${pkgs.bubblewrap}/bin/bwrap \
         --new-session \

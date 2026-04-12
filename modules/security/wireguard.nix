@@ -20,18 +20,45 @@ let
   # The WireGuard interface name - fixed and known
   wgInterface = "wg-mullvad";
 
-  # Parse endpoint to extract IP/hostname and port for firewall rules
-  # Endpoint format: "ip:port" or "hostname:port"
-  endpointParts = lib.splitString ":" cfg.endpoint;
-  endpointHost = lib.head endpointParts;
-  endpointPort = lib.toInt (lib.last endpointParts);
+  # Parse endpoint using regex pattern matching
+  # Only accepts: "hostname:port", "1.2.3.4:port", "[IPv6]:port"
+  # Rejects ambiguous unbracketed IPv6 like "2001:db8::1:51820"
+  endpointParsed = let
+    # Pattern 1: Bracketed IPv6 [addr]:port (only valid IPv6 with port form)
+    ipv6Match = builtins.match "^\\[([0-9a-fA-F:]+)\\]:(0|[1-9][0-9]*)$" cfg.endpoint;
+    # Pattern 2: IPv4 a.b.c.d:port
+    ipv4Match = builtins.match "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+):(0|[1-9][0-9]*)$" cfg.endpoint;
+    # Pattern 3: Hostname (alphanumeric, dots, dashes):port
+    # Note: underscores not allowed (invalid in DNS hostnames)
+    hostnameMatch = builtins.match "^([A-Za-z0-9.-]+):(0|[1-9][0-9]*)$" cfg.endpoint;
 
-  # Determine if endpoint is an IP address (for direct firewall rule)
-  # or hostname (requires DNS resolution before tunnel is up)
-  isEndpointIP = let
-    ipParts = lib.splitString "." endpointHost;
-    firstOctet = lib.toInt (lib.head ipParts);
-  in lib.hasInfix "." endpointHost && lib.all (p: lib.isInt (lib.toInt p)) (lib.take 4 ipParts);
+    # Extract based on which pattern matched
+    matched = if ipv6Match != null then ipv6Match
+              else if ipv4Match != null then ipv4Match
+              else if hostnameMatch != null then hostnameMatch
+              else null;
+
+    # Safe integer conversion with bounds check
+    parsePort = s: let
+      n = lib.toInt s;
+      valid = n >= 1 && n <= 65535;
+    in if valid then n else null;
+
+    # Build parsed result if pattern matched
+    parsedEndpoint = if matched == null then null else let
+      host = builtins.elemAt matched 0;
+      portStr = builtins.elemAt matched 1;
+      port = parsePort portStr;
+    in if port == null then null else {
+      host = host;
+      port = port;
+      isIPv6 = ipv6Match != null;
+      isIPv4 = ipv4Match != null;
+      isHostname = hostnameMatch != null;
+      isIP = ipv6Match != null || ipv4Match != null;
+    };
+
+  in parsedEndpoint;
 
   # Build the list of non-WG interfaces for bootstrap exceptions
   # This is dynamic: all interfaces EXCEPT the WG interface
@@ -42,16 +69,29 @@ in {
     # Assert that we have the minimum required configuration
     assertions = [
       {
-        assertion = cfg.privateKey != "";
-        message = "myOS.security.wireguardMullvad.privateKey must be set (use agenix or sops)";
+        assertion = cfg.privateKeyFile != "";
+        message = "myOS.security.wireguardMullvad.privateKeyFile must be set (use agenix or sops)";
       }
       {
         assertion = cfg.endpoint != "";
         message = "myOS.security.wireguardMullvad.endpoint must be set (Mullvad server endpoint)";
       }
       {
+        # Validate endpoint format at evaluation time
+        assertion = endpointParsed != null;
+        message = "myOS.security.wireguardMullvad.endpoint format invalid. Must be one of: " +
+          "hostname:port (e.g., us-nyc-wg-001.mullvad.net:51820), " +
+          "IPv4:port (e.g., 1.2.3.4:51820), " +
+          "[IPv6]:port (e.g., [2606:4700::1111]:51820). " +
+          "Note: IPv6 must be bracketed. Port must be 1-65535.";
+      }
+      {
         assertion = cfg.address != "";
         message = "myOS.security.wireguardMullvad.address must be set (WireGuard tunnel IP)";
+      }
+      {
+        assertion = cfg.serverPublicKey != "";
+        message = "myOS.security.wireguardMullvad.serverPublicKey must be set (Mullvad server public key)";
       }
     ];
 
@@ -61,7 +101,7 @@ in {
     # WireGuard interface using NixOS native module
     # This is the single source of truth for tunnel configuration
     networking.wireguard.interfaces.${wgInterface} = {
-      inherit (cfg) privateKey;
+      inherit (cfg) privateKeyFile;
 
       # The tunnel IP address assigned by Mullvad
       ips = [ cfg.address ];
@@ -82,7 +122,7 @@ in {
         persistentKeepalive = cfg.persistentKeepalive;
 
         # Preshared key for additional symmetric encryption layer (optional but recommended)
-        presharedKey = lib.mkIf (cfg.presharedKey != "") cfg.presharedKey;
+        presharedKeyFile = lib.mkIf (cfg.presharedKeyFile != "") cfg.presharedKeyFile;
       }];
 
       # Bring interface up at boot
@@ -115,12 +155,14 @@ in {
 
             # WireGuard: accept incoming handshake packets on the endpoint port
             # Only from the specific Mullvad server endpoint when known
-            ${if isEndpointIP then ''
-              ip saddr ${endpointHost} udp sport ${toString endpointPort} accept
+            ${if endpointParsed.isIPv4 then ''
+              ip saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
+            '' else if endpointParsed.isIPv6 then ''
+              ip6 saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
             '' else ''
               # Endpoint is hostname - allow from any (DNS resolution needed)
               # This is slightly broader but necessary for hostname-based configs
-              udp sport ${toString endpointPort} accept
+              udp sport ${toString endpointParsed.port} accept
             ''}
 
             # DHCP client responses: required for IP acquisition
@@ -171,14 +213,20 @@ in {
             # ICMP for path MTU discovery (non-WG interfaces for bootstrap)
             ${bootstrapExceptionExpression} ip protocol icmp icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
 
-            # DNS: ONLY through the tunnel interface
-            # This prevents DNS leaks - DNS queries must go through WG
+            # DNS: ONLY through the tunnel interface, EXCEPT for hostname endpoint bootstrap
+            # When endpoint is a hostname, allow DNS on non-WG interfaces to resolve it
+            ${if endpointParsed.isHostname then ''
+            # Pre-tunnel DNS for hostname endpoint resolution (bootstrap only)
+            ${bootstrapExceptionExpression} udp dport 53 accept
+            ${bootstrapExceptionExpression} tcp dport 53 accept
+            '' else ""}
+            # DNS through tunnel (normal operation)
             oifname "${wgInterface}" udp dport 53 accept
             oifname "${wgInterface}" tcp dport 53 accept
 
             # WireGuard handshake: to the endpoint (non-WG interface)
             # This establishes/maintains the tunnel itself
-            ${bootstrapExceptionExpression} udp dport ${toString endpointPort} accept
+            ${bootstrapExceptionExpression} udp dport ${toString endpointParsed.port} accept
 
             # ALL other traffic: ONLY through WireGuard interface
             # This is the killswitch: if tunnel is down, no traffic leaves

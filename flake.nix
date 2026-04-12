@@ -36,8 +36,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
     in {
     # Build-time checks for nix flake check
-    # Note: nix flake check already evaluates all nixosConfigurations,
-    # catching config errors. These checks verify file structure.
+    # These verify the NixOS configurations evaluate correctly
     checks.${system} = {
       # Verify required files exist
       required-files = pkgs.runCommand "required-files-check" {} ''
@@ -47,6 +46,29 @@
         done
         echo "All required files present" > $out
       '';
+
+      # Verify nixos configuration evaluates
+      nixos-config = pkgs.runCommand "nixos-config-check"
+        { nativeBuildInputs = [ pkgs.nix ]; }
+        ''
+          echo "Evaluating nixos configuration..."
+          nix eval --json '.#nixosConfigurations.nixos.config.system.build.toplevel' \
+            --store /tmp/empty-store 2>/dev/null \
+            || { echo "nixos config evaluation failed"; exit 1; }
+          echo "nixos config evaluates successfully" > $out
+        '';
+
+      # Verify paranoid specialisation builds
+      paranoid-config = pkgs.runCommand "paranoid-config-check"
+        { nativeBuildInputs = [ pkgs.nix ]; }
+        ''
+          echo "Checking paranoid specialisation..."
+          # Evaluate the paranoid specialisation toplevel
+          nix eval --json '.#nixosConfigurations.nixos.config.specialisation.paranoid.configuration.system.build.toplevel' \
+            --store /tmp/empty-store 2>/dev/null \
+            || { echo "paranoid specialisation evaluation failed"; exit 1; }
+          echo "paranoid specialisation evaluates successfully" > $out
+        '';
     };
 
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {

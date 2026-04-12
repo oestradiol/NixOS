@@ -39,7 +39,8 @@ mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persis
 mount -o subvol=@log,compress=zstd,noatime /dev/mapper/cryptroot /mnt/var/log
 mount -o subvol=@home-daily,compress=zstd,noatime /dev/mapper/cryptroot /mnt/home/player
 mount -o subvol=@home-paranoid,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist/home/ghost
-mount -o subvol=@swap,compress=zstd,noatime /dev/mapper/cryptroot /mnt/swap
+# Note: NO compression on swap subvolume - swapfiles must be NOCOW and non-compressed
+mount -o subvol=@swap,noatime,nodatacow /dev/mapper/cryptroot /mnt/swap
 mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
 
 sudo nixos-enter
@@ -289,3 +290,173 @@ grep -r "org.freedesktop.portal" /usr/share/dbus-1/
 ```
 
 **Prevention**: Test safe-* browsers after every KDE Plasma or browser update before rebooting into paranoid profile permanently.
+
+---
+
+## If swap activation fails
+
+**Symptom**: System boots but swap is not active (`swapon --show` empty, `free -h` shows 0 swap). May see Btrfs errors in dmesg.
+
+**Cause**: Btrfs swapfiles require NODATACOW (no copy-on-write) and must not be compressed. If `@swap` subvolume was mounted with compression, swapfile creation/activation will fail.
+
+**Verify the issue**:
+```bash
+# Check if swap is active
+swapon --show
+free -h
+
+# Check swap subvolume mount options
+findmnt /swap
+# WRONG: shows compress=zstd
+# CORRECT: shows noatime,nodatacow (NO compression)
+
+# Check dmesg for swap errors
+dmesg | grep -i "swap\|btrfs"
+```
+
+**Recovery** (installer chroot or recovery boot):
+```bash
+# 1. Boot installer USB, unlock LUKS, mount as in install guide
+# 2. Unmount the broken swap subvolume and remount correctly
+umount /mnt/swap
+mount -o subvol=@swap,noatime,nodatacow /dev/mapper/cryptroot /mnt/swap
+
+# 3. Remove old swapfile if it exists (may be corrupted)
+rm -f /mnt/swap/swapfile
+
+# 4. Recreate swapfile correctly
+fallocate -l 8G /mnt/swap/swapfile
+chmod 600 /mnt/swap/swapfile
+mkswap /mnt/swap/swapfile
+
+# 5. Test swapfile activation before reboot
+swapon /mnt/swap/swapfile && swapoff /mnt/swap/swapfile && echo "Swapfile: OK" || {
+    echo "ERROR: Swapfile failed to activate"
+    exit 1
+}
+
+# 6. Reboot and verify
+swapon --show
+free -h
+```
+
+**Prevention**: The install script now uses `noatime,nodatacow` for `@swap`. Verify before first boot with `findmnt /mnt/swap`.
+
+---
+
+## If WireGuard endpoint parsing fails (evaluation error)
+
+**Symptom**: `nixos-rebuild` fails during evaluation with an assertion error about endpoint format. Build never completes.
+
+**Error message**:
+```
+myOS.security.wireguardMullvad.endpoint format invalid. Must be one of:
+hostname:port (e.g., us-nyc-wg-001.mullvad.net:51820),
+IPv4:port (e.g., 1.2.3.4:51820),
+[IPv6]:port (e.g., [2606:4700::1111]:51820)
+```
+
+**Cause**: The endpoint string in your configuration does not match any of the accepted patterns.
+
+**Valid formats**:
+- `us-nyc-wg-001.mullvad.net:51820` (hostname with port)
+- `1.2.3.4:51820` (IPv4 with port)
+- `[2606:4700::1111]:51820` (bracketed IPv6 with port)
+
+**Common mistakes**:
+- `2001:db8::1:51820` - Unbracketed IPv6 is ambiguous (colons in address vs colon for port)
+- `hostname` - Missing port (required)
+- `hostname:abc` - Non-numeric port
+- `hostname:70000` - Port out of range (must be 1-65535)
+- `[::1]:51820` - Actually valid, but user may have written `::1:51820`
+
+**Recovery**:
+```bash
+# 1. Edit your host configuration to fix endpoint format
+# Example: hosts/nixos/default.nix or your profile
+
+# 2. Wrap IPv6 addresses in brackets
+# WRONG: endpoint = "2001:db8::1:51820";
+# CORRECT: endpoint = "[2001:db8::1]:51820";
+
+# 3. Include port number
+# WRONG: endpoint = "us-nyc-wg-001.mullvad.net";
+# CORRECT: endpoint = "us-nyc-wg-001.mullvad.net:51820";
+```
+
+**Test before rebuild**:
+```bash
+# Verify your endpoint matches one of these patterns:
+# hostname:port
+# 1.2.3.4:port
+# [IPv6]:port
+```
+
+---
+
+## If AppArmor breaks applications
+
+**Symptom**: Applications fail to start or behave incorrectly after enabling paranoid profile. Errors mention "apparmor", "DENIED", or "profile".
+
+**Common affected applications**:
+- Flatpak apps (AppArmor may block sandbox transitions)
+- Steam/Proton (complex permission requirements)
+- Custom scripts in home directory (may lack AppArmor profile)
+
+**Verify the issue**:
+```bash
+# Check AppArmor denials
+sudo dmesg | grep -i apparmor
+sudo journalctl -xe | grep -i apparmor
+
+# Check if profiles are loaded
+sudo aa-status
+
+# Check specific profile denials
+sudo cat /sys/kernel/security/apparmor/profiles | grep -E "(steam|flatpak)"
+```
+
+**Immediate recovery** (disable AppArmor temporarily):
+```bash
+# Option 1: Disable AppArmor in kernel cmdline (requires reboot)
+# Add to boot parameters: apparmor=0
+# Or use systemd-boot editor at boot time
+
+# Option 2: Disable AppArmor service
+sudo systemctl stop apparmor
+sudo systemctl disable apparmor
+
+# Option 3: Rebuild with AppArmor disabled (persistent)
+# Edit profiles/paranoid.nix or your host config:
+myOS.security.apparmor = false;
+nixos-rebuild switch
+```
+
+**Fine-grained recovery** (profile-specific):
+```bash
+# Put specific profile in complain mode (logs but allows)
+sudo aa-complain /path/to/profile
+
+# Example for Flatpak
+sudo aa-complain /etc/apparmor.d/flatpak
+
+# List profiles and their modes
+sudo aa-status
+```
+
+**Root cause**: NixOS AppArmor support is still maturing. Many applications lack complete profiles, and the interaction between:
+- AppArmor MAC enforcement
+- Flatpak sandboxing
+- bubblewrap (used by safe-* browsers)
+can create unexpected denials.
+
+**Long-term**: Report specific AppArmor denials with:
+```bash
+sudo dmesg | grep -i apparmor > /tmp/apparmor-denials.txt
+# Include this in bug reports along with application name and action attempted
+```
+
+**Prevention**: 
+- Test critical applications after enabling paranoid profile
+- Keep AppArmor enabled but monitor `dmesg` for denials
+- Use `aa-complain` as temporary workaround for specific broken profiles

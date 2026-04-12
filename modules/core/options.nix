@@ -57,24 +57,26 @@
         - NixOS owns tunnel state AND firewall policy
         - Deterministic, auditable, self-owned enforcement
         
-        Required: wireguardMullvad.privateKey, endpoint, address, serverPublicKey
+        Required: wireguardMullvad.privateKeyFile, endpoint, address, serverPublicKey
       '';
-      wireguardMullvad.privateKey = lib.mkOption {
+      wireguardMullvad.privateKeyFile = lib.mkOption {
         type = lib.types.str;
         default = "";
         description = ''
-          WireGuard private key for this peer (your key).
+          Path to WireGuard private key file (your key).
           Use agenix or sops to provide this securely.
           Generate via: wg genkey | tee privatekey | wg pubkey > publickey
+          Example: config.age.secrets.wg-private-key.path
         '';
       };
-      wireguardMullvad.presharedKey = lib.mkOption {
+      wireguardMullvad.presharedKeyFile = lib.mkOption {
         type = lib.types.str;
         default = "";
         description = ''
-          Optional preshared key for additional symmetric encryption layer.
+          Path to optional preshared key file for additional symmetric encryption layer.
           Provides post-quantum resistance to the handshake.
           Generate via: wg genpsk > presharedkey
+          Example: config.age.secrets.wg-preshared-key.path
         '';
       };
       wireguardMullvad.address = lib.mkOption {

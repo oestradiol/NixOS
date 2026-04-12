@@ -1,12 +1,14 @@
 # Feature Coverage Audit
 
-**Purpose**: Verify every configuration option and security feature is tested in TEST-PLAN.md, deferred to POST-STABILITY.md, or explicitly rejected.
+**Purpose**: Verify every configuration option and security feature is covered in TEST-PLAN.md, deferred to POST-STABILITY.md, or explicitly rejected.
+
+**Scope**: This is a documentation coverage audit, not runtime verification. Features marked as "covered in test plan" have verification steps defined in TEST-PLAN.md but have not necessarily been executed on hardware.
 
 **Date**: 2026-04-12
 **Status**: Complete
 
 ## Legend
-- ✅ TEST-PLAN.md - Tested immediately after first boot
+- ✅ TEST-PLAN.md - Covered in TEST-PLAN.md for runtime verification
 - 📋 POST-STABILITY.md - Deferred to post-stability phase
 - ❌ Rejected/Not Implemented - Explicitly not done
 - ⚠️ Gap - Missing from both (needs action)
@@ -18,21 +20,21 @@
 ### Hardware/Profile
 | Feature | TEST-PLAN | POST-STABILITY | Status | Notes |
 |---------|-----------|----------------|--------|-------|
-| `gpu` (nvidia/amd) | ✅ Graphics section | - | Implemented | NVIDIA tested |
-| `profile` (daily/paranoid) | ✅ Boot section | - | Implemented | Both boot paths tested |
+| `gpu` (nvidia/amd) | ✅ Graphics section | - | Implemented | NVIDIA covered in test plan |
+| `profile` (daily/paranoid) | ✅ Boot section | - | Implemented | Both boot paths covered in test plan |
 
 ### Gaming
 | Feature | TEST-PLAN | POST-STABILITY | Status | Notes |
 |---------|-----------|----------------|--------|-------|
-| `gaming.controllers.enable` | ✅ Daily profile section | - | Implemented | Bluetooth/controllers tested |
+| `gaming.controllers.enable` | ✅ Daily profile section | - | Implemented | Bluetooth/controllers covered in test plan |
 | `gaming.sysctls` | ✅ Daily profile section | - | Implemented | SteamOS scheduler + ntsync module |
 
 ### Infrastructure
 | Feature | TEST-PLAN | POST-STABILITY | Status | Notes |
 |---------|-----------|----------------|--------|-------|
 | `persistence.root` | ✅ Boot/filesystem | - | Implemented | Mount verification |
-| `security.impermanence.enable` | ✅ Boot/filesystem | - | Implemented | tmpfs + persistence tested |
-| `security.agenix.enable` | ✅ Secrets section | - | Implemented | SSH keys + decryption tested |
+| `security.impermanence.enable` | ✅ Boot/filesystem | - | Implemented | tmpfs + persistence covered in test plan |
+| `security.agenix.enable` | ✅ Secrets section | - | Implemented | SSH keys + decryption covered in test plan |
 
 ### Staged Enablement (POST-INSTALL)
 | Feature | TEST-PLAN | POST-STABILITY | Status | Notes |
@@ -43,9 +45,9 @@
 ### VPN
 | Feature | TEST-PLAN | POST-STABILITY | Status | Notes |
 |---------|-----------|----------------|--------|-------|
-| `security.wireguardMullvad.enable` | ✅ VPN section | ✅ Section 6 | Implemented | Both modes tested |
-| `security.wireguardMullvad.privateKey` | ✅ VPN section | ✅ Section 6 | Implemented | Via agenix |
-| `security.wireguardMullvad.presharedKey` | - | ✅ Section 6 | Implemented | Optional, documented |
+| `security.wireguardMullvad.enable` | ✅ VPN section | ✅ Section 6 | Implemented | Both modes covered in test plan |
+| `security.wireguardMullvad.privateKeyFile` | ✅ VPN section | ✅ Section 6 | Implemented | Via agenix |
+| `security.wireguardMullvad.presharedKeyFile` | - | ✅ Section 6 | Implemented | Optional, documented |
 | `security.wireguardMullvad.address` | ✅ VPN section | ✅ Section 6 | Implemented | Config required |
 | `security.wireguardMullvad.dns` | ✅ VPN section | ✅ Section 6 | Implemented | Config required |
 | `security.wireguardMullvad.endpoint` | ✅ VPN section | ✅ Section 6 | Implemented | Config required |

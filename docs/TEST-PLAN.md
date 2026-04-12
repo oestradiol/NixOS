@@ -11,6 +11,7 @@ For post-stability configuration, see [`POST-STABILITY.md`](./POST-STABILITY.md)
 - [ ] system boots to paranoid specialisation
 - [ ] `/` is tmpfs (`findmnt -R /`)
 - [ ] `/nix`, `/persist`, `/var/log`, `/home/player`, `/home/ghost`, `/boot` are mounted as intended
+- [ ] **Swap is active** (`swapon --show` shows `/swap/swapfile`, `free -h` shows swap > 0)
 - [ ] reboot drops non-persisted files
 - [ ] persistence verification: create file in `/tmp`, reboot, verify it's gone; create file in `~/Data`, reboot, verify it survives
 
@@ -91,6 +92,10 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Tunnel is established (`sudo wg show wg-mullvad` shows handshake/transfer)
 - [ ] Default route is via tunnel (`ip route | grep default` shows dev wg-mullvad)
 - [ ] nftables policy is default-deny (`sudo nft list table inet filter | grep 'policy drop'`)
+- [ ] **Endpoint-type specific nftables rules** (verify based on your endpoint):
+  - **IPv4 endpoint**: `sudo nft list table inet filter | grep "ip saddr.*udp sport"` should show rule with your endpoint IP
+  - **IPv6 endpoint**: `sudo nft list table inet filter | grep "ip6 saddr.*udp sport"` should show rule with your endpoint IP
+  - **Hostname endpoint**: `sudo nft list table inet filter | grep "udp sport.*accept"` should show port-only rule (no IP restriction)
 - [ ] **Killswitch test**: Stop WireGuard, verify egress fails, restart, verify works:
   ```bash
   sudo systemctl stop wg-quick-wg-mullvad

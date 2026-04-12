@@ -30,7 +30,8 @@
     # See: docs/PRE-INSTALL.md Section 15 for WireGuard config generation
     wireguardMullvad.enable = lib.mkForce true;
     # WireGuard secrets: provide via agenix in host secrets file
-    # wireguardMullvad.privateKey = "<agenix-secret-reference>";
+    # wireguardMullvad.privateKeyFile = config.age.secrets.wg-private-key.path;
+    # wireguardMullvad.presharedKeyFile = config.age.secrets.wg-preshared-key.path;  # optional
     # wireguardMullvad.endpoint = "<your-mullvad-server>:51820";
     # wireguardMullvad.address = "10.64.x.x/32";
     # wireguardMullvad.serverPublicKey = "<mullvad-server-pubkey>";

@@ -54,6 +54,10 @@
 - **Home directory**: tmpfs (wiped on boot) with selective bind-mounts only for allowlisted items
 - **Root filesystem**: tmpfs (full system wipe on boot except persisted paths)
 
+**WireGuard security note**: Uses file-based secrets (privateKeyFile/presharedKeyFile) following NixOS WireGuard best practices. Inline secrets are NOT used - they would expose keys in the nix store. All WireGuard keys must be provided via agenix or similar secrets manager.
+
+**WireGuard endpoint DNS bootstrap**: When using hostname endpoints (e.g., us-nyc-wg-001.mullvad.net:51820), a pre-tunnel DNS exception allows DNS queries on non-WG interfaces to resolve the endpoint hostname before tunnel establishment. This is a necessary trade-off for hostname-based configs. For maximum security, use literal IP endpoints instead of hostnames to avoid this brief DNS exposure.
+
 **Residual fingerprinting vectors** (cannot fully mitigate without breakage):
 - **DMI/SMBIOS data** (`/sys/class/dmi/id/`): Hardware model, serial numbers - world-readable, required by kernel
 - **CPU model/features**: Exposed via `/proc/cpuinfo` - required for userspace operation
@@ -71,7 +75,7 @@
 
 ## Security monitoring exclusions (documented for awareness)
 
-**ClamAV scan targets**: `/home/player`, `/home/ghost`, `/persist`, `/persist/home/ghost`, `/var/lib`, `/var/log`, `/tmp`, `/var/tmp`, `/boot/efi`
+**ClamAV scan targets**: `/home/player`, `/home/ghost`, `/persist`, `/persist/home/ghost`, `/var/lib`, `/var/log`, `/tmp`, `/var/tmp`, `/boot`
 
 **ClamAV exclusions** (via `--exclude-dir` flags in daily/impermanence and deep scans):
 - `/persist/etc/ssh` — SSH keys (high-churn, sensitive)
@@ -128,6 +132,10 @@ All key hardening knobs are tunable per-profile without code changes:
 - GPU/Wayland/PipeWire socket passthrough (read-only)
 - No capabilities (`--cap-drop ALL`)
 - Die-with-parent: auto-cleanup when launcher exits
+- **D-Bus filtering**: When enabled (sandbox.dbusFilter = true), full /run/user bind is REMOVED to prevent real bus access
+  - Only specific proxy sockets are bound (xdg-dbus-proxy filtered)
+  - This is ADVISORY filtering — motivated attackers may still find IPC bypass paths
+  - When disabled: full /run/user bind for compatibility (real bus exposed)
 
 ### Firefox hardening (arkenfox-grounded user.js)
 - 70+ hardened prefs covering: startup, geolocation, telemetry (Normandy/Shield), safe browsing, implicit outbound blocking, DoH disabled (VPN DNS only), HTTPS-only mode, SSL/TLS hardening (safe negotiation, 0-RTT disabled, OCSP hard-fail), HPKP/CRLite, referer trimming, container tabs, WebRTC disabled, dFPI, RFP (resist fingerprinting), shutdown sanitizing
@@ -153,6 +161,10 @@ All key hardening knobs are tunable per-profile without code changes:
 - Capability dropping (`--cap-drop ALL`)
 - Die-with-parent for auto-cleanup
 - Apps wrapped: VRCX, Windsurf (daily)
+- **D-Bus filtering**: When enabled (sandbox.dbusFilter = true), full /run/user bind is REMOVED to prevent real bus access
+  - Only specific proxy sockets are bound (xdg-dbus-proxy filtered)
+  - This is ADVISORY filtering — motivated attackers may still find IPC bypass paths
+  - When disabled: full /run/user bind for compatibility (real bus exposed)
 
 ## VM isolation layer (strongest practical sandbox)
 - KVM/QEMU with hardware virtualization (AMD-V/VT-x)

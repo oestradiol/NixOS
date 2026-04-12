@@ -34,18 +34,33 @@ mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persi
 mount -o subvol=@log,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/var/log"
 mount -o subvol=@home-daily,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/home/player"
 mount -o subvol=@home-paranoid,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persist/home/ghost"
-mount -o subvol=@swap,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/swap"
+# Note: NO compression on swap subvolume - swapfiles must be NOCOW and non-compressed
+mount -o subvol=@swap,noatime,nodatacow /dev/mapper/cryptroot "$MNT/swap"
 
 # Create Btrfs swapfile (8GB) - required for the swapDevices config in base-desktop.nix
-# Using traditional fallocate + mkswap approach on Btrfs (COW disabled on @swap via chattr +C)
+# Requirements:
+# - COW disabled on @swap subvolume via chattr +C (done above)
+# - mount with nodatacow (done above)
+# - fallocate (not dd) for preallocated extents
+# - swapfile cannot be snapshotted while active
 fallocate -l 8G "$MNT/swap/swapfile"
 chmod 600 "$MNT/swap/swapfile"
 mkswap "$MNT/swap/swapfile"
+
+# Test swapon in chroot to verify swapfile works before reboot
+# This catches Btrfs swapfile configuration errors early
+echo "Testing swapfile activation..."
+swapon "$MNT/swap/swapfile" && swapoff "$MNT/swap/swapfile" && echo "Swapfile test: OK" || {
+    echo "ERROR: Swapfile failed to activate. Check Btrfs configuration."
+    exit 1
+}
 
 mount "${DISK}p1" "$MNT/boot"
 
 echo "Mounts ready at $MNT"
 echo "Swapfile created: /swap/swapfile (8GB)"
+echo "Swapfile tested: swapon/swapoff verified successfully"
+echo "WARNING: Do not snapshot @swap subvolume while swapfile is active"
 echo "@home-paranoid -> /mnt/persist/home/ghost (runtime: /persist/home/ghost)"
 echo ""
 echo "WARNING: hardware-target.nix has uid=1001/gid=100 for /home/ghost tmpfs mount."

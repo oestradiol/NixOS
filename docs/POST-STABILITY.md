@@ -81,7 +81,7 @@ No strict killswitch is enforced at the OS level - the app manages its own firew
 ```nix
 myOS.security.wireguardMullvad = {
   enable = lib.mkForce true;
-  privateKey = config.age.secrets.wg-private-key.path;
+  privateKeyFile = config.age.secrets.wg-private-key.path;
   address = "10.64.x.x/32";        # Your Mullvad-assigned IP
   endpoint = "us-nyc-wg-001.mullvad.net:51820";  # Your chosen server
   serverPublicKey = "<server-pubkey>";  # From Mullvad config
@@ -121,6 +121,11 @@ sudo systemctl start wg-quick-wg-mullvad
 
 **Known limitations**:
 - Bootstrap DNS: Brief clearnet DNS queries at boot before tunnel is established (unavoidable - must resolve VPN endpoint hostname)
+  - **IP endpoints (recommended for paranoid)**: No bootstrap DNS leak - endpoint is already an IP address
+  - **Hostname endpoints**: Pre-tunnel DNS exception allows DNS queries on non-WG interfaces to resolve the endpoint hostname
+    - This is a necessary trade-off for hostname-based configs
+    - DNS leak is brief and limited to endpoint resolution only
+    - For maximum security, use literal IP endpoints instead of hostnames
 - No automatic key rotation (unlike Mullvad app) - rotate keys manually via Mullvad web interface
 - No multihop or obfuscation features (plain WireGuard)
 - No split tunneling (full killswitch: all traffic through tunnel or blocked)
@@ -429,6 +434,61 @@ vrchat       # Should run via XWayland or native Wayland
 
 ---
 
+## Known Issues (Fixed - Verify After Install)
+
+These bugs were identified during audit and fixed in code. Verify they work correctly on your installation.
+
+### Btrfs Swapfile Compression Bug (FIXED)
+
+**Original issue**: The install script mounted `@swap` subvolume with `compress=zstd`, which breaks swapfile requirements.
+
+**Fix applied**: Changed to `noatime,nodatacow` mount options.
+
+**Verify after install**:
+```bash
+# Check swap subvolume mount options
+findmnt /swap
+# Should show: noatime, nodatacow (NO compress=zstd)
+
+# Verify swapfile is active
+swapon --show
+free -h
+
+# Check for swap errors in dmesg
+dmesg | grep -i swap
+```
+
+**If swap fails**: See [`RECOVERY.md`](./RECOVERY.md) "If swap activation fails" section.
+
+### WireGuard Endpoint Parser Bug (FIXED)
+
+**Original issue**: Endpoint parsing used `splitString ":"` which breaks IPv6, and `toInt` on hostname parts caused evaluation errors.
+
+**Fix applied**: Regex-based pattern matching using `builtins.match` for bracketed IPv6, IPv4, and hostname patterns.
+
+**Verify after install**:
+```bash
+# Test paranoid profile builds (evaluation-time check)
+nixos-rebuild build --flake /etc/nixos#nixos
+ls result/specialisation/paranoid/
+
+# If paranoid WireGuard is configured, verify endpoint parsing
+# (If endpoint format is invalid, build will fail with assertion)
+```
+
+**Valid endpoint formats**:
+- `us-nyc-wg-001.mullvad.net:51820` (hostname:port)
+- `1.2.3.4:51820` (IPv4:port)
+- `[2606:4700::1111]:51820` (bracketed IPv6:port)
+
+**Invalid (will fail assertion)**:
+- `2001:db8::1:51820` (unbracketed IPv6 - ambiguous)
+- `hostname` (missing port)
+- `hostname:abc` (non-numeric port)
+- `hostname:70000` (port out of range)
+
+---
+
 ## Deferred items (post-stability decisions needed)
 
 ### Hardened compilation flags (Madaidan recommendation)
@@ -448,6 +508,62 @@ vrchat       # Should run via XWayland or native Wayland
 ### Full SUID/capability pruning program
 - Manual post-stability work required
 - See SOURCE-TOPIC-LEDGER.md for Madaidan/saylesss88 references
+
+### VM boot testing for automated verification
+- Status: Not implemented
+- Value: Automated boot testing in VM would catch config errors before hardware deployment
+- Implementation: Use `nixos-rebuild build-vm` or QEMU/KVM with minimal config
+- Scope: Test both daily and paranoid profiles boot successfully
+- Risk: May not fully replicate hardware-specific behavior (GPU, TPM, Secure Boot)
+- Decision needed: Add to verification pipeline?
+
+---
+
+## Verification Pipeline Gaps
+
+This repo currently provides: static code review, evaluation-time assertions (flake checks), install-time validation (swapfile test), and manual test plan documentation.
+
+The following verification methods are **not implemented** and represent gaps in the verification pipeline:
+
+### 1. Automated VM boot testing
+- **Status**: Not implemented (documented as deferred above)
+- **What's missing**: CI pipeline that boots both profiles in VM to verify config correctness
+- **Implementation**: GitHub Actions or local pre-commit hook using `nixos-rebuild build-vm`
+- **Value**: Catches config errors before hardware deployment
+- **Limitation**: Cannot test GPU/TPM/Secure Boot hardware-specific behavior
+
+### 2. Hardware CI / automated hardware testing
+- **Status**: Not implemented
+- **What's missing**: Automated testing on actual hardware with target configuration
+- **Implementation**: Hardware test matrix with at least one machine matching the target config (NVIDIA GPU, TPM, Secure Boot)
+- **Value**: Verifies hardware-specific interactions that VM cannot replicate
+- **Limitation**: Requires physical hardware infrastructure
+
+### 3. Runtime exploit testing / adversarial validation
+- **Status**: Not implemented
+- **What's missing**: Adversarial testing of firewall rules, sandbox escape attempts, privilege escalation checks
+- **Implementation**: Security testing suite (nmap, exploit attempts, sandbox escape verification)
+- **Value**: Verifies hardening claims under adversarial conditions
+- **Limitation**: Requires security expertise and controlled testing environment
+
+### 4. Measured performance benchmarks
+- **Status**: Partially documented (manual post-install in PERFORMANCE-NOTES.md)
+- **What's missing**: Automated performance regression testing with baseline measurements
+- **Implementation**: Benchmark suite measuring frametime, latency, boot time, memory usage
+- **Value**: Empirical validation of performance impact claims
+- **Limitation**: Requires consistent hardware and controlled test conditions
+
+### Current verification level
+With these gaps, the repo is appropriately characterized as:
+- **Audited**: Code reviewed against external sources
+- **Statically checked**: Evaluation-time assertions catch config errors
+- **Installation-path improved**: Install-time validation catches deployment errors
+- **Documentation-governed**: All changes must update relevant docs
+
+Not yet:
+- **Fully verified**: No automated VM/hardware boot testing
+- **Pentested**: No adversarial runtime testing
+- **Empirically benchmarked**: Performance claims are theoretical estimates
 
 ### NTS time sync replacement
 - Knob not yet implemented
@@ -917,7 +1033,7 @@ sudo cryptsetup luksHeaderBackup /dev/disk/by-partlabel/NIXCRYPT --header-backup
 **Action**: Back up EFI contents and create verification script:
 ```bash
 # One-time backup after first successful boot
-sudo tar czf /persist/efi-backup-$(date +%Y%m%d).tar.gz -C /boot/efi .
+sudo tar czf /persist/efi-backup-$(date +%Y%m%d).tar.gz -C /boot .
 
 # Periodic verification (add to weekly cron or timer)
 bootctl status  # Should show "Secure Boot: disabled" or "enabled" consistently
