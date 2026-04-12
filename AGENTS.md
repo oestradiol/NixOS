@@ -44,3 +44,13 @@ Goal: keep code, docs, and audit surfaces aligned.
 - Did topic coverage change? → update `docs/audit/SOURCE-TOPIC-LEDGER.md`
 - Did manual steps change? → update `docs/POST-STABILITY.md` and `docs/TEST-PLAN.md`
 - Did failure modes change? → update `docs/PRE-INSTALL.md`
+
+## Defaults Policy (options.nix)
+**Principle**: Maximize hardening without user pain.
+
+**Rule**: `options.nix` defaults must balance:
+1. **Transparent hardening** enabled (initOnAlloc, slabNomerge, root lock, PTI)
+2. **Painful hardening** disabled or permissive (ptrace=1 for games, apparmor off, sandboxedBrowsers off)
+3. **Escalation path** clear via profile opt-in (paranoid hardens everything with mkForce)
+
+**Rationale**: Default user didn't choose pain. Paranoid user did.

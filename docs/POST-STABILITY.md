@@ -334,6 +334,72 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 - **Consideration**: Optional for paranoid profile; complex implementation for daily driver
 - **Reference**: Original plan item moved from PROJECT-STATE.md
 
+### NVIDIA Pascal / GTX 1060 driver branch strategy under unstable
+- **Status**: Risk actively tracked; temporary fallback in place
+- **Rationale**: nixpkgs unstable currently has a packaging gap for `legacy_580` (issue #503740)
+- **Temporary fallback**: Using `nvidiaPackages.production` branch instead of ideal `legacy_580`
+- **Current state**: `production` still supports Pascal (GTX 1060), but this will eventually change
+- **Risk**: When Pascal support is dropped from `production`, builds may fail or GPU may not function
+- **Re-evaluation trigger**: Switch back to `legacy_580` when:
+  1. nixpkgs issue #503740 is resolved AND
+  2. `legacy_580` is properly exposed in `nvidiaPackages` AND
+  3. A test build confirms it evaluates and builds cleanly
+- **Monitoring**: Track https://github.com/NixOS/nixpkgs/issues/503740
+- **Fallback if production drops Pascal first**: Pin nixpkgs to a known-good revision or carry a local nixpkgs patch
+
+### AIDE vs ClamAV: Choose your scanning model
+Both AIDE and ClamAV are enabled by default, but serve different purposes:
+
+**ClamAV** (signature-based):
+- "Is this file known malware?"
+- Catches known threats via virus database
+- Daily + weekly scans of persisted directories
+- **Recommendation**: Keep enabled
+
+**AIDE** (integrity-based):
+- "Did this file change unexpectedly?"
+- Catches unknown malware / rootkits by detecting file modifications
+- Weekly scans of high-value persisted paths only
+- Generates noise if files legitimately change
+
+**If you prefer ClamAV-only** (disable AIDE):
+```nix
+# In your profile configuration
+myOS.security.aide.enable = false;
+```
+
+**Trade-offs**:
+- AIDE + ClamAV: Maximum coverage (known + unknown threats), but AIDE may alert on legitimate changes
+- ClamAV-only: Fewer false positives, but zero-day malware won't be detected until signatures exist
+
+### Experimental: D-Bus filtering for sandboxed browsers
+**Status**: Implemented but disabled by default (breakage risk)
+
+**The problem**: Bubblewrap docs warn that unfiltered D-Bus access can allow systemd exploitation. Currently, sandboxed browsers bind `/run` read-only, exposing full D-Bus sockets.
+
+**The solution**: `xdg-dbus-proxy` provides filtered D-Bus access with a deny-by-default policy.
+
+**Enable after post-stability testing**:
+```nix
+# In your profile (paranoid recommended)
+myOS.security.sandboxedBrowsers.dbusFilter = true;
+```
+
+**Test after enabling**:
+1. Launch `safe-firefox` and verify it starts
+2. Test browser extensions (may break with filtering)
+3. Test native messaging (KeePassXC, etc.)
+4. Check PipeWire/WebRTC audio/video still works
+5. If anything breaks, disable immediately: `dbusFilter = false`
+
+**What the filter allows**:
+- Own namespace: `org.mozilla.firefox.*`
+- Portal access: `org.freedesktop.portal.*` (file picker, notifications)
+- Accessibility: `org.a11y.Bus`
+- Everything else: **BLOCKED**
+
+**For maximum isolation**: Use `vmIsolation.enable` and run browsers in a VM instead of relying on bubblewrap D-Bus filtering.
+
 ### Manual User Checks (verify personally)
 **After install, personally verify these items that cannot be automated:**
 

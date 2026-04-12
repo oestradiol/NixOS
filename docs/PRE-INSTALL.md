@@ -145,7 +145,7 @@ For each security claim, verify the code matches the documentation.
 **Mullvad infrastructure IPs (VERIFY CURRENT AT https://mullvad.net/en/servers BEFORE INSTALL):**
 ```
 WireGuard relays: 185.65.134.0/24, 185.65.135.0/24, 193.138.219.0/24
-API/Bridge: 185.65.134.66, 185.65.135.1, 193.138.219.228
+API/Bridge: 185.65.134.66, 185.65.135.1, 193.138.218.74
 ```
 **CRITICAL**: If these IPs have rotated, the killswitch will block Mullvad connection. Verify current IPs and update `modules/security/networking.nix` before install.
 

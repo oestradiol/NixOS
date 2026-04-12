@@ -15,7 +15,8 @@ lib.mkIf (config.myOS.gpu == "nvidia") {
     powerManagement.enable = config.myOS.security.allowSleep;
     open = lib.mkDefault false;
     nvidiaSettings = true;
-    package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
+    # Using 'production' as temporary fallback until legacy_580 is properly exposed.
+    package = config.boot.kernelPackages.nvidiaPackages.production;
   };
 
   environment.sessionVariables = {

@@ -44,11 +44,21 @@
 
       # ── Profile policy ──────────────────────────────────────────
       sandboxedBrowsers.enable = lib.mkEnableOption "Use sandboxed browser wrappers exclusively (disables base Firefox). When enabled, only safe-firefox, safe-tor-browser, and safe-mullvad-browser are available. When disabled, base Firefox with moderate hardening is used.";
+      sandboxedBrowsers.dbusFilter = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          EXPERIMENTAL: Enable D-Bus filtering via xdg-dbus-proxy in sandboxed browsers.
+          Bubblewrap docs warn that unfiltered D-Bus can allow systemd exploitation.
+          However, this may break browser functionality (extensions, native messaging).
+          Enable only after post-stability testing. See POST-STABILITY.md Section 20.
+        '';
+      };
       disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
       ptraceScope = lib.mkOption {
         type = lib.types.int;
-        default = 2;
-        description = "kernel.yama.ptrace_scope (0=classic, 1=restricted, 2=attached-only, 3=no-attach). Daily uses 1 for EAC compatibility, paranoid uses 2 for hardening.";
+        default = 1;
+        description = "kernel.yama.ptrace_scope (0=classic, 1=restricted, 2=attached-only, 3=no-attach). Default 1 for EAC/daily compatibility; paranoid forces 2 for hardening.";
       };
       swappiness = lib.mkOption {
         type = lib.types.int;
@@ -114,6 +124,17 @@
       };
       usbRestrict = lib.mkEnableOption "USB authorized_default=2 (may block external hubs)";
       hardenedMemory.enable = lib.mkEnableOption "Graphene hardened allocator (stability risk)";
+
+      aide.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          AIDE integrity monitoring (file hash-based change detection).
+          Complements ClamAV: AIDE catches unknown malware/rootkits by detecting
+          file changes, while ClamAV catches known malware via signatures.
+          Weekly scans of persisted directories. Set false for ClamAV-only.
+        '';
+      };
 
       # ── VM isolation layer (strongest practical sandbox) ───────
       vmIsolation.enable = lib.mkOption {

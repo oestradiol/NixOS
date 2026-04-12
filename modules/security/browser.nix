@@ -1,20 +1,30 @@
 { config, lib, pkgs, ... }:
 let
+  cfg = config.myOS.security.sandboxedBrowsers;
+
   # Browser sandboxing: UID isolation (100000:100000), process namespace, minimal FS access
   #
   # ISOLATION PROVIDED:
   # - UID namespace: browser runs as UID 100000 (unmapped on host)
   # - IPC/PID/UTS namespaces for process isolation
   # - Capability dropping (--cap-drop ALL)
+  # - Ephemeral tmpfs home (no persistent browser state)
+  # - Optional D-Bus filtering via xdg-dbus-proxy (when dbusFilter enabled)
   #
   # ISOLATION LIMITATIONS (read carefully):
-  # - Network namespace is NOT isolated (--unshare-net not used) because browsers
-  #   need host network for VPN/Tor connectivity
+  # - Network namespace is NOT isolated (--unshare-net not used) — browser has full host network
   # - Broad host paths bound read-only: /run, /var, /etc — exposes host runtime state
-  # - GPU passthrough (--dev-bind /dev/dri) — GPU drivers are known escape vectors
-  # - These wrappers provide HELPFUL CONTAINMENT, not "trustworthy hostile-content isolation"
+  # - GPU passthrough (--dev-bind /dev/dri) — GPU drivers are known escape vectors via DMA
+  # - D-Bus filtering is OPTIONAL (disabled by default) — enable via myOS.security.sandboxedBrowsers.dbusFilter
+  #   When disabled: /run binding exposes D-Bus, Pulse/PipeWire sockets — potential breakout paths
+  # - Even with D-Bus filtering, these wrappers provide DAMAGE REDUCTION, not strong isolation
   #
-  # For maximum isolation of untrusted content, use VM isolation instead.
+  # SECURITY REALITY CHECK:
+  # These wrappers provide DAMAGE REDUCTION for accidental misclicks and basic containment.
+  # They do NOT provide "trustworthy hostile-content isolation" against motivated attackers.
+  # For malicious PDFs, suspicious executables, or untrusted web content: use VM isolation.
+  #
+  # For maximum isolation: enable myOS.security.vmIsolation and run browsers in a VM.
   mkSandboxedBrowser = { name, package, binaryName ? name, extraBinds ? [] }: 
     pkgs.writeShellScriptBin "safe-${name}" ''
       set -eu
@@ -29,6 +39,25 @@ let
       [[ -n "''${WAYLAND_DISPLAY:-}" ]] && WAYLAND_SOCK="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
       [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]] && PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
       [[ -d /dev/dri ]] && GPU_DEV="/dev/dri"
+      
+      # D-Bus filtering setup (when enabled)
+      DBUS_PROXY_SOCK=""
+      ${if cfg.dbusFilter then ''
+      DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
+      # Start xdg-dbus-proxy for filtered D-Bus access
+      # Allows: own name, talk to portal, talk to a11y bus
+      # Blocks: unrestricted system/session bus access
+      ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
+        "$DBUS_SESSION_BUS_ADDRESS" \
+        "$DBUS_PROXY_SOCK" \
+        --filter \
+        --own=org.mozilla.firefox.* \
+        --talk=org.freedesktop.portal.* \
+        --talk=org.a11y.Bus &
+      DBUS_PID=$!
+      cleanup() { kill $DBUS_PID 2>/dev/null || true; }
+      trap cleanup EXIT
+      '' else "# D-Bus filtering disabled — direct /run access allows full D-Bus access (breakage risk)\n      :"}
       
       exec ${pkgs.bubblewrap}/bin/bwrap \
         --new-session \
@@ -47,7 +76,7 @@ let
         --ro-bind /sbin /sbin \
         --ro-bind /lib /lib \
         --ro-bind /lib64 /lib64 \
-        --ro-bind /run /run \
+        ${if cfg.dbusFilter then "# D-Bus filtered via proxy — limited access\n        --ro-bind \"$DBUS_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/bus\"" else "--ro-bind /run /run"} \
         --ro-bind /var /var \
         --bind "$RUNTIME" "$HOME" \
         --tmpfs /tmp \
@@ -64,6 +93,7 @@ let
         --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR" \
         --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
         --setenv DISPLAY "$DISPLAY" \
+        ${if cfg.dbusFilter then "--setenv DBUS_SESSION_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/bus\"" else ""} \
         --cap-drop ALL \
         ${package}/bin/${binaryName} --no-remote --profile "$PROFILE" "$@"
     '';
@@ -229,6 +259,22 @@ let
     [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]] && PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
     [[ -d /dev/dri ]] && GPU_DEV="/dev/dri"
     
+    # D-Bus filtering setup (when enabled)
+    DBUS_PROXY_SOCK=""
+    ${if cfg.dbusFilter then ''
+    DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
+    ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
+      "$DBUS_SESSION_BUS_ADDRESS" \
+      "$DBUS_PROXY_SOCK" \
+      --filter \
+      --own=org.mozilla.firefox.* \
+      --talk=org.freedesktop.portal.* \
+      --talk=org.a11y.Bus &
+    DBUS_PID=$!
+    cleanup() { kill $DBUS_PID 2>/dev/null || true; }
+    trap cleanup EXIT
+    '' else "# D-Bus filtering disabled\n    :"}
+    
     exec ${pkgs.bubblewrap}/bin/bwrap \
       --new-session \
       --die-with-parent \
@@ -246,7 +292,7 @@ let
       --ro-bind /sbin /sbin \
       --ro-bind /lib /lib \
       --ro-bind /lib64 /lib64 \
-      --ro-bind /run /run \
+      ${if cfg.dbusFilter then "--ro-bind \"$DBUS_PROXY_SOCK\" \"\''${XDG_RUNTIME_DIR}/bus\"" else "--ro-bind /run /run"} \
       --ro-bind /var /var \
       --bind "$RUNTIME" "$HOME" \
       --tmpfs /tmp \
@@ -258,6 +304,7 @@ let
       --dev-bind /dev/random /dev/random \
       --dev-bind /dev/urandom /dev/urandom \
       --dev-bind /dev/tty /dev/tty \
+      ${if cfg.dbusFilter then "--setenv DBUS_SESSION_BUS_ADDRESS \"unix:path=\''${XDG_RUNTIME_DIR}/bus\"" else ""} \
       --setenv HOME "$HOME" \
       --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR" \
       --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
