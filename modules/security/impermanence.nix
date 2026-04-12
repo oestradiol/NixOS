@@ -7,12 +7,13 @@ in {
   config = lib.mkMerge [
     (lib.mkIf impermanenceEnabled {
       environment.persistence.${persistRoot} = {
-        hideMounts = true;
+        # Note: hideMounts and allowOther removed - impermanence now uses real bind mounts
 
         directories = [
           "/var/lib/nixos"
           "/var/lib/systemd"
           "/var/lib/aide"  # AIDE integrity database
+          "/var/lib/sbctl"  # Secure Boot keys (Lanzaboote/sbctl)
           "/etc/NetworkManager/system-connections"
           "/var/lib/bluetooth"
           "/var/lib/flatpak"
@@ -47,7 +48,7 @@ in {
         # These allowlists manage dotfiles within an already-persistent home.
         #
         # NOTE: Paranoid profile (/home/ghost): selective impermanence (tmpfs + allowlist)
-        # @home-paranoid is mounted to /persist/home-ghost, and only allowlisted items
+        # @home-paranoid is mounted to /persist/home/ghost, and only allowlisted items
         # are persisted. The home directory itself is tmpfs - wiped on every boot.
         # This is "ephemeral root + selective home persistence" for paranoid.
         users.player = {
@@ -76,7 +77,8 @@ in {
         };
 
         users."ghost" = {
-          home = "/persist/home-ghost";  # Selective impermanence: tmpfs home + allowlist
+          # Note: home directory is now automatically deduced by impermanence module
+          # @home-paranoid should be mounted at /persist/home/ghost
           directories = [
             "Downloads"
             "Documents"

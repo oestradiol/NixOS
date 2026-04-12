@@ -47,7 +47,7 @@ Never trust a status line by itself. For each claim, check four layers:
 - `modules/security/vm-isolation.nix` — KVM/QEMU, virt-manager, AMD/Intel IOMMU
 
 ### Governance
-- `modules/security/governance.nix` — 27 build-time assertions
+- `modules/security/governance.nix` — 28 build-time assertions
 - `modules/security/scanners.nix` — ClamAV, AIDE timers
 
 ---
@@ -163,7 +163,7 @@ API/Bridge: 185.65.134.66, 185.65.135.1, 193.138.219.228
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| 27 assertions | `modules/security/governance.nix` lines 7-119 | ✅ VERIFIED |
+| 28 assertions | `modules/security/governance.nix` lines 7-120 | ✅ VERIFIED |
 | Paranoid requires sandboxed browsers | Lines 17-18 | ✅ VERIFIED |
 | Paranoid requires Mullvad lockdown | Lines 21-26 | ✅ VERIFIED |
 | Paranoid ghost not in wheel | Lines 61-62 | ✅ VERIFIED |
@@ -192,7 +192,7 @@ See: https://nixos.org/manual/nixos/stable/options#opt-users.mutableUsers
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| Lanzaboote integration | `secure-boot.nix:6-9` | ✅ VERIFIED |
+| Lanzaboote integration | `secure-boot.nix:6-11` | ✅ VERIFIED |
 | TPM requires systemd initrd | `secure-boot.nix:13-16` | ✅ VERIFIED |
 | Staged (disabled by default) | `hosts/nixos/default.nix:38-39` | ✅ VERIFIED |
 

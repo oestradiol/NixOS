@@ -28,13 +28,14 @@ btrfs subvolume create "$MNT/@home-paranoid"
 umount "$MNT"
 
 mount -t tmpfs none "$MNT" -o mode=755,size=4G
-mkdir -p "$MNT"/{boot,nix,persist,var/log,home/player,home/ghost}
+mkdir -p "$MNT"/{boot,nix,persist,var/log,home/player,persist/home/ghost}
 mount -o subvol=@nix,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/nix"
 mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persist"
 mount -o subvol=@log,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/var/log"
 mount -o subvol=@home-daily,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/home/player"
-mount -o subvol=@home-paranoid,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/home/ghost"
+mount -o subvol=@home-paranoid,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persist/home/ghost"
 mount "${DISK}p1" "$MNT/boot"
 
 echo "Mounts ready at $MNT"
+echo "@home-paranoid -> /mnt/persist/home/ghost (runtime: /persist/home/ghost)"
 echo "Now copy this repo to $MNT/etc/nixos and run nixos-install --flake /mnt/etc/nixos#nixos"

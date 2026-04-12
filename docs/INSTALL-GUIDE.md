@@ -32,8 +32,10 @@ Inside `cryptroot` Btrfs create:
 
 ## Phase 2 — mount target
 - root: tmpfs on `/mnt`
-- mount subvolumes to `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, `/mnt/home/player`, `/mnt/home/ghost`
+- mount subvolumes to `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, `/mnt/home/player`, `/mnt/persist/home/ghost`
 - mount EFI to `/mnt/boot`
+
+**Note**: `@home-paranoid` mounts to `/mnt/persist/home/ghost` (runtime: `/persist/home/ghost`), not `/mnt/home/ghost`
 
 ## Phase 3 — install repo
 1. Copy this repository to `/mnt/etc/nixos`.
@@ -88,7 +90,7 @@ Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 - `@persist` → `/persist` (fully persistent)
 - `@log` → `/var/log` (fully persistent)
 - `@home-daily` → `/home/player` (fully persistent subvolume)
-- `@home-paranoid` → `/persist/home-ghost` (persistent storage for selective impermanence)
+- `@home-paranoid` → `/persist/home/ghost` (persistent storage for selective impermanence)
 
 ### tmpfs root
 `/` is tmpfs — everything not allowlisted is discarded on reboot.
@@ -110,7 +112,7 @@ Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 **Paranoid profile** (`/home/ghost`):
 - **Selective impermanence**: tmpfs home + allowlist
 - `/home/ghost` is tmpfs (wiped on boot)
-- `@home-paranoid` mounted to `/persist/home-ghost` for persistence
+- `@home-paranoid` mounted to `/persist/home/ghost` for persistence
 - Only allowlisted items are bind-mounted into tmpfs home
 - Malware/ransomware in home is wiped on reboot
 

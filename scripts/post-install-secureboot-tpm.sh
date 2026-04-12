@@ -9,6 +9,8 @@ set -euo pipefail
 # Then run: sudo nixos-rebuild switch --flake /etc/nixos#nixos
 
 # Step 2: Create and enroll Secure Boot keys
+# NOTE: sbctl create-keys places keys in /var/lib/sbctl by default.
+# This MUST match boot.lanzaboote.pkiBundle in modules/security/secure-boot.nix
 sudo sbctl create-keys
 sudo sbctl enroll-keys --microsoft
 

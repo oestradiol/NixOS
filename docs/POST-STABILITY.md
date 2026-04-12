@@ -21,6 +21,10 @@ For recovery procedures if issues occur, see [`RECOVERY.md`](./RECOVERY.md).
 ## 4. Secure Boot / Lanzaboote sequence
 Do this only after a normal encrypted boot is known-good.
 
+**Prerequisite (both options):**
+1. Edit `hosts/nixos/default.nix`: set `myOS.security.secureBoot.enable = true;`
+2. `sudo nixos-rebuild switch --flake /etc/nixos#nixos`
+
 **Option A: Use the helper script (recommended)**
 ```bash
 sudo ./scripts/post-install-secureboot-tpm.sh
@@ -28,12 +32,12 @@ sudo ./scripts/post-install-secureboot-tpm.sh
 This runs `sbctl create-keys` and `sbctl enroll-keys --microsoft` for you.
 
 **Option B: Manual steps**
-1. Edit `hosts/nixos/default.nix`: set `myOS.security.secureBoot.enable = true;`
-2. `sudo nixos-rebuild switch --flake /etc/nixos#nixos`
-3. `sudo sbctl create-keys`
-4. `sudo sbctl enroll-keys --microsoft`
-5. Enable Secure Boot in firmware
-6. Reboot and verify: `bootctl status`, `sbctl status`
+1. `sudo sbctl create-keys`
+2. `sudo sbctl enroll-keys --microsoft`
+
+**Final steps (both options):**
+1. Enable Secure Boot in firmware setup
+2. Reboot and verify: `bootctl status`, `sbctl status`
 
 **If issues occur**: See [`RECOVERY.md`](./RECOVERY.md) "If Secure Boot breaks boot" and "If disabling Secure Boot still doesn't boot" sections.
 
@@ -193,7 +197,9 @@ Test that browsers don't leak identifying information.
 **WebRTC leak test (Firefox):**
 1. Open daily Firefox (or `safe-firefox` on paranoid)
 2. Visit https://browserleaks.com/webrtc
-3. Expected: No IP addresses shown (WebRTC disabled via `media.peerconnection.enabled=false`)
+3. Expected:
+   - Daily: May show Mullvad IP if VPN active (WebRTC enabled for gaming/video calls)
+   - Paranoid (`safe-firefox`): No IP addresses shown (WebRTC disabled via `media.peerconnection.enabled=false`)
 
 **DNS leak test:**
 1. Connect to Mullvad VPN
@@ -270,7 +276,7 @@ Review these sources post-stability to identify additional hardening opportuniti
 
 **Note**: These sources are already analyzed in `docs/audit/SOURCE-COVERAGE-MATRIX.md`. Review them to understand what was adopted vs deferred.
 
-## 17. Monitor these hardening knobs on daily
+## 18. Monitor these hardening knobs on daily
 All negligible-impact hardening is kept enabled on daily by decision. If specific issues arise, disable via `myOS.security.*` in `profiles/daily.nix`:
 - **AppArmor** (`apparmor = false`) — if specific apps fail with permission errors
 - **init_on_alloc** (`kernelHardening.initOnAlloc = false`) — if allocation-heavy workloads show measurable regression
@@ -280,7 +286,7 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 - **ptraceScope** (`ptraceScope = 2`) — if VRChat EAC issues occur, daily uses 1 for compatibility
 - **swappiness** (`swappiness = 30`) — if swap behavior needs tuning, daily uses 150 for zram optimization, paranoid uses 180
 
-## 18. Wayland-only display manager roadmap
+## 19. Wayland-only display manager roadmap
 **Phase 1 (current):** X11 server runs for SDDM/NVIDIA compatibility, user sessions are Wayland-only, X apps use XWayland automatically. Acceptable tradeoff for NVIDIA compatibility.
 
 **Phase 2 (post-stability):** After system is stable and tested, evaluate greetd + tuigreet for Wayland-native display manager. This would eliminate X11 server entirely but is experimental and may break NVIDIA compatibility. See https://wiki.nixos.org/wiki/Greetd.
@@ -687,6 +693,67 @@ dmesg | grep -i iommu
 ```
 **Paranoid consideration**: Thunderbolt allows DMA attacks that bypass all OS hardening. Consider physical disabling in firmware for paranoid profile.
 
+## 20. PAM profile-binding (EXPERIMENTAL - opt-in only)
+
+**WARNING**: This is a high-risk PAM modification. It writes directly to `security.pam.services.*.text`, replacing the entire PAM service file. This bypasses NixOS's default PAM stack generation and can cause authentication lockouts if misconfigured.
+
+**Default**: **DISABLED** in both profiles. Only enable after post-stability testing.
+
+### What it does
+Enforces user/profile binding at the PAM level:
+- Daily profile: Only `player` can login/sudo/su
+- Paranoid profile: Only `ghost` can login/sudo/su
+- Cross-profile user switching is blocked (cannot `su` from daily to ghost or vice versa)
+
+### Pre-enable verification
+Test thoroughly before enabling:
+```bash
+# Verify current PAM works for both users
+sudo pamtester sddm player authenticate
+sudo pamtester login ghost authenticate
+sudo pamtester sudo player authenticate
+sudo pamtester su player authenticate
+
+# Check systemd services
+systemctl status systemd-logind
+```
+
+### Enable (both profiles)
+Edit your profile (`profiles/daily.nix` or `profiles/paranoid.nix`):
+```nix
+myOS.security.pamProfileBinding.enable = true;  # or lib.mkForce true for paranoid
+```
+
+Rebuild and test immediately:
+```bash
+sudo nixos-rebuild switch --flake /etc/nixos#nixos
+
+# CRITICAL: Test before closing this terminal
+# Open a NEW terminal/window and verify:
+pamtester sddm player authenticate  # Should succeed on daily
+pamtester sudo player authenticate   # Should succeed
+
+# Test wrong-user blocking (should fail):
+# (On daily) sudo pamtester sddm ghost authenticate  # Should fail
+```
+
+### Recovery if locked out
+If authentication breaks:
+1. Boot to recovery mode or NixOS installer USB
+2. Mount your system: `nixos-enter` or manual mount
+3. Edit `/etc/nixos/profiles/daily.nix` (or paranoid.nix):
+   ```nix
+   myOS.security.pamProfileBinding.enable = false;
+   ```
+4. Rebuild: `nixos-rebuild switch --flake /etc/nixos#nixos`
+5. Alternative emergency fix: Edit `/etc/pam.d/sddm`, `/etc/pam.d/login`, etc. to remove the profile-binding line
+
+### Implementation notes
+- Uses `lib.mkDefault` and `lib.mkOrder 100` for non-destructive insertion
+- Uses `requisite` (not `required`) for fail-fast behavior
+- Root access preserved as emergency fallback in the script
+- Future: Consider migrating to `security.pam.services.<name>.rules` API (experimental in nixpkgs)
+
 ---
 
-**Summary**: 4 items fixed (LUKS header backup, EFI backup, bubblewrap acknowledgment, SSH rotation); 6 items require your explicit decision.
+**Summary**: 4 items fixed (LUKS header backup, EFI backup, bubblewrap acknowledgment, SSH rotation); 7 items require your explicit decision (added PAM risk documentation).

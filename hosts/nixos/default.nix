@@ -20,6 +20,8 @@
     ../../modules/security/scanners.nix
     ../../modules/security/vm-isolation.nix  # Disabled by default, knob: myOS.security.vmIsolation.enable
     ../../modules/security/sandboxed-apps.nix
+    ../../modules/security/privacy.nix
+    ../../modules/security/user-profile-binding.nix
     # Desktop
     ../../modules/gpu/nvidia.nix
     ../../modules/gpu/amd.nix

@@ -51,10 +51,16 @@
     options = [ "subvol=@home-daily" "compress=zstd" "noatime" ];
   };
 
-  # Paranoid profile: selective home impermanence (tmpfs root + allowlist)
-  # @home-paranoid subvolume mounted to /persist/home-ghost for impermanence
-  # /home/ghost itself is tmpfs - only allowlisted items persist
-  fileSystems."/persist/home-ghost" = {
+  # Paranoid profile: selective home impermanence (tmpfs + allowlist)
+  # @home-paranoid subvolume mounted to /persist/home/ghost for impermanence backing store
+  # /home/ghost is tmpfs (wiped on boot) - only allowlisted items bind-mounted from /persist/home/ghost
+  fileSystems."/home/ghost" = {
+    device = "none";
+    fsType = "tmpfs";
+    neededForBoot = true;
+    options = [ "defaults" "size=2G" "mode=700" "uid=1001" "gid=100" ];  # uid=ghost, gid=users
+  };
+  fileSystems."/persist/home/ghost" = {
     device = "/dev/mapper/cryptroot";
     fsType = "btrfs";
     neededForBoot = true;
