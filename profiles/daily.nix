@@ -43,7 +43,7 @@
     agenix.enable = true;
 
     # Machine ID: systemd-generated stable ID (operational stability)
-    # Paranoid uses Whonix shared ID for privacy
+    # Paranoid also uses a unique persisted host ID
     persistMachineId = true;
     # machineIdValue = null (default) - let systemd generate unique ID
 
@@ -91,7 +91,7 @@
     # VM/App sandboxing: enabled for untrusted apps
     sandbox.vms = false;   # Significant overhead, manual enable if needed
     sandbox.apps = true;     # VRCX, Windsurf wrapped
-    sandbox.dbusFilter = false;  # Direct D-Bus access for compatibility
+    sandbox.dbusFilter = true;   # Tightened wrappers: filtered D-Bus by default
 
     # Kernel hardening (maximal for daily - only disable what breaks apps or severe perf)
     kernelHardening = {

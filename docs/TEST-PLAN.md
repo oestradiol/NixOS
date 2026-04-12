@@ -1,284 +1,118 @@
 # TEST PLAN
 
-Runtime verification checklist to run **immediately after** first boot.
+Exactly everything required to prove the daily profile works first and the paranoid profile reaches its current minimum functional state after daily is already operable.
 
-For pre-install static checks and code audit, see [`PRE-INSTALL.md`](./PRE-INSTALL.md).
-For recovery procedures if tests fail, see [`RECOVERY.md`](./RECOVERY.md).
-For post-stability configuration, see [`POST-STABILITY.md`](./POST-STABILITY.md).
+## 1. Stage order
+- [ ] get daily operable first
+- [ ] do not spend time chasing paranoid-specific breakage until daily is usable for recovery and iteration
+- [ ] only after daily passes sections 2 through 4 should paranoid sections become blocking
 
-## Boot and filesystem
-- [ ] system boots to daily
-- [ ] system boots to paranoid specialisation
-- [ ] `/` is tmpfs (`findmnt -R /`)
-- [ ] `/nix`, `/persist`, `/var/log`, `/home/player`, `/home/ghost`, `/boot` are mounted as intended
-- [ ] **Swap is active** (`swapon --show` shows `/swap/swapfile`, `free -h` shows swap > 0)
-- [ ] reboot drops non-persisted files
-- [ ] persistence verification: create file in `/tmp`, reboot, verify it's gone; create file in `~/Data`, reboot, verify it survives
+## 2. Build and boot
+- [ ] `nix flake check` passes
+- [ ] daily builds
+- [ ] daily boots
+- [ ] paranoid builds
+- [ ] paranoid boots
 
-### /persist mount validation
-- [ ] `/persist` is mounted: `findmnt /persist` shows bind mount from Btrfs subvolume
-- [ ] Critical persisted paths are bind-mounted: `findmnt /etc/passwd /etc/shadow /var/lib/systemd`
-- [ ] Impermanence mount units are active: `systemctl list-units --type=mount | grep persist`
-- [ ] If `/persist` fails to mount, system should fail to boot or show errors in journal
+## 3. Persistence and identity
+- [ ] `/persist` is mounted
+- [ ] `/etc/machine-id` is persisted
+- [ ] daily machine-id is unique and stable across reboot
+- [ ] paranoid machine-id is unique and stable across reboot
+- [ ] no profile uses the removed Whonix shared machine-id
 
-### EFI boot entry survival
-- [ ] Boot entries exist: `bootctl list` shows NixOS entries
-- [ ] After firmware reset/update, boot entries survive (test if possible)
-- [ ] EFI variables are accessible: `bootctl status` shows EFI system partition
-- [ ] If Secure Boot enabled: `sbctl status` shows enrolled keys and signed files
+## 4. Daily profile
+- [ ] Steam works
+- [ ] VR path works
+- [ ] controllers work
+- [ ] Firefox launches normally
+- [ ] `about:policies` and the generated Firefox profile match the vendored arkenfox baseline plus repo daily relaxations
+- [ ] Mullvad app mode connects and stays usable for ordinary browsing
+- [ ] `services.resolved` is active in daily and DNS resolution works normally
+- [ ] Flathub remote exists and Flatpak portals work
+- [ ] `fwupdmgr get-devices` works
+- [ ] `safe-vrcx` launches
+- [ ] `safe-windsurf` launches
+- [ ] VRCX file chooser works through portals if needed
+- [ ] Windsurf file chooser works through portals if needed
+- [ ] daily wrappers keep only expected persisted state
 
-### Btrfs health and integrity
-- [ ] Btrfs filesystem is healthy: `sudo btrfs filesystem df /` shows usage
-- [ ] No read-only remount: `sudo btrfs filesystem status /` does not show "readonly"
-- [ ] Checksum errors: `dmesg | grep -i btrfs | grep -i checksum` should be empty
-- [ ] Scrub scheduled or run manually: `sudo btrfs scrub start /` (can take time)
-- [ ] Subvolume list is correct: `sudo btrfs subvolume list /` shows expected subvolumes
-
-## Machine ID persistence (both profiles)
-- [ ] `/etc/machine-id` is persisted (check: `findmnt /etc/machine-id` shows bind from `/persist`)
-- [ ] **Daily**: Machine-id is systemd-generated unique ID (check: `cat /etc/machine-id` - should NOT be `b08dfa6083e7567a1921a715000001fb`)
-- [ ] **Paranoid**: Machine-id is Whonix shared ID `b08dfa6083e7567a1921a715000001fb` (check: `cat /etc/machine-id`)
-- [ ] Machine-id survives reboot on both profiles (record before reboot, verify same after)
-
-**If boot fails**: See [`RECOVERY.md`](./RECOVERY.md) "If the new system does not boot" section.
-**If impermanence issues**: See [`RECOVERY.md`](./RECOVERY.md) "If impermanence causes app issues" section.
-
-## Graphics and session
-- [ ] SDDM starts (`systemctl status display-manager`)
-- [ ] Plasma 6 Wayland session starts for `player`
-- [ ] Plasma 6 Wayland session starts for `ghost`
-- [ ] `nvidia_drm.modeset=1` is active (`cat /proc/cmdline`)
-
-**Verification**:
-```bash
-systemctl --failed
-journalctl -b -p warning
-id && whoami && echo "$XDG_SESSION_TYPE"
-```
-
-**If NVIDIA/Wayland breaks**: See [`RECOVERY.md`](./RECOVERY.md) "If NVIDIA/Wayland breaks after update" section.
-
-## Daily profile
-- [ ] Steam starts
-- [ ] Gamescope starts
-- [ ] Gamemode is active (`systemctl status gamemoded`)
-- [ ] VR services work (`systemctl status wivrn`)
-- [ ] Vesktop run if installed
-- [ ] Firefox Sync is disabled (`identity.fxaccounts.enabled = false` in about:config)
-- [ ] Bluetooth controllers pair and work (Xbox/8BitDo/etc.)
-- [ ] ntsync kernel module loaded (`lsmod | grep ntsync`)
-- [ ] no obvious gaming regression versus current setup baseline
-
-**If gaming performance regresses**: See [`RECOVERY.md`](./RECOVERY.md) "If gaming performance regresses" section.
-
-## Paranoid profile
-- [ ] Steam absent/disabled
-- [ ] VR absent/disabled
-- [ ] Vesktop absent/disabled
+## 5. Paranoid minimum state
 - [ ] `safe-firefox` launches
+- [ ] `safe-firefox` uses the stricter arkenfox-derived local baseline
 - [ ] `safe-tor-browser` launches
 - [ ] `safe-mullvad-browser` launches
-- [ ] Signal (Flatpak) launches
-- [ ] separate user home is respected
+- [ ] browser wrappers work without broad `/run/user/$UID` exposure
+- [ ] browser wrappers work without broad `/var` exposure
+- [ ] portal/file chooser path is understood and tested where relevant
+- [ ] `auditctl -s` shows auditing enabled and backlog limit applied
+- [ ] `auditctl -l` shows the repo rule set loaded
+- [ ] `systemctl status audit-rules-nixos.service` succeeds
+- [ ] reboot happened after AppArmor was first enabled
+- [ ] `aa-status` shows AppArmor active after reboot
+- [ ] if any repo policy is later added, verify its complain/enforce state explicitly
+- [ ] no unexpected AppArmor denial loop blocks paranoid login or wrapped-browser launch
 
-## Application sandboxing
-- [ ] Signal Flatpak runs on both profiles
-- [ ] VRCX (safe-vrcx) runs on daily profile
-- [ ] Windsurf (safe-windsurf) runs on daily profile
-- [ ] Verify sandbox isolation: `ps aux | grep bwrap` shows UID 100000 processes
-- [ ] Flatpak apps have desktop entries in KDE menu
-- [ ] Sandboxed apps have desktop entries in KDE menu
+## 6. Bubblewrap verification
+For at least one browser wrapper and one daily app wrapper, inspect the running process or wrapper behavior and confirm:
+- [ ] no broad home bind
+- [ ] no broad `/var` bind
+- [ ] private runtime dir is used
+- [ ] D-Bus is filtered when enabled
+- [ ] network is exposed only for wrappers that request it
+- [ ] GPU is exposed only for wrappers that request it
 
-## D-Bus filtering (paranoid profile)
-- [ ] `safe-firefox` launches with D-Bus filtering enabled
-- [ ] Browser extensions load correctly
-- [ ] File pickers (portal) work via xdg-dbus-proxy
-- [ ] Desktop notifications work (if enabled)
-- [ ] No D-Bus errors in `journalctl --user -u xdg-dbus-proxy`
+## 7. WireGuard paranoid verification
+- [ ] endpoint configured as literal `IP:port`
+- [ ] no hostname endpoint remains in paranoid config
+- [ ] nftables output exception is pinned to the exact endpoint IP and port
+- [ ] no standing non-WG DNS exception exists
+- [ ] DNS works through the tunnel
+- [ ] non-WG egress is blocked when tunnel is down
+- [ ] endpoint-IP change procedure in `RECOVERY.md` is understandable and testable
 
-**If D-Bus filtering breaks functionality**: Disable in paranoid.nix: `sandbox.dbusFilter = lib.mkForce false`
+## 8. Security monitoring and integrity verification
+- [ ] `freshclam` succeeds and ClamAV signatures update normally
+- [ ] `systemctl list-timers` shows both ClamAV timers
+- [ ] `systemctl start clamav-impermanence-scan` completes
+- [ ] `systemctl start clamav-deep-scan` completes
+- [ ] if `myOS.security.aide.enable = true`, AIDE database is initialized and `systemctl start aide-daily-check` completes
+- [ ] privacy settings match the active profile: MAC randomization mode, IPv6 temporary addresses, and TCP timestamps
 
-## VPN and leak testing
+## 9. VM tooling and workflow verification
+- [ ] libvirt starts when paranoid is active
+- [ ] virt-manager launches
+- [ ] creating a VM is possible
+- [ ] the four VM classes are documented and understood: `trusted-work-vm`, `risky-browser-vm`, `malware-research-vm`, `throwaway-untrusted-file-vm`
+- [ ] each class has explicit policy across all six layers in `PROJECT-STATE.md`
+- [ ] `repo-vm-class policy <class>` matches the written policy
+- [ ] `repo-vm-class create trusted-work-vm ...` produces a persistent NAT-backed VM with USB disabled by default
+- [ ] `repo-vm-class create risky-browser-vm ...` produces a transient NAT-backed VM with no host share or clipboard by default
+- [ ] `repo-vm-class create malware-research-vm ...` defaults to no network and rejects NAT
+- [ ] `repo-vm-class create throwaway-untrusted-file-vm ...` defaults to no network and only permits explicit read-only import shares
+- [ ] host defaults still match the workflow: no USB redirection by default, no implicit clipboard trust, no claim that VM tooling alone makes every guest hardened
+- [ ] treat guest templates and real-world tuning as still needing live trials; do not mark any VM class fully proven until those trials are completed
+- [ ] keep VM guest-template tuning in post-stability even after host-side automation is working
 
-### Daily: Mullvad App
-- [ ] Mullvad daemon is running (`systemctl status mullvad-daemon`)
-- [ ] Can connect to Mullvad (`mullvad status` shows Connected)
-- [ ] Mullvad check shows expected VPN route (`curl https://am.i.mullvad.net/connected`)
-- [ ] Firefox WebRTC does not reveal real IP (test: https://browserleaks.com/webrtc)
+## 10. Secure Boot and TPM staged verification
+- [ ] baseline encrypted boot works before enabling either feature
+- [ ] Secure Boot enrollment works
+- [ ] TPM enrollment works
+- [ ] fallback recovery path is documented and understood
 
-### Paranoid: Self-Owned WireGuard
-- [ ] WireGuard interface is up (`ip link show wg-mullvad`)
-- [ ] Tunnel is established (`sudo wg show wg-mullvad` shows handshake/transfer)
-- [ ] Default route is via tunnel (`ip route | grep default` shows dev wg-mullvad)
-- [ ] nftables policy is default-deny (`sudo nft list table inet filter | grep 'policy drop'`)
-- [ ] **Paranoid requires pinned IP endpoint**: verify endpoint is literal IP, not hostname (check `grep endpoint /etc/nixos/profiles/paranoid.nix`)
-- [ ] **No DNS exception for pinned IP**: verify no DNS allow rules on non-WG interfaces (`sudo nft list table inet filter | grep "dport 53" | grep -v wg-mullvad`)
-- [ ] **No dynamicEndpointRefreshSeconds for pinned IP**: verify disabled (check WireGuard config or `sudo wg show wg-mullvad`)
-- [ ] **Killswitch test**: Stop WireGuard, verify egress fails, restart, verify works:
-  ```bash
-  sudo systemctl stop wg-quick-wg-mullvad
-  curl --max-time 5 https://example.com  # Should fail
-  sudo systemctl start wg-quick-wg-mullvad
-  curl https://example.com  # Should succeed
-  ```
-- [ ] Mullvad check shows expected VPN route (`curl https://am.i.mullvad.net/connected`)
-- [ ] No DNS leaks (`dig +short whoami.mullvad.net` returns Mullvad server ID)
-- [ ] Tor Browser shows Tor check success
+## 11. Performance checks
+- [ ] daily gaming baseline is acceptable
+- [ ] VR baseline is acceptable
+- [ ] paranoid overhead is understood and acceptable
+- [ ] no unexpected regression from wrapper changes
 
-**Verification commands**:
-```bash
-# WireGuard status
-sudo wg show wg-mullvad
-ip link show wg-mullvad
+## 12. Explicit deferred validation
+- [ ] `myOS.security.pamProfileBinding.enable` remains off unless explicitly staged and tested; this feature is not part of the current-stage baseline
 
-# Routing
-ip route | grep default
-
-# Firewall
-sudo nft list table inet filter
-
-# DNS and IP verification
-dig +short whoami.mullvad.net
-curl https://am.i.mullvad.net/connected
-resolvectl status
-```
-
-**If paranoid blocks too much network**: See [`RECOVERY.md`](./RECOVERY.md) "If the paranoid profile blocks too much network" section.
-
-## Secure Boot and TPM
-- [ ] signed boot succeeds (`bootctl status`, `sbctl status`)
-- [ ] firmware Secure Boot shows enabled (`mokutil --sb-state`)
-- [ ] recovery passphrase still works
-- [ ] TPM unlock works twice in a row (`sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT`)
-
-**Verification commands**:
-```bash
-bootctl status
-sbctl status
-mokutil --sb-state || true
-sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
-```
-
-**If Secure Boot breaks**: See [`RECOVERY.md`](./RECOVERY.md) "If Secure Boot breaks boot" and "If disabling Secure Boot still doesn't boot" sections.
-**If TPM unlock breaks**: See [`RECOVERY.md`](./RECOVERY.md) "If TPM unlock breaks" section.
-
-## Kernel and sysctl hardening
-- [ ] `sysctl kernel.dmesg_restrict` returns 1
-- [ ] `sysctl kernel.kptr_restrict` returns 2
-- [ ] `sysctl kernel.yama.ptrace_scope` returns 1 on daily, 2 on paranoid
-- [ ] `sysctl kernel.unprivileged_bpf_disabled` returns 1
-- [ ] `sysctl fs.suid_dumpable` returns 0
-- [ ] `sysctl net.ipv6.conf.all.use_tempaddr` returns 2
-- [ ] `sysctl vm.swappiness` returns 150 on daily, 180 on paranoid
-- [ ] `cat /proc/cmdline` includes `debugfs=off`
-- [ ] `coredumpctl` shows no stored dumps / storage disabled
-- [ ] `lsmod | grep -E 'dccp|sctp|rds|tipc|firewire'` returns empty
-
-### Paranoid-only kernel controls (Madaidan-aligned)
-- [ ] `sysctl kernel.kexec_load_disabled` returns 1 (paranoid only)
-- [ ] `sysctl kernel.sysrq` returns 4 (paranoid only: restricted)
-- [ ] `sysctl kernel.io_uring_disabled` returns 1 (paranoid only)
-- [ ] `sysctl net.ipv4.tcp_timestamps` returns 0 (paranoid only; daily: 1)
-- [ ] EarlyOOM is running (`systemctl status earlyoom`) — OOM killer for desktop systems
-
-## Root and privilege hardening
-- [ ] `sudo -u root whoami` works only from wheel user
-- [ ] `su -` fails for non-wheel users
-- [ ] `grep root /etc/shadow` shows locked (`!`) password
-
-## USB protection (paranoid only)
-- [ ] `cat /proc/cmdline` includes `usbcore.authorized_default=2` on paranoid
-- [ ] keyboard and mouse still work on paranoid
-- [ ] `cat /proc/cmdline` does NOT include `usbcore.authorized_default` on daily
-
-**If USB authorization blocks peripherals**: See [`RECOVERY.md`](./RECOVERY.md) "If USB authorization blocks peripherals (paranoid)" section.
-
-## IPv6 privacy
-- [ ] `ip -6 addr` shows temporary addresses on active interfaces
-
-## MAC address randomization (paranoid profile)
-- [ ] WiFi interface uses random MAC: `ip link show wlan0` shows MAC changes across boots or per-network
-- [ ] Ethernet interface uses random MAC (paranoid): `ip link show eth0` shows random MAC
-- [ ] WiFi scan uses random MAC: check NetworkManager logs or `nmcli device wifi list`
-- [ ] Verify MAC is not the hardware MAC: compare with `ethtool -P <interface>`
-
-## Systemd service hardening
-- [ ] `systemctl show flatpak-repo | grep NoNewPrivileges` returns yes
-- [ ] `systemctl show clamav-impermanence-scan | grep NoNewPrivileges` returns yes
-- [ ] `systemctl show clamav-deep-scan | grep NoNewPrivileges` returns yes
-
-## VM isolation (paranoid only)
-- [ ] libvirtd service is running (`systemctl status libvirtd`)
-- [ ] KVM module is loaded (`lsmod | grep kvm`)
-- [ ] IOMMU is enabled in kernel logs (`dmesg | grep -i iommu`)
-- [ ] User has libvirtd group access (`groups player ghost`)
-
-## Audit tools
-- [ ] `lynis audit system`
-- [ ] `sudo aide --init` (initialize AIDE database - required before checks work)
-- [ ] `sudo aide --check` (verify AIDE can detect file changes)
-- [ ] `sudo freshclam` (update ClamAV virus definitions)
-- [ ] `sudo systemctl start clamav-impermanence-scan` (test impermanence scan works)
-- [ ] `sudo systemctl start clamav-deep-scan` (test deep scan works)
-- [ ] review `/var/log/clamav-impermanence-scan.log` and `/var/log/clamav-deep-scan.log` for results
-
-## Secrets and agenix
-- [ ] SSH host keys exist in `/persist/etc/ssh/` (impermanence working)
-- [ ] `agenix` command available
-- [ ] After creating `.age` files in `/etc/nixos/secrets/`, `nixos-rebuild switch` decrypts them correctly
-- [ ] WireGuard secrets decrypt to `/run/agenix/` (check: `ls -la /run/agenix/wg-private-key`)
-
-## Nix trusted users (security-critical)
-- [ ] Verify trusted-users is `["root"]`: `nix show-config | grep trusted-users`
-- [ ] Both profiles should use minimal safe default: `["root"]` only
-- [ ] Understand security implications: trusted-users can build as root, set config, perform GC as root
-- [ ] If you need to add users for Steam/development, modify `modules/core/base-desktop.nix` directly
-
-## WireGuard endpoint configuration (paranoid only)
-- [ ] Verify endpoint is pinned IP (literal IP:port, not hostname)
-- [ ] Verify no DNS exception (no port 53 allow rules on non-WG interfaces)
-- [ ] Verify no dynamicEndpointRefreshSeconds (disabled for static IP)
-- [ ] Test pinned endpoint IP recovery procedure (see RECOVERY.md "If WireGuard pinned endpoint IP changes")
-- [ ] Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
-
-## New recovery scenario validation (post-stability)
-- [ ] EFI partition space exhaustion: check ESP size with `df -h /boot`, verify >= 512MB
-- [ ] Sandboxed app wrapper failures: test `safe-vrcx` and `safe-windsurf` launch, check for D-Bus/portal errors
-- [ ] xdg-dbus-proxy/portal regressions: verify portal service running with `systemctl --user status xdg-desktop-portal`
-- [ ] First-boot lockout: verify user creation and password setting during install, test login immediately after first boot
-- [ ] Secure Boot state migration: verify sbctl status after firmware reset, test key re-enrollment
-- [ ] Live rollback with persistence changes: test rollback after impermanence config changes, verify no missing files
-- [ ] WireGuard pinned endpoint IP changes (paranoid): verify recovery procedure works (simulate IP change, update config, verify handshake)
-
-## Recovery scenario validation (post-stability)
-**Note**: These tests require inducing failure states or simulating them. Perform only after system is stable and you have recovery media ready.
-
-### Agenix/secret decryption recovery
-- [ ] **Scenario 1: Missing age identity test** (simulated):
-  - Backup current SSH host key: `cp /etc/ssh/ssh_host_ed25519_key.pub /tmp/backup.pub`
-  - Verify age identity extraction works: `cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age`
-  - Restore backup if needed
-- [ ] **Scenario 2: Secret file availability test**:
-  - Verify secret files exist in `/run/agenix/` after boot
-  - Verify secret files are persisted in `/persist/secrets/` (if configured)
-- [ ] **Scenario 3: WireGuard secret path test**:
-  - Verify WireGuard can read secret from configured path
-  - Check systemd logs for agenix/WireGuard errors: `journalctl -xe | grep -i "age\|agenix\|wireguard"`
-
-### Paranoid network failure recovery
-- [ ] **Emergency disable test** (from daily profile):
-  - Boot daily profile
-  - Edit paranoid profile to disable WireGuard temporarily: `wireguardMullvad.enable = lib.mkForce false`
-  - Rebuild and boot paranoid to verify network access without WireGuard
-  - Re-enable WireGuard after test
-- [ ] **Killswitch test** (already covered in VPN section above):
-  - Stop WireGuard, verify egress fails
-  - Restart WireGuard, verify egress succeeds
-
-**If recovery scenarios fail**: See [`RECOVERY.md`](./RECOVERY.md) "If agenix secret decryption fails" section.
-
-## Browser hardening verification
-- [ ] Daily Firefox: `about:config` shows `privacy.resistFingerprinting` = false (FPP instead of RFP)
-- [ ] Daily Firefox: `about:config` shows `media.peerconnection.enabled` = true (WebRTC enabled for gaming/video)
-- [ ] Paranoid safe-firefox: check `~/.cache/safe-firefox/profile/user.js` exists with hardened prefs
-- [ ] Tor Browser: verify it uses Tor network (not system DNS)
+These are not complete yet and must stay deferred:
+- [ ] bubblewrap seccomp wiring
+- [ ] bubblewrap Landlock wiring
+- [ ] no-GPU paranoid browser variants
+- [ ] deeper Tor Browser containment trials
+- [ ] deeper Mullvad Browser containment trials
+- [ ] retesting any Whonix-style shared machine-id idea after removal; keep this deferred in `POST-STABILITY.md` only if ever revisited

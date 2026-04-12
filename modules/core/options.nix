@@ -100,10 +100,12 @@
       wireguardMullvad.endpoint = lib.mkOption {
         type = lib.types.str;
         default = "";
-        example = "us-nyc-wg-001.mullvad.net:51820";
+        example = "146.70.34.211:51820";
         description = ''
-          Mullvad server endpoint (hostname:port or IP:port).
-          Choose from: https://mullvad.net/en/servers/
+          Mullvad server endpoint.
+          Repo policy for paranoid: use a literal pinned IP:port, not a hostname.
+          Resolve and pin it from a trusted environment before install.
+          Choose relay details from: https://mullvad.net/en/servers/
         '';
       };
       wireguardMullvad.serverPublicKey = lib.mkOption {
@@ -139,47 +141,70 @@
           type = lib.types.bool;
           default = false;
           description = ''
-            Use sandboxed browser wrappers exclusively (disables base Firefox).
+            Use sandboxed browser wrappers exclusively instead of base Firefox.
             When enabled, only safe-firefox, safe-tor-browser, and safe-mullvad-browser are available.
             When disabled, base Firefox with moderate hardening is used.
-            
-            This provides UID isolation (100000:100000), process namespace, and minimal filesystem access
-            via bubblewrap. Note: Network namespace is NOT isolated - browser has full host network.
+
+            This provides tightened local browser containment via bubblewrap:
+            dedicated user namespace, filtered D-Bus when enabled, exact runtime socket binds,
+            and no broad home or /var exposure. Host networking is still shared.
           '';
         };
         apps = lib.mkOption {
           type = lib.types.bool;
           default = false;
           description = ''
-            Enable bubblewrap sandboxed applications for high-risk proprietary apps not available as Flatpak.
-            Provides UID isolation (100000:100000), process namespace, and minimal filesystem access.
-            Apps: VRCX, Windsurf (daily profile only; paranoid uses Flatpak + VM isolation instead).
+            Enable tightened bubblewrap wrappers for non-Flatpak desktop apps.
+            Current scope: VRCX and Windsurf on the daily profile only.
+            These wrappers use exact persistence binds, private runtime directories,
+            and filtered D-Bus when enabled. They are not VM-equivalent isolation.
           '';
         };
         vms = lib.mkOption {
           type = lib.types.bool;
           default = false;
           description = ''
-            Enable KVM/QEMU VM isolation layer for untrusted workloads.
-            Provides the strongest practical isolation: separate kernel, isolated memory,
-            hardware-enforced boundaries. Significantly stronger than bubblewrap.
-            
-            WARNING: This does NOT affect or configure other sandboxes (browsers/apps).
-            Each sandbox type (bwrap browsers, bwrap apps, VMs) is independent and must be
-            configured separately. Enable this if you need VM isolation beyond what
-            bubblewrap can provide (suspicious documents, untrusted code, etc.).
+            Enable KVM/QEMU VM tooling layer for untrusted workloads.
+            Provides stronger isolation than same-kernel bubblewrap paths.
+            Repo policy defines four workflow classes: trusted-work-vm,
+            risky-browser-vm, malware-research-vm, and throwaway-untrusted-file-vm.
+            The host tooling layer will define helper networks and class-aware launch helpers,
+            but guest images and some workflow validation still remain an operator task.
           '';
         };
         dbusFilter = lib.mkOption {
           type = lib.types.bool;
           default = false;
           description = ''
-            Enable D-Bus filtering via xdg-dbus-proxy for bubblewrap sandboxes (browsers and apps).
-            Applies to both sandbox.browsers and sandbox.apps when enabled.
-            Bubblewrap docs warn that unfiltered D-Bus can allow systemd exploitation.
-            However, this may break functionality (extensions, native messaging, file pickers).
-            Enable only after post-stability testing. See POST-STABILITY.md Section 20.
+            Enable filtered D-Bus access via xdg-dbus-proxy for bubblewrap sandboxes.
+            Applies to both browser wrappers and daily app wrappers.
+            When false, no D-Bus proxy socket is exposed by these wrappers.
           '';
+        };
+      };
+
+
+
+      vm = {
+        storageRoot = lib.mkOption {
+          type = lib.types.str;
+          default = "/var/lib/libvirt/repo-vm";
+          description = "Root directory for repo-managed VM disks, overlays, state, and helper assets.";
+        };
+        natNetworkName = lib.mkOption {
+          type = lib.types.str;
+          default = "repo-nat";
+          description = "Name of the repo-managed libvirt NAT network for VM classes that permit outbound connectivity.";
+        };
+        isolatedNetworkName = lib.mkOption {
+          type = lib.types.str;
+          default = "repo-isolated";
+          description = "Name of the repo-managed libvirt isolated network for staged research traffic with no external connectivity.";
+        };
+        defaultBaseImageDir = lib.mkOption {
+          type = lib.types.str;
+          default = "/var/lib/libvirt/repo-vm/base";
+          description = "Directory containing operator-supplied base qcow2 images used by the VM class helper.";
         };
       };
 
@@ -297,7 +322,7 @@
           EXPERIMENTAL: Enforce user/profile binding via PAM (daily=player, paranoid=ghost).
           WARNING: This modifies PAM service files directly (.text override) which is a
           high-risk implementation. May cause authentication lockouts if misconfigured.
-          Only enable after post-stability testing. See docs/POST-STABILITY.md Section 19.
+          Only enable after post-stability testing and document the recovery path first. See docs/POST-STABILITY.md.
         '';
       };
 
@@ -307,8 +332,8 @@
         default = true;
         description = ''
           Persist /etc/machine-id across reboots via impermanence.
-          Both profiles persist machine-id for operational stability.
-          See machineIdValue for privacy options (Whonix shared ID on paranoid).
+          Both profiles use a unique persisted host ID for operational stability and
+          to follow systemd guidance that machine-id should be locally unique.
         '';
       };
       machineIdValue = lib.mkOption {
@@ -316,15 +341,10 @@
         default = null;
         description = ''
           Explicit machine-id value to set. When null, systemd generates the ID.
-          Daily: null (systemd generates stable ID at first boot).
-          Paranoid: "b08dfa6083e7567a1921a715000001fb" (Whonix shared ID for privacy).
+          Recommended policy for both profiles: null, then persist the generated ID.
 
-          **Design note**: Using the Whonix ID blends with all Whonix users instead of being
-          uniquely fingerprintable, but this conflicts with systemd's guidance that machine-id
-          should be unique per host. This is a deliberate privacy-over-compatibility tradeoff.
-          Some services may expect unique machine-ids; monitor for compatibility issues.
-
-          Reference: https://github.com/Whonix/dist-base-files
+          Set a literal value only for an exceptional operational reason and document it in
+          PROJECT-STATE.md, TEST-PLAN.md, and RECOVERY.md.
         '';
       };
 

@@ -21,15 +21,15 @@ let
   wgInterface = "wg-mullvad";
 
   # Parse endpoint using regex pattern matching
-  # Only accepts: "hostname:port", "1.2.3.4:port", "[IPv6]:port"
+  # Accepts literal IPv4:port or [IPv6]:port.
+  # Hostnames are parsed only to produce a clear evaluation error message.
   # Rejects ambiguous unbracketed IPv6 like "2001:db8::1:51820"
   endpointParsed = let
     # Pattern 1: Bracketed IPv6 [addr]:port (only valid IPv6 with port form)
     ipv6Match = builtins.match "^\\[([0-9a-fA-F:]+)\\]:(0|[1-9][0-9]*)$" cfg.endpoint;
     # Pattern 2: IPv4 a.b.c.d:port
     ipv4Match = builtins.match "^([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+):(0|[1-9][0-9]*)$" cfg.endpoint;
-    # Pattern 3: Hostname (alphanumeric, dots, dashes):port
-    # Note: underscores not allowed (invalid in DNS hostnames)
+    # Pattern 3: Hostname:port, used only for a validation error path
     hostnameMatch = builtins.match "^([A-Za-z0-9.-]+):(0|[1-9][0-9]*)$" cfg.endpoint;
 
     # Extract based on which pattern matched
@@ -79,8 +79,8 @@ in {
       {
         # This module is for paranoid profile only - requires pinned IP endpoint
         # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
-        # WireGuard kernel side cannot perform DNS resolution. If you don't use IP endpoints,
-        # you need dynamicEndpointRefreshSeconds. This module uses pinned IP for cleaner killswitch.
+        # WireGuard kernel side cannot safely satisfy the paranoid policy with hostname endpoints here.
+        # This module uses pinned IP for a cleaner killswitch.
         assertion = endpointParsed.isIP;
         message = "WireGuard module requires pinned IP endpoint (e.g., 146.70.xx.yy:51820), not hostname. " +
           "Hostname endpoints require DNS exception which creates a standing leak path. " +
@@ -91,11 +91,9 @@ in {
       {
         # Validate endpoint format at evaluation time
         assertion = endpointParsed != null;
-        message = "myOS.security.wireguardMullvad.endpoint format invalid. Must be one of: " +
-          "hostname:port (e.g., us-nyc-wg-001.mullvad.net:51820), " +
-          "IPv4:port (e.g., 1.2.3.4:51820), " +
-          "[IPv6]:port (e.g., [2606:4700::1111]:51820). " +
-          "Note: IPv6 must be bracketed. Port must be 1-65535.";
+        message = "myOS.security.wireguardMullvad.endpoint format invalid. Must be literal IPv4:port " +
+          "(e.g., 1.2.3.4:51820) or bracketed IPv6:port (e.g., [2606:4700::1111]:51820). " +
+          "Hostnames are intentionally rejected by paranoid policy. IPv6 must be bracketed. Port must be 1-65535.";
       }
       {
         assertion = cfg.address != "";
@@ -127,7 +125,7 @@ in {
         # This is the "route all traffic" configuration
         allowedIPs = cfg.allowedIPs;
 
-        # Server endpoint: hostname or IP with port
+        # Server endpoint: pinned literal IP with port.
         endpoint = cfg.endpoint;
 
         # Keepalive: important for NAT traversal and maintaining connection
@@ -170,16 +168,11 @@ in {
             # Drop invalid state packets
             ct state invalid drop
 
-            # WireGuard: accept incoming handshake packets on the endpoint port
-            # Only from the specific Mullvad server endpoint when known
+            # WireGuard: accept incoming handshake packets only from the configured endpoint
             ${if endpointParsed.isIPv4 then ''
               ip saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
-            '' else if endpointParsed.isIPv6 then ''
-              ip6 saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
             '' else ''
-              # Endpoint is hostname - allow from any (DNS resolution needed)
-              # This is slightly broader but necessary for hostname-based configs
-              udp sport ${toString endpointParsed.port} accept
+              ip6 saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
             ''}
 
             # DHCP client responses: required for IP acquisition
@@ -237,9 +230,13 @@ in {
             oifname "${wgInterface}" udp dport 53 accept
             oifname "${wgInterface}" tcp dport 53 accept
 
-            # WireGuard handshake: to the endpoint (non-WG interface)
-            # This establishes/maintains the tunnel itself
-            ${bootstrapExceptionExpression} udp dport ${toString endpointParsed.port} accept
+            # WireGuard handshake: only to the configured pinned endpoint on non-WG interfaces
+            # This is the only non-WG egress exception beyond local bootstrap traffic.
+            ${if endpointParsed.isIPv4 then ''
+              ${bootstrapExceptionExpression} ip daddr ${endpointParsed.host} udp dport ${toString endpointParsed.port} accept
+            '' else ''
+              ${bootstrapExceptionExpression} ip6 daddr ${endpointParsed.host} udp dport ${toString endpointParsed.port} accept
+            ''}
 
             # ALL other traffic: ONLY through WireGuard interface
             # This is the killswitch: if tunnel is down, no traffic leaves

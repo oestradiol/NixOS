@@ -21,7 +21,7 @@ in {
     ../../modules/security/secure-boot.nix
     ../../modules/security/flatpak.nix
     ../../modules/security/scanners.nix
-    ../../modules/security/vm-isolation.nix  # Disabled by default, knob: myOS.security.sandbox.vms
+    ../../modules/security/vm-tooling.nix  # Disabled by default, knob: myOS.security.sandbox.vms
     ../../modules/security/sandboxed-apps.nix
     ../../modules/security/privacy.nix
     ../../modules/security/user-profile-binding.nix

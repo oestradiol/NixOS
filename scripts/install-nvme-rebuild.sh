@@ -4,7 +4,38 @@ set -euo pipefail
 DISK="${1:-/dev/nvme0n1}"
 MNT="/mnt"
 
-# WARNING: destructive. This is the target plan for the NVMe only.
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root." >&2
+  exit 1
+fi
+
+if [[ ! -b "$DISK" ]]; then
+  echo "Target disk not found: $DISK" >&2
+  exit 1
+fi
+
+if findmnt -rn -S "$DISK" >/dev/null 2>&1; then
+  echo "Refusing to continue: $DISK already has mounted filesystems." >&2
+  lsblk "$DISK"
+  exit 1
+fi
+
+mounted_parts=$(lsblk -nrpo NAME "$DISK" | tail -n +2 | while read -r part; do
+  findmnt -rn -S "$part" >/dev/null 2>&1 && echo "$part"
+done)
+if [[ -n "${mounted_parts:-}" ]]; then
+  echo "Refusing to continue: one or more partitions on $DISK are mounted:" >&2
+  printf '%s
+' "$mounted_parts" >&2
+  lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS "$DISK"
+  exit 1
+fi
+
+echo "About to DESTROY all data on: $DISK"
+lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS "$DISK"
+read -r -p "Type WIPE to continue: " CONFIRM
+[[ "$CONFIRM" == "WIPE" ]] || { echo "Aborted."; exit 1; }
+
 sgdisk --zap-all "$DISK"
 partprobe "$DISK"
 
@@ -34,21 +65,10 @@ mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persi
 mount -o subvol=@log,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/var/log"
 mount -o subvol=@home-daily,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/home/player"
 mount -o subvol=@home-paranoid,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persist/home/ghost"
-# Note: NO compression on swap subvolume - swapfiles must be NOCOW and non-compressed
 mount -o subvol=@swap,noatime,nodatacow /dev/mapper/cryptroot "$MNT/swap"
 
-# Create Btrfs swapfile (8GB) - required for the swapDevices config in base-desktop.nix
-# Requirements:
-# - COW disabled on @swap subvolume via chattr +C (done above)
-# - mount with nodatacow (done above)
-# - fallocate (not dd) for preallocated extents
-# - swapfile cannot be snapshotted while active
-fallocate -l 8G "$MNT/swap/swapfile"
-chmod 600 "$MNT/swap/swapfile"
-mkswap "$MNT/swap/swapfile"
+btrfs filesystem mkswapfile --size 8g --uuid clear "$MNT/swap/swapfile"
 
-# Test swapon in chroot to verify swapfile works before reboot
-# This catches Btrfs swapfile configuration errors early
 echo "Testing swapfile activation..."
 swapon "$MNT/swap/swapfile" && swapoff "$MNT/swap/swapfile" && echo "Swapfile test: OK" || {
     echo "ERROR: Swapfile failed to activate. Check Btrfs configuration."
@@ -62,9 +82,13 @@ echo "Swapfile created: /swap/swapfile (8GB)"
 echo "Swapfile tested: swapon/swapoff verified successfully"
 echo "WARNING: Do not snapshot @swap subvolume while swapfile is active"
 echo "@home-paranoid -> /mnt/persist/home/ghost (runtime: /persist/home/ghost)"
-echo ""
-echo "WARNING: hardware-target.nix has uid=1001/gid=100 for /home/ghost tmpfs mount."
-echo "Verify these match your actual ghost user UID/GID before running nixos-install."
-echo "Mismatch will cause permission issues on paranoid profile."
-echo ""
-echo "Now copy this repo to $MNT/etc/nixos and run nixos-install --flake /mnt/etc/nixos#nixos"
+echo
+echo "hardware-target.nix derives the /home/ghost tmpfs uid/gid from the configured ghost user."
+echo "Verify users.users.ghost.uid and group match your intended account before nixos-install."
+echo
+echo "Next: copy this repo to $MNT/etc/nixos"
+echo "Then refresh the host hardware scan into /mnt/etc/nixos/hosts/nixos/hardware-install-generated.nix"
+echo "Example: nixos-generate-config --root $MNT --show-hardware-config > $MNT/etc/nixos/hosts/nixos/hardware-install-generated.nix"
+echo "Merge hardware detection deltas from hardware-install-generated.nix into hosts/nixos/hardware-target.nix."
+echo "Do not overwrite repo-owned layout, impermanence, or profile policy in hardware-target.nix wholesale."
+echo "Then run nixos-install --flake /mnt/etc/nixos#nixos"

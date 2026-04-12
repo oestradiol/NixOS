@@ -1,30 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run only after the first successful normal encrypted boot.
-# Review docs/POST-STABILITY.md Section 4 (Secure Boot) and Section 5 (TPM) first.
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root." >&2
+  exit 1
+fi
 
-# Step 1: You must manually edit hosts/nixos/default.nix and set:
-#   myOS.security.secureBoot.enable = true;
-# Then run: sudo nixos-rebuild switch --flake /etc/nixos#nixos
+if ! command -v sbctl >/dev/null 2>&1; then
+  echo "sbctl not found." >&2
+  exit 1
+fi
 
-# Step 2: Create and enroll Secure Boot keys
-# NOTE: sbctl create-keys places keys in /var/lib/sbctl by default.
-# This MUST match boot.lanzaboote.pkiBundle in modules/security/secure-boot.nix
-sudo sbctl create-keys
-sudo sbctl enroll-keys --microsoft
+echo "This script assumes:"
+echo "- myOS.security.secureBoot.enable = true is already committed"
+echo "- the system already rebuilt and booted successfully once in that state"
+echo "- you are intentionally advancing the POST-STABILITY Secure Boot stage"
+read -r -p "Type ENROLL to continue: " CONFIRM
+[[ "$CONFIRM" == "ENROLL" ]] || { echo "Aborted."; exit 1; }
 
-# Step 3: Enable Secure Boot in firmware, then reboot and verify with:
-#   bootctl status
-#   sbctl status
-
-# Step 4 (Optional): TPM enrollment - See POST-STABILITY.md Section 5
-# You must also set myOS.security.tpm.enable = true in default.nix first.
-# Example TPM enrollment (verify device path):
-# sudo systemd-cryptenroll --tpm2-device=auto /dev/disk/by-partlabel/NIXCRYPT --tpm2-pcrs=0+7
+sbctl create-keys
+sbctl enroll-keys --microsoft
 
 echo "Secure Boot keys created/enrolled."
 echo "Next steps:"
 echo "1. Enable Secure Boot in firmware setup"
 echo "2. Reboot and verify: bootctl status, sbctl status"
-echo "3. For TPM: enable in default.nix, rebuild, then run systemd-cryptenroll"
+echo "3. For TPM: enable myOS.security.tpm.enable, rebuild, then run systemd-cryptenroll manually"
+echo "4. Follow docs/TEST-PLAN.md and docs/RECOVERY.md for post-enrollment validation/recovery"

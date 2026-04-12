@@ -6,7 +6,62 @@ in {
   security.protectKernelImage = true;
 
   security.apparmor.enable = sec.apparmor;
-  security.auditd.enable = lib.mkDefault sec.auditd;
+  services.dbus.apparmor = if sec.apparmor then "enabled" else "disabled";
+
+  security.auditd.enable = sec.auditd;
+  security.audit = lib.mkIf sec.auditd {
+    enable = true;
+    backlogLimit = 8192;
+    failureMode = "printk";
+    rateLimit = 0;
+    rules = [
+      # Privileged execution and kernel/module changes
+      "-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k execpriv"
+      "-a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -k execpriv"
+      "-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -F auid>=1000 -F auid!=unset -k kernel_modules"
+      "-a always,exit -F arch=b32 -S init_module,finit_module,delete_module -F auid>=1000 -F auid!=unset -k kernel_modules"
+
+      # Mount and identity / privilege configuration changes
+      "-a always,exit -F arch=b64 -S mount,umount2 -F auid>=1000 -F auid!=unset -k mounts"
+      "-a always,exit -F arch=b32 -S mount,umount2 -F auid>=1000 -F auid!=unset -k mounts"
+      "-w /etc/passwd -p wa -k identity"
+      "-w /etc/group -p wa -k identity"
+      "-w /etc/shadow -p wa -k identity"
+      "-w /etc/gshadow -p wa -k identity"
+      "-w /etc/sudoers -p wa -k scope"
+      "-w /etc/sudoers.d/ -p wa -k scope"
+
+      # Auth, network, and time changes
+      "-w /var/log/lastlog -p wa -k logins"
+      "-w /var/run/utmp -p wa -k session"
+      "-w /var/log/wtmp -p wa -k session"
+      "-w /etc/hosts -p wa -k network_modifications"
+      "-w /etc/NetworkManager/system-connections/ -p wa -k network_modifications"
+      "-w /etc/wireguard/ -p wa -k network_modifications"
+      "-a always,exit -F arch=b64 -S sethostname,setdomainname -k network_modifications"
+      "-a always,exit -F arch=b32 -S sethostname,setdomainname -k network_modifications"
+      "-a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time_change"
+      "-a always,exit -F arch=b32 -S adjtimex,settimeofday,clock_settime -k time_change"
+
+      # File deletion and permission changes by real users
+      "-a always,exit -F arch=b64 -S unlink,unlinkat,rename,renameat,rmdir -F auid>=1000 -F auid!=unset -k delete"
+      "-a always,exit -F arch=b32 -S unlink,unlinkat,rename,renameat,rmdir -F auid>=1000 -F auid!=unset -k delete"
+      "-a always,exit -F arch=b64 -S chmod,fchmod,fchmodat,chown,fchown,fchownat,lchown,setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=unset -k perm_mod"
+      "-a always,exit -F arch=b32 -S chmod,fchmod,fchmodat,chown,fchown,fchownat,lchown,setxattr,lsetxattr,fsetxattr,removexattr,lremovexattr,fremovexattr -F auid>=1000 -F auid!=unset -k perm_mod"
+    ];
+  };
+
+  security.auditd.settings = lib.mkIf sec.auditd {
+    num_logs = 10;
+    max_log_file = 100;
+    max_log_file_action = "rotate";
+    space_left = "25%";
+    space_left_action = "syslog";
+    admin_space_left = "10%";
+    admin_space_left_action = "single";
+    disk_full_action = "single";
+    disk_error_action = "single";
+  };
 
   # Core dumps: disable storage and restrict
   systemd.coredump.extraConfig = ''
@@ -66,6 +121,8 @@ in {
     clamav
     lsof
     strace
+  ] ++ lib.optionals sec.apparmor [
+    apparmor-utils
   ];
 
   # Hardened memory allocator (off by default, staged)

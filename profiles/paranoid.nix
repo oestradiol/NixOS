@@ -16,11 +16,11 @@
     impermanence.enable = lib.mkForce true;
     agenix.enable = lib.mkForce true;
 
-    # Machine ID: Whonix shared ID for privacy (blends with all Whonix users)
-    # Default systemd-generated ID on daily for operational stability
-    # Reference: https://github.com/Whonix/dist-base-files/blob/master/etc/machine-id
+    # Machine ID: unique persisted host ID, same policy as daily.
+    # Bare-metal host identity should remain locally unique.
+    # Bubblewrap hardening is not anonymity-equivalent VM isolation.
     persistMachineId = lib.mkForce true;
-    machineIdValue = lib.mkForce "b08dfa6083e7567a1921a715000001fb";
+    machineIdValue = lib.mkForce null;
 
     # Sleep states disabled (16GB RAM + 8GB swap insufficient; NVIDIA issues)
     allowSleep = lib.mkForce false;
@@ -28,7 +28,7 @@
     # VPN: self-owned WireGuard stack (not Mullvad app)
     # Provider: Mullvad servers | Control plane: NixOS (deterministic, auditable)
     # Paranoid profile REQUIRES pinned IP endpoint (no hostname, no DNS exception)
-    # See: docs/PRE-INSTALL.md Section 15 for WireGuard config generation
+    # See: docs/PRE-INSTALL.md for the initial pinned-endpoint preparation step
     # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
     wireguardMullvad.enable = lib.mkForce true;
     # WireGuard secrets: provide via agenix in host secrets file
@@ -59,8 +59,8 @@
     swappiness = lib.mkForce 180;
 
     # MAC and auditing
-    apparmor = lib.mkForce true;    # MAC framework enforced
-    auditd = lib.mkForce true;      # Full syscall auditing
+    apparmor = lib.mkForce true;    # AppArmor framework + D-Bus mediation baseline
+    auditd = lib.mkForce true;      # Linux audit subsystem + auditd + repo rule set
     lockRoot = lib.mkForce true;     # Root account locked
 
     # Debug and privilege restrictions
@@ -69,7 +69,7 @@
     # VM tooling enabled (libvirtd, QEMU, KVM) — capability available, not automatic enforcement
     # To actually isolate browsers/apps in VMs: manually create VMs and run workloads there
     sandbox.vms = lib.mkForce true;
-    sandbox.apps = lib.mkForce true;
+    sandbox.apps = lib.mkForce false;
 
     # Kernel hardening - ALL paranoid-tier options enabled
     kernelHardening = {

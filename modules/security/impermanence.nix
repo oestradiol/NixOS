@@ -13,8 +13,7 @@ in {
 
         directories = [
           "/var/lib/nixos"
-          # NOTE: Both profiles now persist stable machine-id (daily: systemd-generated,
-          # paranoid: Whonix shared ID). No machine-id rotation issues.
+          # NOTE: Both profiles persist a stable unique machine-id. No rotation issues.
           "/var/lib/systemd"
           "/var/lib/aide"  # AIDE integrity database
           "/var/lib/sbctl"  # Secure Boot keys (Lanzaboote/sbctl)
@@ -44,9 +43,7 @@ in {
           "/etc/subuid"
           "/etc/subgid"
         ]
-        # machine-id: persisted for both profiles
-        # daily: systemd generates unique stable ID
-        # paranoid: set to Whonix shared ID for privacy (blends with Whonix users)
+        # machine-id: persisted for both profiles; systemd generates the unique ID
         ++ lib.optionals persistMachineId [
           "/etc/machine-id"
         ]
@@ -112,7 +109,7 @@ in {
       };
     })
     
-    # Set explicit machine-id if configured (paranoid: Whonix shared ID)
+    # Set explicit machine-id if configured (exceptional override path)
     (lib.mkIf (impermanenceEnabled && persistMachineId && machineIdValue != null) {
       # Use systemd tmpfiles to set the machine-id at boot
       # This runs before systemd-machine-id-commit.service

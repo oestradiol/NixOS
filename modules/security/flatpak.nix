@@ -18,11 +18,18 @@
       Type = "oneshot";
       RemainAfterExit = true;
       NoNewPrivileges = true;
+      PrivateTmp = true;
+      PrivateDevices = true;
+      ProtectSystem = "strict";
+      ProtectHome = true;
+      ReadWritePaths = [ "/var/lib/flatpak" "/etc/flatpak" ];
       ProtectKernelTunables = true;
       ProtectKernelLogs = true;
       ProtectControlGroups = true;
       RestrictSUIDSGID = true;
       LockPersonality = true;
+      RestrictNamespaces = true;
+      RestrictRealtime = true;
     };
   };
 

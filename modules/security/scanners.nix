@@ -70,10 +70,14 @@ in {
         IOSchedulingClass = "best-effort";
         IOSchedulingPriority = 7;
         NoNewPrivileges = true;
+        PrivateTmp = true;
+        PrivateDevices = true;
         ProtectKernelTunables = true;
         ProtectKernelLogs = true;
         ProtectControlGroups = true;
         RestrictSUIDSGID = true;
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
         LockPersonality = true;
       };
       script = ''${clamScanImpermanence} > /var/log/clamav-impermanence-scan.log 2>&1'';
@@ -100,10 +104,14 @@ in {
         Nice = 10;  # Higher priority (less nice) for deep scan
         IOSchedulingClass = "idle";  # Only run when system is idle
         NoNewPrivileges = true;
+        PrivateTmp = true;
+        PrivateDevices = true;
         ProtectKernelTunables = true;
         ProtectKernelLogs = true;
         ProtectControlGroups = true;
         RestrictSUIDSGID = true;
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
         LockPersonality = true;
       };
       script = ''${clamScanDeep} > /var/log/clamav-deep-scan.log 2>&1'';
@@ -187,10 +195,14 @@ in {
         Type = "oneshot";
         Nice = 10;
         NoNewPrivileges = true;
+        PrivateTmp = true;
+        PrivateDevices = true;
         ProtectKernelTunables = true;
         ProtectKernelLogs = true;
         ProtectControlGroups = true;
         RestrictSUIDSGID = true;
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
         LockPersonality = true;
       };
       script = ''${aideCheck} > /var/log/aide-daily-check.log 2>&1'';

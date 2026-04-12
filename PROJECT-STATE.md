@@ -1,347 +1,303 @@
 # PROJECT STATE
 
-## Decisions frozen
-- Fresh reinstall on the NVMe target.
-- One NixOS install, two boot specialisations: `daily` and `paranoid`.
-- Separate users: `player` and `ghost`, selected through SDDM.
-- KDE Plasma 6 (user sessions on Wayland, SDDM on X11 for NVIDIA compatibility - see Wayland roadmap below).
-- NVIDIA enabled initially in both profiles for hardware reliability.
-- Windows may be removed. The separate SATA disk is intentionally left unused.
-- LUKS2 + Btrfs + tmpfs root + explicit `/persist` model.
-- Secure Boot + TPM2 are staged after the first known-good encrypted boot.
-- Daily keeps Steam, Vesktop, VR, Signal, Bitwarden. Firefox Sync is disabled by policy (identity.fxaccounts.enabled = false) for compartmentalization.
-- Paranoid forbids Steam, Vesktop and VR by default; Signal remains allowed.
-- Paranoid browser path uses `safe-firefox` and separate Tor Browser/Mullvad Browser roles.
-- Controllers (Bluetooth/Xbox): enabled on daily (`myOS.gaming.controllers.enable = true`), disabled on paranoid.
-- Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
-- AppArmor on daily: keep enabled, monitor for breakage.
-- All negligible-impact hardening on daily: keep enabled, monitor post-install.
-- `init_on_free=1`: paranoid-only (measurable impact).
-- `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
-- Browser sandboxing: UID isolation (100000), bubblewrap process namespaces. Firefox hardening is arkenfox-inspired with custom preferences; not clean arkenfox alignment.
-- VM isolation: implemented as knob, disabled by default, compatible with daily driver.
-- Application sandboxing: replace high-risk proprietary apps with Flatpak (sandboxed) or bubblewrap wrappers (UID isolation). Signal Desktop uses Flatpak on both profiles.
+## Purpose
+Canonical current state: architecture, policy, constraints, implemented support scope, explicit decisions, explicit rejections, and deferred work.
 
-## Implemented in repo
-- Flake, host entrypoint, daily default profile, paranoid specialisation.
-- Hardware-target mount model for the uploaded Ryzen 5 3600 + GTX 1060 system.
-- tmpfs root, `/nix`, `/persist`, `/var/log`, `/swap`, split home subvolumes.
-- zram (zstd 50%) + 8GB Btrfs swapfile on `@swap` subvolume (swapfile created by install script).
-- Separate Home Manager configs for `player` (daily) and `ghost` (paranoid).
-- Baseline hardening module with full sysctl hardening (20+ keys).
-- Core dump disable, root lock, PAM su wheel-only.
-- Dangerous kernel module blacklist (dccp, sctp, rds, tipc, firewire).
-- USB device authorization restricted on paranoid (`myOS.security.usbRestrict`).
-- `debugfs=off`, `randomize_kstack_offset=on` boot parameters.
-- Browser policy module with two modes: base Firefox with arkenfox-inspired hardening (geo disabled, DoH disabled for VPN DNS, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandbox.browsers = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandbox.browsers = true` (paranoid).
-- Networking killswitch with DHCP/DNS exceptions for tunnel establishment.
-- Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
-- Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
-- ClamAV split scans: daily impermanence scan + weekly deep scan (comprehensive).
-- AIDE weekly integrity checks with persisted database.
-- WireGuard endpoint configuration (paranoid only): Requires pinned IP endpoint (literal IP:port) for maximum security with no DNS exception. Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
-- Agenix/secret decryption recovery: comprehensive recovery procedures documented in RECOVERY.md for missing age identity, lost SSH host keys, secret file corruption, and WireGuard secret path unavailability.
+## Repository role
+Single NixOS host with two boot specialisations:
+- `daily`: maximally hardened within daily usability constraints
+- `paranoid`: maximally hardened within paranoid constraints, with expected breakage
 
-## Privacy and anti-fingerprinting (profile-dependent)
+Separate users:
+- `player` for daily
+- `ghost` for paranoid
 
-### Paranoid profile (maximal privacy hardening)
-**Goal**: Minimize trackable hardware/software identifiers that can fingerprint the system across boots/sessions.
+## Frozen operational decisions
+- KDE Plasma 6 remains the desktop target; current design assumes SDDM login and Wayland-first sessions.
+- NVIDIA remains enabled initially on both profiles for target-hardware reliability.
+- Windows is not part of the steady-state design.
+- swap remains split between zram and an 8GB Btrfs swapfile on `@swap`.
+- daily keeps Steam, VR, Signal, Bitwarden, and general social/desktop compatibility.
+- paranoid forbids Steam, VR, and Vesktop by default; Signal remains allowed.
+- controllers are enabled on daily and disabled on paranoid.
+- Firefox Sync remains disabled by policy.
+- AppArmor framework stays enabled on both profiles; custom repo-maintained AppArmor policies remain deferred until the framework baseline is live-validated.
+- `init_on_free=1` stays paranoid-only.
+- `nosmt=force` stays paranoid-only.
+- selected non-Flatpak daily apps are wrapped with bubblewrap; Signal remains a Flatpak path.
 
-**Implemented mitigations**:
-- **machine-id**: Paranoid uses Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) as a deliberate privacy exception to blend with Whonix users. **HIGH-RISK DOCTRINE**: This conflicts with systemd's unique-id guidance (machine-id should be locally unique) and can create operational issues in software that assumes per-host identity. This is a privacy tactic with operational risk, not baseline secure design. Daily uses systemd-generated stable unique ID for operational stability (follows systemd guidance).
-- **MAC addresses**: Randomized for all interfaces via `systemd.network.links` with `MACAddressPolicy = "random"`
-- **WiFi scanning**: Random MAC during network scans (`wifi.scanRandMacAddress = true`)
-- **IPv6**: Privacy extensions enabled (randomized temporary addresses)
-- **TCP timestamps**: Disabled (`tcp_timestamps = 0`) - prevents clock skew fingerprinting
-- **Home directory**: tmpfs (wiped on boot) with selective bind-mounts only for allowlisted items
-- **Root filesystem**: tmpfs (full system wipe on boot except persisted paths)
+## Current architecture
 
-**WireGuard security note**: Uses file-based secrets (privateKeyFile/presharedKeyFile) following NixOS WireGuard best practices. Inline secrets are NOT used - they would expose keys in the nix store. All WireGuard keys must be provided via agenix or similar secrets manager.
+### System model
+- one NixOS installation
+- encrypted root with tmpfs root + impermanence
+- explicit `/persist` allowlist for state survival
+- boot specialisations select profile policy without separate installs
+- staged Secure Boot + TPM rollout after first stable encrypted boot
 
-**WireGuard endpoint configuration** (paranoid only): Requires pinned IP endpoint (literal IP:port) with no DNS exception and no dynamic refresh (maximum security, cleaner killswitch). Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint. Tradeoff: Requires manual endpoint IP update if Mullvad changes relay IP; see RECOVERY.md for recovery procedure.
+### Repository shape
+- `hosts/nixos/` wires host-specific layout and hardware references
+- `profiles/daily.nix` and `profiles/paranoid.nix` define profile overrides
+- `modules/core/` defines base system wiring and option surface
+- `modules/security/` defines hardening, privacy, sandboxing, networking, persistence, governance, secrets, VM tooling, and browser policy
+- `docs/` defines install/test/recovery/performance procedures
+- `REFERENCES.md` is the canonical external reference ledger
+- `AUDITS.md` tracks audit coverage, validation status, source-backed claims, and pending audit work
 
-**Residual fingerprinting vectors** (cannot fully mitigate without breakage):
-- **DMI/SMBIOS data** (`/sys/class/dmi/id/`): Hardware model, serial numbers - world-readable, required by kernel
-- **CPU model/features**: Exposed via `/proc/cpuinfo` - required for userspace operation
-- **TPM EK** (if enrolled): Hardware-bound persistent key - don't enroll TPM if you want to avoid this
-- **Disk serial numbers**: Available via `smartctl`, `hdparm` - requires root, but persistent
-- **USB device topology**: Persistent port/device relationships
+### Bubblewrap architecture
+- one shared sandbox constructor in `modules/security/sandbox-core.nix`
+- browser and app modules are thin wrappers over that core
+- default posture is strict; every relaxation must be explicit per wrapper
+- exact runtime socket exposure replaces broad `/run/user/$UID` exposure
+- broad home and broad `/var` binds are not used by default
+- filtered D-Bus via `xdg-dbus-proxy` is the intended wrapper path when enabled
 
-### Daily profile (operational stability prioritized)
-- **machine-id**: Systemd-generated stable unique ID (`persistMachineId = true`) - follows systemd's unique-id guidance; required for D-Bus, Steam, systemd state
-- **MAC addresses**: Stable per network (`MACAddressPolicy = "stable"`) - prevents WiFi captive portal re-auth issues
-- **WiFi scanning**: Random MAC during scans only
-- **IPv6**: Privacy extensions enabled (standard privacy)
-- **TCP timestamps**: Enabled (needed for some gaming/networking optimizations)
-- **Home directory**: Fully persistent Btrfs subvolume
+### Browser architecture
+- daily Firefox uses an in-repo arkenfox-derived baseline, relaxed only where daily usability needs it
+- paranoid `safe-firefox` uses the same baseline without the daily relaxations and runs inside the shared sandbox core
+- Tor Browser and Mullvad Browser keep their upstream browser-hardening model; the repo adds local wrapper containment only
+- wrapper scope is local containment on the host, not VM-equivalent isolation
 
-## Security monitoring exclusions (documented for awareness)
+### AppArmor policy
+- current implemented state is framework enablement plus D-Bus mediation baseline
+- reboot is required when first enabling the framework
+- repo-maintained AppArmor profiles remain deferred
+- `killUnconfinedConfinables` stays off for now and is only a post-stability decision
+- any future profile rollout should start with explicit validation of loaded profiles, denial logs, and complain/enforce state
 
-**ClamAV scan targets**: `/home/player`, `/home/ghost`, `/persist`, `/persist/home/ghost`, `/var/lib`, `/var/log`, `/tmp`, `/var/tmp`, `/boot`
+### Network architecture
+- daily uses Mullvad app mode
+- paranoid uses self-owned `networking.wireguard` with nftables killswitch
+- paranoid requires a pinned literal endpoint `IP:port`
+- paranoid allows no standing non-tunnel DNS exception
+- exact non-WireGuard egress exception is limited to that endpoint `IP:port`
+- endpoint rotation is therefore an explicit operator maintenance task
+- `networking.wireguard` is kept for now because it already matches the repo’s deterministic nftables and option surface; a `systemd.network` migration is deferred unless live validation exposes routing or MTU problems
 
-**ClamAV exclusions** (via `--exclude-dir` flags in daily/impermanence and deep scans):
-- `/persist/etc/ssh` — SSH keys (high-churn, sensitive)
-- `/home/player/.*\.steam` — Steam runtime files (regex pattern)
-- `/home/player/.local/share/Steam` — Steam data (daily scan excludes entire dir)
-- `/home/player/.local/share/Steam/steamapps` — Game files (deep scan only)
-- `/home/player/.var/app` — Flatpak application data (sandboxed, trusted platform)
-- `/var/log/journal` — Binary journal logs (noisy, not meaningful to scan)
+### VM architecture
 
-**AIDE exclusions** (via `!` directives in aide.conf):
-- `/persist/var/lib/aide` — AIDE's own database
-- `/home/player/.local/share/Steam` — Steam runtime files
-- `/home/player/.steam` — Steam configuration
-- `/var/lib/systemd` — Volatile service state
-- `/var/log/journal` — Volatile binary logs
+#### VM workflow classes
+Four VM classes are now canonical:
+- `trusted-work-vm`: persistent VM for lower-risk work that still benefits from separation from the main host
+- `risky-browser-vm`: browser-focused VM for sites or workflows that should not rely on same-kernel browser containment alone
+- `malware-research-vm`: high-risk analysis VM for unknown binaries or clearly hostile content; strongest separation, highest friction
+- `throwaway-untrusted-file-vm`: disposable VM for opening unknown documents or archives with minimal host trust
 
-**Design note**: Both daily and paranoid persisted directories are scanned by ClamAV and monitored by AIDE. Profile separation isolates runtime environments, not scan coverage — malware in `/persist/home/ghost` would still be detected from the daily profile.
+#### VM workflow layers
+Every class is defined across these six layers:
+1. threat class and intended use
+2. host-to-guest boundary policy
+3. network policy
+4. disposability policy
+5. guest hardening baseline
+6. operator workflow
 
-**Trust note**: Steam games, Flatpak user data, and Nix store packages are intentionally NOT scanned:
-- **Steam store**: Games cryptographically signed, delivered via TLS; Steam runtime excluded from scans
-- **Flathub apps**: User app data (`~/.var/app`) excluded; system Flatpak content under `/var/lib/flatpak` is scanned as part of `/var/lib`
-- **NixOS cache**: Cryptographically hashed, bit-reproducible builds
+#### Current class definitions
 
-Users should not sideload untrusted binaries into these directories. The Nix store (`/nix/store`) is read-only, hash-verified, and excluded from scans by design.
+##### `trusted-work-vm`
+1. Threat class: lower-risk work that still should not live directly on the host.
+2. Host-to-guest boundary: clipboard allowed only when intentionally needed; no bidirectional trust by default, no shared folders by default, explicit import/export only, USB passthrough off by default, drag-and-drop off by default, audio allowed if needed, display integration minimal, guest agent justified only if a specific workflow needs it.
+3. Network: NAT-only by default; host-VPN-only acceptable when the host network path is already trusted enough for the task.
+4. Disposability: persistent VM allowed; snapshot before major changes recommended.
+5. Guest baseline: auto-updates on, guest firewall on, browser hardened, no host-share auto-mounts, no password reuse, no identity reuse if the task does not require it.
+6. Operator workflow: use for ordinary compartmentalized work that benefits from separation but does not justify the higher-friction classes.
 
-- 30 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
-- **Build-time checks**: `flake.nix` includes `checks.x86_64-linux` with nixos-config and paranoid-config evaluation tests; run via `nix flake check`.
-- **Audit script**: `scripts/audit-tutorial.sh` runs static checks; failures now propagate (removed `|| true` masking).
-- **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
-- **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
-- **Nix trusted users**: Hardcoded to `["root"]` in base-desktop.nix for both profiles. Upstream Nix warns that adding users to trusted-users is essentially equivalent to giving them root access for Nix operations (build as root, bypass sandbox, set config, GC as root). This repo uses the minimal safe default to reduce attack surface. If you need to add users for Steam/development workflows, modify `modules/core/base-desktop.nix` and understand the security implications.
-- **Module structure minimized**: `core/` (4 files), `security/` (11 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (2 files).
-- **Docs minimized**: 8 surviving docs (down from 28), single front-door README.
-- All hardening topics tracked in `docs/audit/SOURCE-TOPIC-LEDGER.md`.
+##### `risky-browser-vm`
+1. Threat class: websites or web apps too risky for host browsers or same-kernel wrappers alone.
+2. Host-to-guest boundary: clipboard off by default, temporary host→guest transfer only when necessary, no shared folders, no USB passthrough, no drag-and-drop, audio only if the site genuinely needs it, minimal display integration, guest agent discouraged.
+3. Network: NAT-only or VPN-inside-guest; prefer a path that keeps host browsing identity separate from the guest.
+4. Disposability: snapshot reset after risky sessions strongly preferred; disposable overlays acceptable.
+5. Guest baseline: hardened browser only, auto-updates on, guest firewall on, no host credentials, no sync accounts reused from the host.
+6. Operator workflow: use for suspicious or high-tracking browsing; if browser containment on the host feels insufficient, move the task here instead of weakening host policy.
 
-## Configurable myOS.security options
-All key hardening knobs are tunable per-profile without code changes:
-- `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist, pti, vsyscallNone, oopsPanic, moduleSigEnforce, disableIcmpEcho}`
-- `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `sandbox.vms`, `sandbox.apps`
-- `disableSMT`, `sandbox.browsers`, `hardenedMemory.enable`
-- `ptraceScope` (kernel.yama.ptrace_scope: 1 for EAC compatibility, 2 for hardening)
-- `swappiness` (vm.swappiness: lower values for gaming, higher for systems with limited RAM)
-- `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
-- `wireguardMullvad.enable` — `true` = self-owned WireGuard (paranoid), `false` = Mullvad app (daily, default)
+##### `malware-research-vm`
+1. Threat class: hostile binaries or content with active exploitation risk.
+2. Host-to-guest boundary: clipboard off, shared folders off, USB passthrough off, drag-and-drop off, audio off unless the sample requires it, minimal display integration, guest agent off unless strictly justified.
+3. Network: no network by default; isolated internal network or tightly staged research network only when the task requires it.
+4. Disposability: disposable or snapshot-reset-first only; treat persistence as exceptional.
+5. Guest baseline: separate identity, no reused passwords, guest firewall on, updates staged carefully, no host shares, no productivity accounts, minimal software footprint.
+6. Operator workflow: for unknown binaries or malware-adjacent research, do not rely on bubblewrap; use this class or a stricter offline analysis path only.
 
-## Gaming knobs
-- `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
-- `myOS.gaming.sysctls` — SteamOS-aligned scheduler tuning and RT scheduling (default: true)
+##### `throwaway-untrusted-file-vm`
+1. Threat class: unknown documents, archives, or media files that are risky but do not require a full malware-research environment.
+2. Host-to-guest boundary: clipboard off by default, no shared folders, explicit one-way import folder only, USB passthrough off, drag-and-drop off, audio only if the file type needs it, minimal display integration, guest agent discouraged.
+3. Network: no network by default; temporary NAT only if the file must fetch dependencies to render.
+4. Disposability: disposable overlay or snapshot reset after each use.
+5. Guest baseline: small guest image, auto-updates on, guest firewall on, no account reuse, no host-share auto-mounts.
+6. Operator workflow: open unknown files here first; promote to `malware-research-vm` if the behavior looks actively suspicious.
 
-## Browser security architecture (research-grounded)
-### Sandboxing (bubblewrap)
-- UID namespace: browser runs as UID 100000 (unmapped on host)
-- IPC/PID/UTS namespaces for process isolation
-- Minimal filesystem: ro-bind system dirs, tmpfs for home/runtime
-- GPU/Wayland/PipeWire socket passthrough (read-only)
-- No capabilities (`--cap-drop ALL`)
-- Die-with-parent: auto-cleanup when launcher exits
-- **D-Bus filtering**: When enabled (sandbox.dbusFilter = true), full /run/user bind is REMOVED to prevent real bus access
-  - Only specific proxy sockets are bound (xdg-dbus-proxy filtered)
-  - This is ADVISORY filtering — motivated attackers may still find IPC bypass paths
-  - When disabled: full /run/user bind for compatibility (real bus exposed)
+- `modules/security/vm-tooling.nix` is the host capability/tooling layer for the VM workflow defined below
+- it provides libvirt/QEMU/KVM support, repo-managed NAT + isolated networks, and the `repo-vm-class` launcher
+- the launcher encodes class defaults for boundary policy, network mode, disposability, guest boot shape, and minimal operator workflow
+- host defaults remain conservative: no USB redirection by default, no automatic browser/app coupling, and no implicit clipboard or host-share trust
+- the workflow is explicitly defined across four classes and six policy layers
+- host-side enforcement is automated through repo-managed libvirt networks plus the `repo-vm-class` launcher
+- guest image contents still remain operator-supplied and must be validated per class
+- guest templates and real-world tuning still need live trials before any class is treated as fully proven
 
-### Firefox hardening (arkenfox-grounded user.js)
-- 70+ hardened prefs covering: startup, geolocation, telemetry (Normandy/Shield), safe browsing, implicit outbound blocking, DoH disabled (VPN DNS only), HTTPS-only mode, SSL/TLS hardening (safe negotiation, 0-RTT disabled, OCSP hard-fail), HPKP/CRLite, referer trimming, container tabs, WebRTC disabled, dFPI, RFP (resist fingerprinting), shutdown sanitizing
-- Auto-clears cookies/storage/cache/formdata on exit
-- WebRTC: disabled on paranoid (prevents IP leak), enabled on daily (gaming/video calls)
-- Container tabs enabled for site isolation
+## Policy
 
-## Application sandboxing architecture
-### Flatpak (daily + paranoid profiles)
-- High-risk proprietary apps use Flatpak where available; otherwise bubblewrap
-- Flatpak provides namespace isolation, capability dropping, read-only filesystem by default
-- Flathub remote configured automatically via systemd service (flatpak-repo)
-- App data persistence scaffolded for: Signal, Spotify, Bitwarden, Vesktop, Obsidian
-- Packages installed manually after first boot (see POST-STABILITY.md)
-- App data persisted via impermanence: `~/.var/app/com.example.App`
+### Daily policy
+Goal: preserve gaming, VR, socialization, normal browsing, and desktop reliability while enabling low-friction hardening unlikely to break normal use.
 
-### Bubblewrap wrappers (non-Flatpak apps like VRCX, Windsurf)
-- UID isolation (100000:100000 unmapped from host)
-- Process namespace isolation (IPC, PID, UTS) — **Network namespace is NOT isolated**
-- Minimal filesystem access (ro-bind system dirs)
-- GPU/Wayland/PipeWire socket passthrough (read-only)
-- Input device passthrough for keyboard/mouse
-- Capability dropping (`--cap-drop ALL`)
-- Die-with-parent for auto-cleanup
-- Apps wrapped: VRCX, Windsurf (daily)
-- **D-Bus filtering**: When enabled (sandbox.dbusFilter = true), full /run/user bind is REMOVED to prevent real bus access
-  - Only specific proxy sockets are bound (xdg-dbus-proxy filtered)
-  - This is ADVISORY filtering — motivated attackers may still find IPC bypass paths
-  - When disabled: full /run/user bind for compatibility (real bus exposed)
+Daily policy means:
+- enable transparent or low-cost hardening by default
+- avoid known high-breakage hardening unless already proven acceptable for daily use
+- keep browser use convenient while still anchored to an arkenfox-derived baseline
+- allow app compatibility concessions where needed for daily-driver usability
+- keep security/privacy controls explicit through options rather than ad hoc edits
 
-## VM isolation layer (strongest practical sandbox)
-- KVM/QEMU with hardware virtualization (AMD-V/VT-x)
-- Auto-detects AMD vs Intel KVM modules
-- IOMMU passthrough mode (`iommu=pt`, `amd_iommu=on`)
-- TPM emulation for VMs (swtpm)
-- QEMU hardening: seccomp sandbox, SPICE/VNC TLS (TLS requires manual certificate/x509 path configuration)
-- virt-manager GUI enabled when knob active
-- Users `player` and `ghost` added to `libvirtd` group
-- **Knob**: `myOS.security.sandbox.vms` (default: false)
-- **Compatible with daily driver**, significant resource overhead when enabled
+### Paranoid policy
+Goal: push host hardening, wrapper hardening, and network policy hard without pretending the repo can remove usability requirements or same-kernel limits. During the first staged rollout, paranoid only needs to reach minimum functional state after daily is already operable. After that, post-stability work treats paranoid as the place to pursue the maximum achievable hardening under the repo's stated constraints through careful trials and validation.
 
-## Kernel hardening knobs (Madaidan-research grounded)
-All tunable via `myOS.security.kernelHardening.*`:
+Paranoid policy means:
+- enforce stronger hardening through explicit profile overrides
+- require stricter governance assertions
+- prefer pinned and deterministic network policy
+- keep a usable desktop
+- keep networked browsers
+- keep Wayland/X11/display integration
+- keep audio/portal/session usability
+- treat bubblewrap wrappers as same-kernel containment, not sufficient hostile-workload isolation
+- document all meaningful breakage and workaround paths in `docs/RECOVERY.md` and validate them through `docs/TEST-PLAN.md`
 
-**Enabled by default (daily):**
-- `initOnAlloc` — zero pages on allocation (init_on_alloc=1)
-- `slabNomerge` — prevent slab cache merging
-- `moduleBlacklist` — blacklist dangerous kernel modules (dccp, sctp, rds, tipc, firewire)
-- `pti=on` — Kernel Page Table Isolation (Meltdown mitigation)
-- `vsyscall=none` — disable vsyscalls (ROP prevention)
-- `pageAllocShuffle` — randomize page allocator freelists (<1% impact, no gaming breakage)
+## Constraints
 
-**Enabled on paranoid (explicit with mkForce):**
-- `initOnFree` — zero pages on free (1-7% overhead)
-- `pageAllocShuffle` — randomize page allocator freelists
-- `oopsPanic` — panic on kernel oops (prevents exploit continuation)
-- `moduleSigEnforce` — only load signed kernel modules
-- `disableIcmpEcho` — ignore ping requests (network enumeration prevention)
+### Daily constraints
+Daily must still support:
+- gaming
+- VR
+- controllers and Bluetooth accessories
+- desktop portals and file chooser flows
+- social and messaging apps
+- ordinary browsing without wrapper friction
+- NVIDIA reliability on the target hardware path
 
-**Intentionally disabled (deferred):**
-- `hardenedMemory` — Graphene hardened allocator (stability risk, enable only after post-install testing)
+### Paranoid constraints
+Paranoid remains constrained by:
+- same-kernel boundary for bubblewrap wrappers
+- browser need for network access
+- required Wayland/X11/display integration
+- required audio/portal/session usability
+- possible GPU/runtime socket needs for usability
+- incomplete hostile-workload VM workflow
+- pinned-endpoint WireGuard maintenance when the provider changes relay IPs
 
-## Needs live validation
-- Real destructive install on the NVMe.
-- Actual boot success on the target machine.
-- SDDM user separation flow.
-- Mullvad killswitch behavior, WebRTC/DNS leak behavior, Tor Browser role separation.
-- Secure Boot key enrollment and actual measured boot path.
-- TPM2 enrollment and recovery-passphrase fallback.
-- Steam/VR/gaming performance and compatibility on the daily profile.
-- AIDE database initialization and usefulness on the rebuilt host.
+These constraints define the current meaning of “maximally hardened within paranoid constraints.”
 
-## Not yet implemented
-- Remote wipe / dead-man switch integration.
-- Full virtualization split (optional later wave).
-- Full `graphene-hardened` allocator rollout (keep off until post-install testing).
-- Line-by-line nix-mineral diff.
-- Repo-wide hardened compilation flags policy.
-- Memory-safe-language enforcement policy.
-- Dedicated entropy-hardening component.
-- Root-editing discipline enforcement in code (documented only).
-- NTS time sync replacement.
-- Broad SUID/capabilities pruning program.
-- Wayland-only display manager (three-phase roadmap):
-  - Phase 1 (current): X11 server runs for SDDM/NVIDIA compatibility, user sessions are Wayland-only, X apps use XWayland automatically
-  - Phase 2 (post-stability): Evaluate greetd + tuigreet for Wayland-native DM (experimental, may break NVIDIA)
-  - Phase 3 (October 2026): Plasma 6.8 Wayland-exclusive release (drops X11 session support entirely)
+## Implemented state
 
-## Rejected or intentionally deferred
-- Treating boot specialisations as strong compromise isolation.
-- Turning on Secure Boot before the first ordinary encrypted boot works.
-- Using TPM as the only disk-unlock path.
-- Forcing the paranoid profile to drop NVIDIA before the system is stable.
-- Making virtualization a required part of the first implementation wave.
-- Choosing SELinux for wave one; AppArmor is the selected MAC path.
-- Choosing Firejail for wave one; Flatpak and bubblewrap wrappers are the selected path.
-- Choosing `doas`/`run0` for wave one; sudo remains in place for now.
-- Choosing `disko` for wave one; the install path remains manual/scripted.
+### Profiles
+`daily` currently enables:
+- gaming and VR support
+- Firefox with an arkenfox-derived baseline plus explicit daily relaxations
+- tightened bubblewrap wrappers for VRCX and Windsurf
+- Mullvad app mode
+- desktop compatibility-oriented defaults
 
-## Trust model
+`paranoid` currently enables:
+- tighter kernel and system hardening
+- browser wrappers
+- self-owned WireGuard with pinned endpoint policy
+- VM tooling layer
+- stricter governance assertions
 
-### Profile Policy Verification Matrix
+### Security and privacy state
+Implemented now:
+- tmpfs root + impermanence
+- persisted host-local machine-id on both profiles
+- zram plus Btrfs swapfile memory model
+- shared bubblewrap core
+- filtered D-Bus wrapper path
+- exact persistence binds for wrapped apps
+- paranoid pinned-endpoint WireGuard policy
+- Linux audit subsystem + auditd + repo-maintained paranoid audit rules
+- AppArmor framework baseline + D-Bus mediation baseline
+- stricter firewall policy for paranoid
+- service hardening for selected system services
+- ClamAV and AIDE monitoring path
+- flatpak remote bootstrap + portal baseline
+- fwupd enabled on the base desktop path
+- option-driven daily/paranoid hardening split
 
-| Policy | Daily | Paranoid | Status |
-|--------|-------|----------|--------|
-| **Gaming/Steam** | Enabled (`steam.enable = true`) | Disabled (`steam.enable = lib.mkForce false`) | PASS |
-| **VR/WiVRn** | Enabled (`services.wivrn.enable = true`) | Disabled (`services.wivrn.enable = lib.mkForce false`) | PASS |
-| **Controllers** | Enabled (`controllers.enable = true`) | Disabled (`controllers.enable = lib.mkForce false`) | PASS |
-| **Gamescope** | Enabled | Disabled (`programs.gamescope.enable = lib.mkForce false`) | PASS |
-| **Gamemode** | Enabled | Disabled (`programs.gamemode.enable = lib.mkForce false`) | PASS |
-| **Browser** | Base Firefox (`sandbox.browsers = false`) | Sandboxed only (`sandbox.browsers = lib.mkForce true`) | PASS |
-| **VPN** | Mullvad app (`wireguardMullvad.enable = false`, default) | Self-owned WireGuard (`wireguardMullvad.enable = lib.mkForce true`) | PASS |
-| **SMT/Hyperthreading** | Enabled (`disableSMT = false`) | Disabled (`disableSMT = lib.mkForce true`) | PASS |
-| **USB restriction** | Disabled (`usbRestrict = false`) | Enabled (`usbRestrict = lib.mkForce true`) | PASS |
-| **Audit logging** | Disabled (`auditd = false`) | Enabled (`auditd = lib.mkForce true`) | PASS |
-| **VM isolation** | Disabled (`sandbox.vms = false`) | Enabled (`sandbox.vms = lib.mkForce true`) | PASS |
-| **Home persistence** | Full Btrfs subvolume | Selective tmpfs + allowlist | PASS |
-| **Machine-id** | Systemd-generated stable unique ID (`persistMachineId = true`) - follows systemd guidance | Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) - deliberate privacy exception, conflicts with systemd unique-id guidance | PASS |
-| **MAC addresses** | Stable per network | Random per device appearance (typically at boot) | PASS |
-| **ptrace scope** | 1 (EAC compatible) | 2 (strictest) | PASS |
-| **init_on_free** | Disabled (performance) | Enabled (`initOnFree = lib.mkForce true`) | PASS |
-| **oops_panic** | Disabled (stability) | Enabled (`oopsPanic = lib.mkForce true`) | PASS |
-| **Memory allocator** | Disabled | Deferred (test post-install) | PASS |
-| **AIDE/ClamAV** | Enabled | Enabled (both profiles) | PASS |
-| **Root lock** | Enabled (`lockRoot = true`) | Enabled (`lockRoot = lib.mkForce true`) | PASS |
-| **AppArmor** | Enabled (`apparmor = true`) | Enabled (`apparmor = lib.mkForce true`) | PASS |
+### Support scope statements
+Current supported claims:
+- daily Firefox is arkenfox-derived and intentionally relaxed only for daily usability constraints
+- paranoid `safe-firefox` is arkenfox-derived and uses the stricter local baseline inside the wrapper
+- daily app wrappers provide tightened daily containment for selected non-Flatpak apps
+- paranoid browsers provide tightened local browser containment on the host
+- paranoid audit path means the Linux audit subsystem is enabled, auditd is enabled, and a repo-maintained rule set is loaded
+- AppArmor means the kernel framework and D-Bus mediation baseline are enabled; it does not imply a finished repo-maintained custom profile library yet
+- VM tooling is available as a host capability layer
 
-### Daily
-- Broad desktop convenience: gaming, VR, sync, messenger sprawl allowed.
-- **VPN**: Mullvad app for convenience (key rotation, multihop, GUI controls). No strict killswitch required.
-- All proprietary apps sandboxed via Flatpak or bubblewrap wrappers.
-- **Privacy**: MAC stable per network; machine-id is systemd-generated stable unique ID (follows systemd guidance).
+Current unsupported claims:
+- wrapper layer is not VM-equivalent isolation
+- VM class policy is not yet fully auto-enforced by code; parts remain procedural and test-driven
+- seccomp and Landlock are not implemented in the wrapper core
+- custom repo-maintained AppArmor policy coverage is not complete yet
+- AppArmor follow-up still includes evaluating `killUnconfinedConfinables`, deciding complain-vs-enforce rollout strategy for new profiles, and validating denial-log / D-Bus mediation behavior after each policy addition
+- Tor Browser and Mullvad Browser are not claimed to be maximally tightened yet; further containment trials are deferred
 
-### Paranoid
-- Separate user `ghost`, stricter browser policy, Signal only.
-- Vesktop, Steam, VR disabled by policy.
-- **VPN**: Self-owned WireGuard to Mullvad servers. No Mullvad app. NixOS owns tunnel state AND firewall policy (single source of truth). Deterministic killswitch generated from WireGuard config. Uses pinned IP endpoints (literal IP:port) for maximum security - no DNS exception, no dynamic refresh.
-- Lower persistence footprint (tmpfs home, selective allowlist).
-- Signal Desktop sandboxed via Flatpak.
-- **Privacy**: Randomized MAC per device appearance (typically at boot); machine-id is Whonix shared ID (deliberate privacy exception to blend with Whonix users, conflicts with systemd unique-id guidance); TCP timestamps disabled.
+## Explicit decisions
+- one host, two specialisations
+- separate users for daily and paranoid
+- tmpfs root + explicit persistence
+- Secure Boot + TPM rollout staged after first stable encrypted boot
+- daily remains usability-first within a hardened baseline
+- paranoid remains security-first within explicit operational constraints
+- machine-id stays host-local and unique on both profiles
+- paranoid WireGuard endpoint must be a pinned literal `IP:port`
+- wrapper logic stays centralized in the shared sandbox core
+- Firefox hardening is maintained in-repo as a vendored arkenfox baseline with explicit local overrides
+- `networking.wireguard` stays for now instead of a `systemd.network` migration because it already matches the current repo firewall design and secret wiring; migration remains conditional on live issues, not assumed necessary, and is tracked in `docs/POST-STABILITY.md` for evaluation if routing, MTU, DNS, or interface-ordering issues appear
+- anything unfinished must be deferred into `docs/POST-STABILITY.md` / `AUDITS.md` or explicitly rejected
 
-### Isolation truth
-- Boot specialisations separate behavior, not compromise.
-- Separate users reduce accidental cross-contamination.
-- tmpfs root reduces simple persistence.
-- Flatpak + bubblewrap + systemd hardening reduce app blast radius.
-- All high-risk apps (Electron, proprietary) sandboxed with UID isolation.
-- Real containment still requires separate hardware, full VM, or Qubes-level isolation.
+## Explicit rejections
+- shared Whonix machine-id on the host
+- documenting bubblewrap wrappers as strong isolation or VM-equivalent isolation
+- hostname-based paranoid WireGuard endpoints
+- standing non-WireGuard DNS exception for paranoid
+- silently implying unfinished VM workflow policy is complete
+- silently implying seccomp or Landlock are already active in the wrapper core
+- silently implying AppArmor already has a finished repo-maintained policy set
+- silently claiming Tor Browser or Mullvad Browser wrapper limits are fully explored already
 
-### MONITOR: Ongoing tracking required
-- **Tor/Mullvad D-Bus namespace**: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
-  - Currently using `org.mozilla.firefox.*`; may change to `org.torproject` or `net.mullvad`
-  - Check on browser updates; update `browser.nix` if namespace changes
-- **KDE Plasma 6.8+ X11 deprecation**: Plasma 6.8 drops X11 session support entirely
-  - Test all apps under XWayland compatibility before upgrade
-  - Verify no hard X dependencies remain (xeyes, xev, etc.)
-  - Plan transition to X-disabled configuration (remove services.xserver.enable)
-- **NVIDIA legacy_580 driver**: Track https://github.com/NixOS/nixpkgs/issues/503740
-  - GTX 1060 (Pascal) should use `legacy_580`; currently on `production` as fallback
-  - Migrate when nixpkgs exposes `legacy_580` properly
+## Deferred items
+These remain deferred until implemented and live-validated:
+- wrapper seccomp wiring
+- wrapper Landlock wiring
+- per-app seccomp policy generation
+- stricter no-GPU browser variants
+- further Tor Browser and Mullvad Browser containment trials
+- stronger wrapper tightening after runtime proof where safe
+- custom AppArmor policy rollout after framework-baseline validation
+- VM workflow completion
+- Secure Boot + TPM final rollout after daily stability
+- hardened allocator rollout after stability testing
+- greetd / tuigreet migration
+- `modules_disabled=1` after module-load validation
+- any experimental revisit of Whonix-style shared machine-id behavior, only as a documented experiment and not as current policy
+- experimental `myOS.security.pamProfileBinding.enable` rollout after a dedicated lockout-recovery rehearsal
 
-## Audit summary
+## Trust boundaries and truthfulness rules
+- static review is not runtime proof
+- wrapper behavior on target hardware remains subject to live validation
+- doc claims must match code and current support scope
+- unfinished work must exist somewhere on the pipeline: `PROJECT-STATE.md`, `AUDITS.md`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md`, or `docs/RECOVERY.md`
 
-# AUDIT
+## Known remaining trust gaps
+Static review cannot prove:
+- all wrappers behave correctly on the target GPU/session stack
+- exact portal and D-Bus needs for every wrapped app on target hardware
+- full boot/install/recovery success on the real machine
+- full VM guest-isolation workflow quality without further policy work
 
-## Final pass summary
-This repository is materially stronger than the original gaming-first unstable-only config.
-
-### What changed structurally
-- moved from one monolithic host config to one host with two boot specialisations
-- added separate SDDM users for daily and paranoid use
-- replaced current ext4 mental model with a hardware-adapted reinstall target
-- added tmpfs root + impermanence model
-- staged Secure Boot and TPM instead of enabling them prematurely
-- added governed docs and audit surfaces
-
-### What is fully implemented in repo form
-- flake restructure with anonymous user identities (`player`/`ghost`)
-- host entrypoint with system-wide Secure Boot/TPM staging
-- target storage model (LUKS2 + Btrfs + tmpfs root)
-- daily/paranoid profile split with governance assertions
-- user split with locked root, wheel-restricted su
-- full sysctl hardening baseline (20+ keys)
-- kernel module blacklist, coredump disable, debugfs off
-- USB authorization restricted on paranoid
-- IPv6 privacy extensions
-- VPN: Mullvad app for daily; self-owned WireGuard for paranoid (single-source-of-truth firewall). Paranoid uses pinned IP endpoints for maximum security (no DNS exception, cleaner killswitch)
-- browser policy split; plain Firefox removed from paranoid
-- systemd service hardening for flatpak, ClamAV, AIDE
-- install/test/recovery docs
-
-### What remains manual by nature
-- destructive repartition/install
-- real account secrets
-- Mullvad login/account state
-- Secure Boot key enrollment in firmware
-- TPM enrollment
-- actual leak tests and performance comparison
-
-### Self-critique
-- `safe-firefox` is a practical wrapper, not a proof of maximal browser isolation
-- Mullvad lockdown nftables may need local adjustment after first real connection test
-- NVIDIA in paranoid is a compatibility compromise
-- hardened allocator remains intentionally disabled until the rest is debugged
-- NVIDIA package: temporarily using `production` branch instead of ideal `legacy_580` due to nixpkgs#503740
-- VPN architecture: paranoid uses self-owned WireGuard (Mullvad as provider only, NixOS as authority)
+## Canonical routing
+- install prep only → `docs/PRE-INSTALL.md`
+- install procedure only → `docs/INSTALL-GUIDE.md`
+- current-stage validation only → `docs/TEST-PLAN.md`
+- deferred/aggressive work only → `docs/POST-STABILITY.md`
+- failure map and recovery only → `docs/RECOVERY.md`
+- performance only → `docs/PERFORMANCE-NOTES.md`
+- references / external-source ledger → `REFERENCES.md`
+- audits, validations, source-backed claims, and pending audits → `AUDITS.md`

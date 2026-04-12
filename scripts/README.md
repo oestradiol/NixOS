@@ -1,107 +1,58 @@
 # Scripts
 
-Helper scripts for installation, audit, and post-install hardening.
+Helper scripts for installation, static audit, and staged boot hardening.
 
-All scripts use `set -euo pipefail` for safety. Review before running.
+All scripts use `set -euo pipefail`. Review them before running.
 
-## Script Inventory
+## Inventory
 
-| Script | Purpose | When to Run | Risk Level |
-|--------|---------|-------------|------------|
-| `install-nvme-rebuild.sh` | Destructive disk partitioning for NVMe install | Before first install | **DESTRUCTIVE** - wipes entire disk |
-| `post-install-secureboot-tpm.sh` | Secure Boot key enrollment and TPM setup | After first successful encrypted boot | Medium - modifies firmware/boot chain |
-| `audit-tutorial.sh` | Static checks and audit guidance | Any time (read-only) | None |
+| Script | Purpose | When to Run | Risk |
+|---|---|---|---|
+| `install-nvme-rebuild.sh` | Create the target GPT + LUKS2 + Btrfs + tmpfs-root mount layout under `/mnt` | Before first install, from the installer | **Destructive** |
+| `post-install-secureboot-tpm.sh` | Stage Secure Boot key creation/enrollment and print the remaining TPM step | Only after the first stable encrypted daily boot | Medium |
+| `audit-tutorial.sh` | Read-only static repo checks plus a runtime checklist handoff | Any time | Low |
 
-## Detailed Usage
+## `install-nvme-rebuild.sh`
 
-### install-nvme-rebuild.sh
+What it is responsible for:
+- wipe the selected target disk
+- create the repo's expected partition labels (`NIXBOOT`, `NIXCRYPT`)
+- create the expected Btrfs subvolumes
+- mount the expected install layout under `/mnt`
+- create and test the Btrfs-native swapfile expected by `modules/core/base-desktop.nix`
+- remind you about the `ghost` UID/GID dependency used by `hosts/nixos/hardware-target.nix`
+- print the hardware-config refresh and reconciliation step required before `nixos-install`
 
-**WARNING**: This script DESTROYS all data on the target disk.
+What it is **not** responsible for:
+- copying the repo into `/mnt/etc/nixos`
+- generating host secrets
+- running `nixos-install`
+- validating post-boot functionality
 
-```bash
-# Default: /dev/nvme0n1
-sudo ./scripts/install-nvme-rebuild.sh
+## `post-install-secureboot-tpm.sh`
 
-# Custom disk:
-sudo ./scripts/install-nvme-rebuild.sh /dev/nvme1n1
-```
+What it is responsible for:
+- creating Secure Boot keys with `sbctl`
+- enrolling them with Microsoft CA support
+- printing the remaining firmware and TPM enrollment steps
 
-**What it does:**
-1. Wipes disk with `sgdisk --zap-all`
-2. Creates GPT layout: 512MiB EFI (NIXBOOT), rest LUKS (NIXCRYPT)
-3. Formats EFI as FAT32
-4. Sets up LUKS2 encryption
-5. Creates Btrfs subvolumes: @nix, @persist, @log, @home-daily, @home-paranoid
-6. Mounts tmpfs root and all subvolumes to `/mnt`
+What it is **not** responsible for:
+- flipping repo options for you
+- enabling Secure Boot in firmware
+- performing TPM enrollment automatically
+- validating the resulting boot chain
 
-**After running:**
-- Copy this repo to `/mnt/etc/nixos`
-- Run `nixos-install --flake /mnt/etc/nixos#nixos`
+## `audit-tutorial.sh`
 
-### post-install-secureboot-tpm.sh
+What it is responsible for:
+- `nix flake show`
+- `nix flake check`
+- verifying canonical docs exist
+- grepping the main persistence / Secure Boot / WireGuard / browser / audit / AppArmor / scanner / Flatpak surfaces
+- printing the runtime checks that belong in `docs/TEST-PLAN.md`
 
-Run after first successful encrypted boot with working daily profile.
-
-**Prerequisite (MUST do first):**
-1. Edit `hosts/nixos/default.nix`: set `myOS.security.secureBoot.enable = true;`
-2. `sudo nixos-rebuild switch --flake /etc/nixos#nixos`
-3. Verify system still boots normally
-
-**Then run:**
-```bash
-sudo ./scripts/post-install-secureboot-tpm.sh
-```
-
-**What the script does:**
-1. Creates Secure Boot keys (`sbctl create-keys`)
-2. Enrolls keys with Microsoft CA (`sbctl enroll-keys --microsoft`)
-3. Provides commented TPM enrollment example
-
-**Final steps (manual):**
-1. Reboot into firmware setup mode
-2. Enable Secure Boot in firmware
-3. Reboot and verify: `bootctl status`, `sbctl status`
-
-**Before running:**
-- Review `docs/POST-STABILITY.md` Section 4 (Secure Boot) and Section 5 (TPM)
-- Ensure daily profile boots successfully
-- Back up current working configuration
-
-### audit-tutorial.sh
-
-Read-only audit and verification script.
-
-```bash
-./scripts/audit-tutorial.sh
-```
-
-**What it does:**
-1. Static repo checks (flake show, flake check, build tests)
-2. Verifies canonical surfaces exist
-3. Checks persistence configuration
-4. Lists Secure Boot/TPM surface references
-5. Lists networking/browser surface references
-6. Prints runtime checks to perform after install
-
-**Safe to run at any time.** Does not modify system state.
-
-## Risk Summary
-
-| Action | Data Loss | System Changes | Reversibility |
-|--------|-----------|----------------|---------------|
-| `install-nvme-rebuild.sh` | **Total disk wipe** | Partition table, LUKS header, filesystems | Irreversible |
-| `post-install-secureboot-tpm.sh` | None | Firmware PK/KEK/db, boot chain | Reversible with firmware reset |
-| `audit-tutorial.sh` | None | None | N/A (read-only) |
-
-## Safety Checklist
-
-Before running `install-nvme-rebuild.sh`:
-- [ ] Backup all important data
-- [ ] Verify target disk (`lsblk`)
-- [ ] Confirm this is the reinstall target, not current running system
-- [ ] Have NixOS installer USB ready
-
-Before running `post-install-secureboot-tpm.sh`:
-- [ ] Daily profile boots successfully
-- [ ] LUKS passphrase recovery method tested
-- [ ] Firmware setup mode access confirmed
+What it is **not** responsible for:
+- mutating system state
+- proving runtime correctness
+- replacing the staged checks in `docs/TEST-PLAN.md`
+- replacing the deferred work tracked in `docs/POST-STABILITY.md`

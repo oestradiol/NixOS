@@ -73,9 +73,17 @@ in {
       message = "Paranoid profile must enable audit daemon.";
     }
     {
+      assertion = !isParanoid || config.security.audit.enable != false;
+      message = "Paranoid profile must enable the Linux audit subsystem, not just auditd.";
+    }
+    {
+      assertion = !isParanoid || config.security.audit.rules != [ ];
+      message = "Paranoid profile must define an audit rule set.";
+    }
+    {
       # Check both new and legacy option paths
       assertion = !isParanoid || config.myOS.security.sandbox.vms;
-      message = "Paranoid profile must enable VM isolation layer. Set myOS.security.sandbox.vms = true.";
+      message = "Paranoid profile must enable VM tooling layer. Set myOS.security.sandbox.vms = true.";
     }
     {
       assertion = !isParanoid || !config.myOS.gaming.sysctls;
@@ -122,13 +130,12 @@ in {
       message = "GPU option must be set to either 'nvidia' or 'amd'.";
     }
     {
-      # Check both new and legacy option paths
-      assertion = !isParanoid || config.myOS.security.sandbox.apps;
-      message = "Paranoid profile must enable sandboxed applications. Set myOS.security.sandbox.apps = true.";
+      assertion = !isParanoid || config.myOS.security.persistMachineId;
+      message = "Paranoid profile must persist machine-id.";
     }
     {
-      assertion = !isParanoid || (config.myOS.security.persistMachineId && config.myOS.security.machineIdValue == "b08dfa6083e7567a1921a715000001fb");
-      message = "Paranoid profile must use Whonix shared machine-id (privacy: blends with Whonix users). Note: This conflicts with systemd's unique-id guidance and may cause compatibility issues. This is a deliberate privacy-over-compatibility tradeoff.";
+      assertion = !isParanoid || config.myOS.security.machineIdValue == null;
+      message = "Paranoid profile must keep a unique host machine-id. Leave myOS.security.machineIdValue = null.";
     }
   ];
 }

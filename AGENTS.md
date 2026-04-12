@@ -1,56 +1,51 @@
-# Repository Guide
+# AGENTS
 
-This file is for repository-aware tools and for future handoff work. Human-first.
+LLM/assistant handoff only.
 
-## Purpose
-Governed NixOS hardening repo. One host, two trust tiers: `daily` and `paranoid`.
-Goal: keep code, docs, and audit surfaces aligned.
+## Read order
+1. `README.md`
+2. `PROJECT-STATE.md`
+3. `REFERENCES.md`
+4. `AUDITS.md`
+5. the specific operational doc you need in `docs/`
+6. code
 
-## Read in this order
-1. `PROJECT-STATE.md`
-2. `docs/audit/SOURCE-TOPIC-LEDGER.md`
-3. `docs/PRE-INSTALL.md`
+## Canonical routing
+- front door only → `README.md`
+- repo state / architecture / decisions / constraints → `PROJECT-STATE.md`
+- references / external source ledger → `REFERENCES.md`
+- audits / validations / pending audits → `AUDITS.md`
+- pre-install checks only → `docs/PRE-INSTALL.md`
+- install steps only → `docs/INSTALL-GUIDE.md`
+- current validation only → `docs/TEST-PLAN.md`
+- deferred work only → `docs/POST-STABILITY.md`
+- recovery only → `docs/RECOVERY.md`
+- performance only → `docs/PERFORMANCE-NOTES.md`
 
-## Canonical rules
-- Frozen decisions live in `PROJECT-STATE.md`.
-- Topic coverage lives in `docs/audit/SOURCE-TOPIC-LEDGER.md`.
-- If code changes behavior, update docs in the same commit.
-- Never commit real secrets. `secrets/` is scaffolding only.
+## Status vocabulary
+- implemented
+- implemented+manual
+- deferred
+- rejected
+- static-only
+- runtime-validated
 
-## Truthfulness rules
-- Do not claim a feature is implemented unless code exists for it.
-- Preserve the distinction between **verified by inspection** and **verified by execution**.
-- Status labels: implemented, manual, deferred, rejected, needs live validation.
+## Working rules
+- do not overclaim wrapper strength
+- do not call unfinished work complete
+- preserve losslessness when compressing docs: move or cross-reference, do not silently drop
+- anything unfinished must exist on the pipeline somewhere canonical
+- daily = hardened within usability constraints
+- paranoid = hardened within paranoid constraints, with explicit same-kernel and usability limits
 
-## File routing
-- Policy and frozen state → `PROJECT-STATE.md`
-- Front door → `README.md`
-- Install, run, test, recovery → `docs/*.md`
-- Audit and coverage → `docs/audit/*.md`
-- Nix entrypoints → `flake.nix`, `hosts/nixos/default.nix`, `profiles/*.nix`
-- Security modules → `modules/security/*.nix`
-- Desktop modules → `modules/desktop/*.nix`
-- Home Manager → `modules/home/*.nix`
+## Useful repo facts
+- Firefox hardening is maintained in-repo as an arkenfox-derived baseline with explicit daily overrides
+- Tor Browser and Mullvad Browser keep upstream browser hardening; repo adds local wrapper containment
+- paranoid WireGuard requires pinned literal endpoint `IP:port`
+- VM tooling lives in `modules/security/vm-tooling.nix`; four VM workflow classes and six policy layers are defined in `PROJECT-STATE.md`, and host-side automation now ships through repo-managed networks plus `repo-vm-class`
+- wrapper seccomp and Landlock remain deferred
 
-## Working method
-1. Read `PROJECT-STATE.md`.
-2. Find the smallest authoritative code surface.
-3. Make the change.
-4. Update `PROJECT-STATE.md` and the ledger if status changed.
-5. Update audit steps if the change creates new failure modes.
-
-## Review checklist
-- Did code change behavior? → update `PROJECT-STATE.md`
-- Did topic coverage change? → update `docs/audit/SOURCE-TOPIC-LEDGER.md`
-- Did manual steps change? → update `docs/POST-STABILITY.md` and `docs/TEST-PLAN.md`
-- Did failure modes change? → update `docs/PRE-INSTALL.md`
-
-## Defaults Policy (options.nix)
-**Principle**: Maximize hardening without user pain.
-
-**Rule**: `options.nix` defaults must balance:
-1. **Transparent hardening** enabled (initOnAlloc, slabNomerge, root lock, PTI)
-2. **Painful hardening** disabled or permissive (ptrace=1 for games, apparmor off, sandbox.browsers and sandbox.vms off)
-3. **Escalation path** clear via profile opt-in (paranoid hardens everything with mkForce)
-
-**Rationale**: Default user didn't choose pain. Paranoid user did.
+- paranoid audit means the Linux audit subsystem, auditd, and a repo rule set
+- AppArmor currently means framework + D-Bus mediation baseline, not a finished custom policy library
+- `networking.wireguard` is intentionally kept for now; move only if live routing/MTU issues justify it
+- `REFERENCES.md` is the canonical external-source ledger; full archival capture is still deferred
