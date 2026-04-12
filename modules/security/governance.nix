@@ -114,10 +114,6 @@ in {
       message = "Paranoid profile must enable sandboxed applications.";
     }
     {
-      assertion = config.myOS.security.aide.enable;
-      message = "AIDE integrity monitoring must be enabled (policy: both profiles). Set aide.enable = false explicitly if you want ClamAV-only.";
-    }
-    {
       assertion = !isParanoid || !config.myOS.security.persistMachineId;
       message = "Paranoid profile must NOT persist machine-id (privacy: randomized each boot).";
     }

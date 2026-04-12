@@ -13,8 +13,6 @@
       # flatpak install -y flathub com.bitwarden.desktop
       # flatpak install -y flathub dev.vencord.Vesktop
       # flatpak install -y flathub md.obsidian.Obsidian
-      # flatpak install -y flathub org.telegram.desktop
-      # flatpak install -y flathub im.riot.Riot
     '';
     serviceConfig = {
       Type = "oneshot";

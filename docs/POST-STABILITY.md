@@ -65,14 +65,20 @@ Paranoid:
 - treat lockdown behavior as expected, not a bug
 - validate killswitch: `sudo nft list ruleset`
 
-**Killswitch architecture (DEFERRED MAINTENANCE RISK):**
-The nftables rules hardcode Mullvad infrastructure IPs that were current as of 2024.
-Mullvad's server infrastructure is dynamic — these IPs may become stale.
+**Killswitch architecture (interface-based):**
+The nftables rules use interface-based filtering (no hardcoded IPs).
+- Physical interface: DHCP, DNS to systemd-resolved, ICMP only (bootstrap)
+- VPN interfaces (`wg-mullvad`, `tun0`, `tun1`): unrestricted egress when tunnel up
 
-**IP Maintenance:** See [`RECOVERY.md`](./RECOVERY.md) "If Mullvad VPN fails to connect (stale IP ranges)" for the recovery procedure when hardcoded IPs rotate.
+**Known tradeoffs:**
+- Brief DNS leak at boot before tunnel establishment (unavoidable - must resolve VPN endpoint)
+- Host is "ping dark" (no inbound ICMP replies)
+- If Mullvad uses different interface names, update `vpnIfaces` in `networking.nix`
+
+**Verification:** `sudo nft list ruleset` should show interface-based rules, not hardcoded IPs.
 
 **Recommendation:** Rely primarily on Mullvad's built-in lockdown-mode killswitch.
-The nftables rules are defense-in-depth only and require manual maintenance.
+The nftables rules are defense-in-depth only.
 
 **If network issues occur**: See [`RECOVERY.md`](./RECOVERY.md) "If the paranoid profile blocks too much network" section.
 
@@ -108,8 +114,6 @@ flatpak install -y flathub com.spotify.Client
 flatpak install -y flathub com.bitwarden.desktop
 flatpak install -y flathub dev.vencord.Vesktop
 flatpak install -y flathub md.obsidian.Obsidian
-flatpak install -y flathub org.telegram.desktop
-flatpak install -y flathub im.riot.Riot
 ```
 
 ## 11. Use sandboxed applications
@@ -388,15 +392,24 @@ myOS.security.sandboxedBrowsers.dbusFilter = true;
 **Test after enabling**:
 1. Launch `safe-firefox` and verify it starts
 2. Test browser extensions (may break with filtering)
-3. Test native messaging (KeePassXC, etc.)
+3. Test native messaging (KeePassXC, etc.) — **expected to break** without `org.freedesktop.NativeMessagingProxy` allowlist
 4. Check PipeWire/WebRTC audio/video still works
 5. If anything breaks, disable immediately: `dbusFilter = false`
 
-**What the filter allows**:
+**What the filter allows on D-Bus**:
 - Own namespace: `org.mozilla.firefox.*`
 - Portal access: `org.freedesktop.portal.*` (file picker, notifications)
 - Accessibility: `org.a11y.Bus`
-- Everything else: **BLOCKED**
+- Everything else on D-Bus: **BLOCKED**
+
+**What the wrapper STILL exposes (outside D-Bus)**:
+- **GPU access** (`/dev/dri` bind) — known escape vector via DMA
+- **Display server** (Wayland/X11 socket) — full desktop interaction
+- **PipeWire** (audio/video capture socket)
+- **Network** (no network namespace isolation) — full host network access
+- **Host filesystem** (broad read-only binds: `/etc`, `/var`, `/run`)
+
+**Verdict**: The D-Bus filter reduces **one IPC surface**. It does not provide "trustworthy browser isolation" against motivated attackers. For hostile content, use VM isolation.
 
 **For maximum isolation**: Use `vmIsolation.enable` and run browsers in a VM instead of relying on bubblewrap D-Bus filtering.
 
@@ -410,7 +423,7 @@ myOS.security.sandboxedBrowsers.dbusFilter = true;
 | **Timezone spoofing** | Check `Date()` in browser console (FPP vs RFP differ) | FPP: your timezone; RFP: GMT/Atlantic/Reykjavik |
 | **Letterboxing** | Resize browser window | FPP: no margins; RFP (paranoid): stepped margins |
 | **WebRTC leak test** | https://browserleaks.com/webrtc on daily | Should show Mullvad IP if VPN active, not real IP |
-| **DoH is Mullvad** | https://www.dnsleaktest.com/ | Daily: `base.dns.mullvad.net` (ads/trackers/malware). Paranoid: `all.dns.mullvad.net` (ads/trackers/malware/gambling) |
+| **DNS via VPN** | https://www.dnsleaktest.com/ | Daily: System/VPN DNS (no DoH). Paranoid: VPN server DNS `all.dns.mullvad.net` (ads/trackers/malware/gambling) |
 | **Firefox Sync disabled** | about:preferences#sync on daily | Should show "Sign in to Sync" not your account |
 | **Cookie behavior** | Check lock icon on any site → Cookies | Should show dFPI/cross-site blocking active |
 | **ETP Strict active** | about:preferences#privacy → Enhanced Tracking Protection | Should show "Strict" selected |

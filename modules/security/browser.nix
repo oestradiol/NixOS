@@ -436,19 +436,15 @@ in {
         "browser.places.speculativeConnect.enabled" = false;
         "browser.urlbar.speculativeConnect.enabled" = false;
 
-        # [SECTION 0700]: DNS - Mullvad DoH (base.dns.mullvad.net) - DAILY PROFILE
-        # Blocks ads, trackers, and malware. Less restrictive than paranoid's all.dns.
-        #
-        # NOTE: Mullvad recommends using VPN server DNS when connected to VPN.
-        # Using external DoH when VPN is active adds latency with negligible security benefit.
-        # This is an explicit design choice that conflicts with current vendor guidance since we might have VPN off.
+        # [SECTION 0700]: DNS - Use system resolver (VPN DNS when connected)
+        # Mullvad recommends using VPN server DNS when connected to VPN.
+        # DoH adds latency with negligible security benefit when VPN is active.
+        # Daily profile uses system/VPN DNS only - no forced DoH.
         # See: https://mullvad.net/en/help/dns-over-https-and-dns-over-tls
         "network.proxy.socks_remote_dns" = true;
         "network.file.disable_unc_paths" = true;
         "network.gio.supported-protocols" = "";
-        "network.trr.mode" = 2;  # DoH with system fallback
-        "network.trr.uri" = "https://base.dns.mullvad.net/dns-query";
-        "network.trr.bootstrapAddress" = "194.242.2.2";
+        "network.trr.mode" = 0;  # DoH disabled - use system/VPN DNS only
 
         # [SECTION 0800]: LOCATION BAR / SEARCH - disable search suggestions (privacy leak)
         "browser.search.suggest.enabled" = false;

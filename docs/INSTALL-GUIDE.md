@@ -37,6 +37,20 @@ Inside `cryptroot` Btrfs create:
 
 **Note**: `@home-paranoid` mounts to `/mnt/persist/home/ghost` (runtime: `/persist/home/ghost`), not `/mnt/home/ghost`
 
+**CRITICAL**: Verify `hardware-target.nix` `uid=1001/gid=100` match your actual `ghost` user UID/GID before install. Mismatch causes permission failures on paranoid boot.
+
+**How to verify** (run on existing system or check `modules/core/users.nix`):
+```bash
+# Check what UID/GID ghost will have in the new system
+grep -A5 'users.users."ghost"' modules/core/users.nix
+# Look for uid = 1001; and gid = 100; (or whatever values are set)
+
+# If already have a ghost user, check current values:
+id ghost  # Output: uid=1001(ghost) gid=100(users) groups=100(users)
+
+# If mismatch: edit hardware-target.nix line 62 to match your actual UID/GID
+```
+
 ## Phase 3 — install repo
 1. Copy this repository to `/mnt/etc/nixos`.
 2. Ensure `hosts/nixos/hardware-target.nix` is active.

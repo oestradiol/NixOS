@@ -54,6 +54,7 @@
   # Paranoid profile: selective home impermanence (tmpfs + allowlist)
   # @home-paranoid subvolume mounted to /persist/home/ghost for impermanence backing store
   # /home/ghost is tmpfs (wiped on boot) - only allowlisted items bind-mounted from /persist/home/ghost
+  # NOTE: uid=1001/gid=100 are host-specific. Verify match to your actual ghost user UID/GID before install.
   fileSystems."/home/ghost" = {
     device = "none";
     fsType = "tmpfs";

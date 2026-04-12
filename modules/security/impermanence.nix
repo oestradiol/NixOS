@@ -70,8 +70,6 @@ in {
             ".var/app/com.bitwarden.desktop"
             ".var/app/dev.vencord.Vesktop"
             ".var/app/md.obsidian.Obsidian"
-            ".var/app/org.telegram.desktop"
-            ".var/app/im.riot.Riot"
           ];
           files = [ ".zsh_history" ];
         };
