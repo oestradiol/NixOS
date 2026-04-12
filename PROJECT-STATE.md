@@ -48,7 +48,7 @@
 **Goal**: Minimize trackable hardware/software identifiers that can fingerprint the system across boots/sessions.
 
 **Implemented mitigations**:
-- **machine-id**: Whonix shared ID on paranoid (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) - blends with Whonix users; systemd-generated stable ID on daily
+- **machine-id**: Paranoid uses Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) as a deliberate privacy exception to blend with Whonix users. This conflicts with systemd's unique-id guidance (machine-id should be locally unique). Daily uses systemd-generated stable unique ID for operational stability.
 - **MAC addresses**: Randomized for all interfaces via `systemd.network.links` with `MACAddressPolicy = "random"`
 - **WiFi scanning**: Random MAC during network scans (`wifi.scanRandMacAddress = true`)
 - **IPv6**: Privacy extensions enabled (randomized temporary addresses)
@@ -68,7 +68,7 @@
 - **USB device topology**: Persistent port/device relationships
 
 ### Daily profile (operational stability prioritized)
-- **machine-id**: Systemd-generated stable ID (`persistMachineId = true`) - required for D-Bus, Steam, systemd state
+- **machine-id**: Systemd-generated stable unique ID (`persistMachineId = true`) - follows systemd's unique-id guidance; required for D-Bus, Steam, systemd state
 - **MAC addresses**: Stable per network (`MACAddressPolicy = "stable"`) - prevents WiFi captive portal re-auth issues
 - **WiFi scanning**: Random MAC during scans only
 - **IPv6**: Privacy extensions enabled (standard privacy)
@@ -107,7 +107,7 @@ Users should not sideload untrusted binaries into these directories. The Nix sto
 - **Build-time checks**: `flake.nix` includes `checks.x86_64-linux` with nixos-config and paranoid-config evaluation tests; run via `nix flake check`.
 - **Audit script**: `scripts/audit-tutorial.sh` runs static checks; failures now propagate (removed `|| true` masking).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
-- **All hardening knobs configurable via `myOS.security.*` options` — profiles set presets, users can override per-knob.
+- **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
 - **Nix trusted users**: Hardcoded to `["root"]` in base-desktop.nix for both profiles. Upstream Nix warns that adding users to trusted-users is essentially equivalent to giving them root access for Nix operations (build as root, bypass sandbox, set config, GC as root). This repo uses the minimal safe default to reduce attack surface. If you need to add users for Steam/development workflows, modify `modules/core/base-desktop.nix` and understand the security implications.
 - **Module structure minimized**: `core/` (4 files), `security/` (11 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (2 files).
 - **Docs minimized**: 8 surviving docs (down from 28), single front-door README.
@@ -256,7 +256,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 | **Audit logging** | Disabled (`auditd = false`) | Enabled (`auditd = lib.mkForce true`) | PASS |
 | **VM isolation** | Disabled (`sandbox.vms = false`) | Enabled (`sandbox.vms = lib.mkForce true`) | PASS |
 | **Home persistence** | Full Btrfs subvolume | Selective tmpfs + allowlist | PASS |
-| **Machine-id** | Systemd-generated stable (`persistMachineId = true`) | Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) | PASS |
+| **Machine-id** | Systemd-generated stable unique ID (`persistMachineId = true`) - follows systemd guidance | Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) - deliberate privacy exception, conflicts with systemd unique-id guidance | PASS |
 | **MAC addresses** | Stable per network | Random per device appearance (typically at boot) | PASS |
 | **ptrace scope** | 1 (EAC compatible) | 2 (strictest) | PASS |
 | **init_on_free** | Disabled (performance) | Enabled (`initOnFree = lib.mkForce true`) | PASS |
@@ -270,7 +270,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 - Broad desktop convenience: gaming, VR, sync, messenger sprawl allowed.
 - **VPN**: Mullvad app for convenience (key rotation, multihop, GUI controls). No strict killswitch required.
 - All proprietary apps sandboxed via Flatpak or bubblewrap wrappers.
-- **Privacy**: MAC stable per network; machine-id is systemd-generated stable unique ID.
+- **Privacy**: MAC stable per network; machine-id is systemd-generated stable unique ID (follows systemd guidance).
 
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
@@ -278,7 +278,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 - **VPN**: Self-owned WireGuard to Mullvad servers. No Mullvad app. NixOS owns tunnel state AND firewall policy (single source of truth). Deterministic killswitch generated from WireGuard config.
 - Lower persistence footprint (tmpfs home, selective allowlist).
 - Signal Desktop sandboxed via Flatpak.
-- **Privacy**: Randomized MAC per device appearance (typically at boot); machine-id is Whonix shared ID (blends with Whonix users); TCP timestamps disabled.
+- **Privacy**: Randomized MAC per device appearance (typically at boot); machine-id is Whonix shared ID (deliberate privacy exception to blend with Whonix users, conflicts with systemd unique-id guidance); TCP timestamps disabled.
 
 ### Isolation truth
 - Boot specialisations separate behavior, not compromise.

@@ -225,18 +225,19 @@ grep "testuser" /etc/passwd || sudo useradd testuser
 **Symptom**: Services fail to start, journal shows machine-id warnings, systemd state appears inconsistent.
 
 **Current design**: Both profiles now persist machine-id for operational stability:
-- **Daily**: Systemd generates a unique stable ID at first boot
+- **Daily**: Systemd generates a unique stable ID at first boot (follows systemd's unique-id guidance)
 - **Paranoid**: Uses the **Whonix shared machine-id** (`b08dfa6083e7567a1921a715000001fb`) for privacy
 
-The Whonix ID blends your system with all Whonix users rather than being uniquely fingerprintable, while remaining stable for systemd state consistency.
+The Whonix ID blends your system with all Whonix users rather than being uniquely fingerprintable, while remaining stable for systemd state consistency. This is a deliberate privacy exception that conflicts with systemd's unique-id guidance (machine-id should be unique per host).
 
-**Design rationale**: 
+**Design rationale**:
 - `/var/lib/systemd` is persisted because it contains:
-  - Service enablement/disablement state
+  - D-Bus machine ID
+  - User runtime directories
   - Timer last-run timestamps
   - Some runtime tracking that NixOS expects to survive reboots
 - Machine-id is persisted on both profiles to avoid operational issues
-- Paranoid uses the shared Whonix ID for privacy (not unique per boot)
+- Paranoid uses the shared Whonix ID for privacy (deliberate exception to systemd's unique-id guidance)
 
 **Reference**: https://github.com/Whonix/dist-base-files/blob/master/etc/machine-id
 
@@ -259,7 +260,7 @@ sudo rm -rf /var/lib/systemd/*
 # If mismatch, the systemd state may need clearing as above
 ```
 
-**Decision**: Current design uses stable machine-id for both profiles. Daily gets unique systemd-generated ID; paranoid gets Whonix shared ID for privacy (blends with all Whonix users rather than being unique per boot). No operational issues.
+**Decision**: Current design uses stable machine-id for both profiles. Daily gets unique systemd-generated ID (follows systemd guidance); paranoid gets Whonix shared ID for privacy (deliberate exception to systemd's unique-id guidance, blends with all Whonix users rather than being unique per boot). No operational issues.
 
 ---
 
@@ -892,12 +893,22 @@ sbctl status
 **Recovery**:
 ```bash
 # 1. Boot NixOS installer USB
-# 2. Mount system as in INSTALL-GUIDE.md
-# 3. Reinstall bootloader
-nixos-enter
-nixos-rebuild switch --install-bootloader
+# 2. Mount system as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
+mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
 
-# 4. Verify entries
+# 3. Bind mount for nixos-enter
+mount --bind /dev /mnt/dev
+mount --bind /proc /mnt/proc
+mount --bind /sys /mnt/sys
+
+# 4. Reinstall bootloader
+nixos-enter --root /mnt
+nixos-rebuild switch --install-bootloader --flake /etc/nixos#nixos
+
+# 5. Verify entries
 bootctl list
 ```
 
@@ -907,14 +918,27 @@ bootctl list
 
 **Recovery**:
 ```bash
-# 1. Boot installer USB
-# 2. Recreate ESP
-mkfs.vfat -F32 /dev/disk/by-partlabel/NIXBOOT
+# 1. Boot NixOS installer USB
+# 2. Recreate ESP (WARNING: This deletes all ESP contents)
+sudo mkfs.vfat -F32 /dev/disk/by-partlabel/NIXBOOT
 
-# 3. Mount and reinstall bootloader
+# 3. Mount system as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
 mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
-nixos-enter
-nixos-rebuild switch --install-bootloader
+
+# 4. Bind mount for nixos-enter
+mount --bind /dev /mnt/dev
+mount --bind /proc /mnt/proc
+mount --bind /sys /mnt/sys
+
+# 5. Reinstall bootloader
+nixos-enter --root /mnt
+nixos-rebuild switch --install-bootloader --flake /etc/nixos#nixos
+
+# 6. Verify entries
+bootctl list
 ```
 
 ### Scenario 3: Secure Boot keys lost
@@ -1026,10 +1050,16 @@ nixos-rebuild switch --rollback
 
 **Recovery**:
 ```bash
-# 1. Identify what changed
-git diff /etc/nixos/ between generations
+# 1. Identify what changed between generations
+nixos-rebuild --list-generations
+# Compare current generation with previous generation
+sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+# View configuration diff:
+sudo git -C /etc/nixos diff HEAD~1 HEAD
 
 # 2. Update current generation config to match persistence expectations
+# Edit modules/security/impermanence.nix to align paths
+
 # 3. Rebuild
 nixos-rebuild switch
 ```
@@ -1043,8 +1073,25 @@ nixos-rebuild switch
 # 1. Check current subvolume layout
 sudo btrfs subvolume list /
 
+# Expected subvolumes for this repo:
+# ID 256 (top level)
+#   ID 257 @ (root)
+#   ID 258 @home
+#   ID 259 @persist
+#   ID 260 @nix
+#   ID 261 @swap
+
 # 2. Compare with expected layout from config
-# 3. Create missing subvolumes or update config to match actual layout
+# Check hosts/nixos/default.nix for subvolume definitions
+
+# 3. Create missing subvolumes (example for @persist)
+sudo btrfs subvolume create /mnt/@persist
+
+# 4. Or update config to match actual layout if subvolume naming changed
+# Edit hosts/nixos/default.nix to use actual subvolume names
+
+# 5. Rebuild
+nixos-rebuild switch
 ```
 
 **Prevention**:
@@ -1091,11 +1138,17 @@ grep -r "subvol=" /etc/nixos/
 # 1. Check what subvolumes exist
 sudo btrfs subvolume list /
 
-# 2. Either create missing subvolume or update config to match actual
-# Create:
-sudo btrfs subvolume create /mnt/@missing-subvolume
+# 2. Identify expected subvolume name from config
+grep -r "subvol=" /etc/nixos/hosts/nixos/default.nix
 
-# Or update config to use existing subvolume
+# 3. Option A: Create missing subvolume (example for @persist)
+sudo btrfs subvolume create /@persist
+
+# 4. Option B: Update config to use existing subvolume
+# Edit hosts/nixos/default.nix to use actual subvolume name
+
+# 5. Rebuild
+nixos-rebuild switch
 ```
 
 ### Scenario 2: Mount option drift
@@ -1105,10 +1158,22 @@ sudo btrfs subvolume create /mnt/@missing-subvolume
 **Recovery**:
 ```bash
 # 1. Check current mount options
-findmnt -o OPTIONS
+findmnt -o OPTIONS /persist
 
-# 2. Update config to match actual subvolume requirements
-# Or remount subvolume with correct options
+# 2. Check expected options from config
+grep -A 10 "fileSystems.\"/persist\"" /etc/nixos/hosts/nixos/default.nix
+
+# Expected options for this repo:
+# options = [ "subvol=@persist" "compress=zstd" "noatime" ]
+
+# 3. Option A: Remount with correct options (temporary)
+sudo mount -o remount,compress=zstd,noatime /persist
+
+# 4. Option B: Update config to match actual subvolume requirements
+# Edit hosts/nixos/default.nix to match actual subvolume state
+
+# 5. Rebuild
+nixos-rebuild switch
 ```
 
 **Prevention**:
