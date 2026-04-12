@@ -12,6 +12,7 @@
     ../../modules/security/base.nix
     ../../modules/security/governance.nix
     ../../modules/security/networking.nix
+    ../../modules/security/wireguard.nix  # Self-owned WireGuard for paranoid (replaces Mullvad app)
     ../../modules/security/browser.nix
     ../../modules/security/impermanence.nix
     ../../modules/security/secrets.nix

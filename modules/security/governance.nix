@@ -18,12 +18,11 @@ in {
       message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox).";
     }
     {
-      assertion = !isParanoid || config.myOS.security.mullvad.enable;
-      message = "Paranoid profile must enable Mullvad/VPN path.";
-    }
-    {
-      assertion = !isParanoid || config.myOS.security.mullvad.nftablesFallback;
-      message = "Paranoid profile must enable nftablesFallback (Option B: emergency fail-closed) by default.";
+      # Paranoid must use self-owned WireGuard (not Mullvad app)
+      # wireguardMullvad.enable = true → self-owned mode (paranoid requirement)
+      # wireguardMullvad.enable = false → Mullvad app mode (daily default)
+      assertion = !isParanoid || config.myOS.security.wireguardMullvad.enable;
+      message = "Paranoid profile must use self-owned WireGuard (myOS.security.wireguardMullvad.enable = true).";
     }
     {
       assertion = !isParanoid || config.myOS.security.impermanence.enable;

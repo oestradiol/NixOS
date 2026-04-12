@@ -33,7 +33,8 @@
 | Module blacklist (dccp/sctp/etc) | **Zero** | |
 | `security.protectKernelImage` | **Zero** | |
 | Core dump disable | **Zero** | |
-| Mullvad (enable, no nftablesFallback) | **Optional** | When active: ~5-15ms latency. Off by default on daily |
+| Mullvad app (daily only) | **Optional** | When active: ~5-15ms latency. Off by default on daily |
+| Self-owned WireGuard (paranoid only) | **Required** | Deterministic, always-on. Minimal overhead vs Mullvad app |
 
 ### Moved to paranoid-only (would have had measurable gaming impact)
 | Knob | Why moved | Impact if kept |

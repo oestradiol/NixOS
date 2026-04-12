@@ -70,20 +70,46 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 
 **If D-Bus filtering breaks functionality**: Disable in paranoid.nix: `sandboxedBrowsers.dbusFilter = lib.mkForce false`
 
-## Mullvad and leak testing
-- [ ] daily can connect to Mullvad (`mullvad status`)
-- [ ] paranoid can connect to Mullvad
-- [ ] paranoid loses network when Mullvad disconnects unexpectedly (disconnect VPN, verify egress fails)
+## VPN and leak testing
+
+### Daily: Mullvad App
+- [ ] Mullvad daemon is running (`systemctl status mullvad-daemon`)
+- [ ] Can connect to Mullvad (`mullvad status` shows Connected)
 - [ ] Mullvad check shows expected VPN route (`curl https://am.i.mullvad.net/connected`)
 - [ ] Firefox WebRTC does not reveal real IP (test: https://browserleaks.com/webrtc)
+
+### Paranoid: Self-Owned WireGuard
+- [ ] WireGuard interface is up (`ip link show wg-mullvad`)
+- [ ] Tunnel is established (`sudo wg show wg-mullvad` shows handshake/transfer)
+- [ ] Default route is via tunnel (`ip route | grep default` shows dev wg-mullvad)
+- [ ] nftables policy is default-deny (`sudo nft list table inet filter | grep 'policy drop'`)
+- [ ] **Killswitch test**: Stop WireGuard, verify egress fails, restart, verify works:
+  ```bash
+  sudo systemctl stop wg-quick-wg-mullvad
+  curl --max-time 5 https://example.com  # Should fail
+  sudo systemctl start wg-quick-wg-mullvad
+  curl https://example.com  # Should succeed
+  ```
+- [ ] Mullvad check shows expected VPN route (`curl https://am.i.mullvad.net/connected`)
+- [ ] No DNS leaks (`dig +short whoami.mullvad.net` returns Mullvad server ID)
 - [ ] Tor Browser shows Tor check success
 
 **Verification commands**:
 ```bash
-sudo nft list ruleset
-mullvad status
-resolvectl status
+# WireGuard status
+sudo wg show wg-mullvad
+ip link show wg-mullvad
+
+# Routing
+ip route | grep default
+
+# Firewall
+sudo nft list table inet filter
+
+# DNS and IP verification
+dig +short whoami.mullvad.net
 curl https://am.i.mullvad.net/connected
+resolvectl status
 ```
 
 **If paranoid blocks too much network**: See [`RECOVERY.md`](./RECOVERY.md) "If the paranoid profile blocks too much network" section.

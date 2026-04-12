@@ -30,7 +30,8 @@ Never trust a status line by itself. For each claim, check four layers:
 - `modules/security/secrets.nix`
 
 ### Networking / browser / privacy
-- `modules/security/networking.nix` — killswitch, nftables
+- `modules/security/networking.nix` — Mullvad app mode networking, nftables fallback for app mode
+- `modules/security/wireguard.nix` — Self-owned WireGuard stack for paranoid (single-source-of-truth config + firewall)
 - `modules/security/browser.nix` — Firefox policies or sandboxed browser wrappers (UID 100000, bubblewrap)
   - When `sandboxedBrowsers.enable = false` (daily): Base Firefox with 60+ hardening prefs (all telemetry disabled, safe browsing local-only, prefetch blocked, HTTPS-only, dFPI, ETP strict, OCSP hard-fail, container tabs, shutdown sanitizing, FPP fingerprinting protection per arkenfox v140+)
   - When `sandboxedBrowsers.enable = true` (paranoid): Base Firefox disabled, only sandboxed wrappers available (safe-firefox with full hardened user.js including RFP, safe-tor-browser, safe-mullvad-browser)
@@ -112,7 +113,7 @@ Check: `/mnt`, `/mnt/boot`, `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, home sub
 | Partition labels not matching repo assumptions | Manual partitioning | Use `scripts/install-nvme-rebuild.sh` or match its layout exactly |
 | Missing subvolume mount before install | Forgot `mount -o subvol=@nix` | Run `findmnt -R /mnt` and verify all subvolumes |
 | Secure Boot enabled before signed boot path ready | Firmware settings | Keep Secure Boot disabled for first install |
-| UID/GID mismatch on paranoid home | `hardware-target.nix` hardcodes `uid=1001/gid=100` | Verify `ghost` user UID/GID match before install; edit if needed |
+| UID/GID mismatch on paranoid home | `hardware-target.nix` derives from `config.users.users."ghost"` | Verify `ghost` user UID/GID in `modules/core/users.nix` match tmpfs mount options |
 | Missing recovery passphrase | Did not record it | Write LUKS passphrase down before enrollment |
 
 ---
@@ -134,16 +135,33 @@ For each security claim, verify the code matches the documentation.
 
 **Action**: Confirm docs don't claim network isolation for browsers.
 
-### Networking / killswitch
+### Networking / VPN architecture
+
+**Two mutually exclusive modes:**
+
+| Mode | Profile | Module | Authority |
+|------|---------|--------|-----------|
+| Mullvad app | daily | `networking.nix` | Mullvad daemon + optional nftables fallback |
+| Self-owned WireGuard | paranoid | `wireguard.nix` | NixOS (config generates firewall) |
+
+#### Self-owned WireGuard (paranoid) — RECOMMENDED
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| nftables fallback (Option B) | `modules/security/networking.nix:20-75` | ✅ VERIFIED |
-| VPN interface allowlist | `wg-mullvad`, `tun0`, `tun1` accepted | ✅ VERIFIED |
-| Bootstrap traffic scoped | DHCP/NDP only on non-VPN interfaces; ICMPv6 NDP-only | ✅ VERIFIED |
-| Firewall disabled when nftablesFallback active | `networking.firewall.enable = !config.myOS.security.mullvad.nftablesFallback` | ✅ VERIFIED |
+| Single source of truth | `wireguard.nix`: WireGuard config generates firewall rules | ✅ VERIFIED |
+| Fixed interface name | `wg-mullvad` hardcoded, used in both WG config and firewall | ✅ VERIFIED |
+| Killswitch: default-deny output | Only DHCP/NDP bootstrap, DNS through tunnel, WG handshake, tunnel traffic | ✅ VERIFIED |
+| No Mullvad app | `services.mullvad-vpn.enable = false` when WG mode active | ✅ VERIFIED |
+| DNS through tunnel only | `oifname "wg-mullvad" udp/tcp dport 53 accept` | ✅ VERIFIED |
+| No NixOS firewall conflict | `networking.firewall.enable = false` in WG mode | ✅ VERIFIED |
 
-**Killswitch behavior**: Interface-based only (no hardcoded Mullvad IPs). Physical interface allows DHCP, DNS to systemd-resolved, and ICMP for bootstrap. All egress through VPN interfaces (`wg-mullvad`, `tun0`, `tun1`) when tunnel is up.
+**Required setup**: See Section 15 below for WireGuard config generation.
+
+#### Mullvad app mode (daily)
+
+**Architecture**: Mullvad app manages its own firewall state. No nftables killswitch from this repo.
+
+**Killswitch**: Use Mullvad's built-in `mullvad lockdown-mode set on` for enforcement.
 
 **Known leakage**: Brief DNS queries at boot before tunnel establishment (unavoidable - must resolve VPN endpoint).
 
@@ -163,7 +181,7 @@ For each security claim, verify the code matches the documentation.
 |-------|--------------|--------|
 | 28 assertions | `modules/security/governance.nix` lines 7-118 | ✅ VERIFIED |
 | Paranoid requires sandboxed browsers | Lines 17-18 | ✅ VERIFIED |
-| Paranoid requires nftablesFallback | Lines 21-26 | ✅ VERIFIED |
+| Paranoid requires wireguardMullvad | Lines 21-26 | ✅ VERIFIED |
 | Paranoid ghost not in wheel | Lines 61-62 | ✅ VERIFIED |
 | Daily no hardened memory | Lines 105-106 | ✅ VERIFIED |
 
@@ -201,6 +219,147 @@ See: https://nixos.org/manual/nixos/stable/options#opt-users.mutableUsers
 1. Is this claim listed in `PROJECT-STATE.md`?
 2. Is the code file in the code map above?
 3. Did I verify build/runtime, or am I trusting an inspected file?
+
+---
+
+---
+
+## Section 15 — WireGuard Configuration (paranoid profile)
+
+**Purpose**: Configure self-owned WireGuard tunnel to Mullvad servers. This replaces the Mullvad app on paranoid with a deterministic, auditable NixOS-native stack.
+
+**Memory anchor**: Mullvad as provider, NixOS as authority.
+
+### 15.1 Generate WireGuard keys
+
+On a trusted machine with `wg` (wireguard-tools):
+
+```bash
+# Generate private key
+wg genkey | tee mullvad-private.key | wg pubkey > mullvad-public.key
+
+# Optional: generate preshared key for post-quantum resistance
+wg genpsk > mullvad-preshared.key
+```
+
+### 15.2 Get Mullvad server configuration
+
+1. Log in to https://mullvad.net/en/account/
+2. Go to "WireGuard configuration" or use the API
+3. Select a server (e.g., `us-nyc-wg-001`)
+4. Note these values:
+   - **Server public key**: The WireGuard public key of the Mullvad server
+   - **Server endpoint**: Hostname or IP with port (e.g., `us-nyc-wg-001.mullvad.net:51820`)
+   - **Your assigned IP**: The tunnel IP Mullvad assigns you (e.g., `10.64.123.45/32`)
+   - **DNS server**: Usually `10.64.0.1` (Mullvad's ad-blocking DNS)
+
+Alternative: Use Mullvad's CLI config generator:
+```bash
+# Install mullvad-vpn temporarily on another machine
+mullvad relay set tunnel-protocol wireguard
+mullvad relay set location us nyc  # or your preferred location
+mullvad connect
+# Then extract the config from the app or generate via web
+```
+
+### 15.3 Create secrets file with agenix
+
+Create `secrets/wireguard.nix` (this is a template - never commit real keys):
+
+```nix
+{ config, pkgs, ... }:
+{
+  # Reference these in your host config
+  # The actual encrypted secrets go in secrets/wireguard-*.age
+  age.secrets.wg-private-key.file = ../secrets/wireguard-private.age;
+  age.secrets.wg-preshared-key.file = ../secrets/wireguard-preshared.age;
+}
+```
+
+Encrypt your keys:
+
+```bash
+# Get your system's public age key
+agenix-keygen  # or cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
+
+# Encrypt the private key (replace with your recipient key)
+age -r age1yourpublickey... -o secrets/wireguard-private.age mullvad-private.key
+
+# Encrypt preshared key if generated
+age -r age1yourpublickey... -o secrets/wireguard-preshared.age mullvad-preshared.key
+
+# Remove plaintext files securely
+shred -u mullvad-private.key mullvad-public.key mullvad-preshared.key
+```
+
+### 15.4 Configure the paranoid profile
+
+Edit `profiles/paranoid.nix` and uncomment/complete the WireGuard options:
+
+```nix
+myOS.security = {
+  # ... other options ...
+
+  wireguardMullvad = {
+    enable = lib.mkForce true;
+    privateKey = config.age.secrets.wg-private-key.path;
+    presharedKey = config.age.secrets.wg-preshared-key.path;  # optional
+    address = "10.64.123.45/32";  # Your Mullvad-assigned tunnel IP
+    endpoint = "us-nyc-wg-001.mullvad.net:51820";  # Your chosen server
+    serverPublicKey = "<server-public-key-here>";  # From Mullvad config
+    dns = "10.64.0.1";  # Mullvad DNS through tunnel
+  };
+};
+```
+
+### 15.5 Verify the configuration
+
+Build and check:
+
+```bash
+nix build .#nixosConfigurations.nixos.config.system.build.toplevel
+# Should succeed with assertions passing
+
+# Verify the nftables ruleset includes your endpoint
+nix build .#nixosConfigurations.nixos.config.networking.nftables.ruleset
+```
+
+### 15.6 Post-install verification
+
+After first boot into paranoid profile:
+
+```bash
+# Check WireGuard interface is up
+ip link show wg-mullvad
+
+# Check tunnel is established (should show handshake)
+sudo wg show wg-mullvad
+
+# Verify routing (default should be via wg-mullvad)
+ip route | grep default
+
+# Test for DNS leaks (should show Mullvad DNS, not ISP)
+dig +short whoami.mullvad.net
+
+# Test for IP leaks (should show Mullvad exit IP)
+curl https://am.i.mullvad.net/connected
+```
+
+### 15.7 Architecture verification
+
+Confirm the security property holds:
+
+```bash
+# Check nftables is active and policy is default-deny
+sudo nft list table inet filter
+# Should see: chain output { type filter hook output priority filter; policy drop; ... }
+
+# Check that only wg-mullvad can egress (no leaks)
+# Temporarily stop the WG interface - all outbound should fail
+sudo systemctl stop wg-quick-wg-mullvad
+curl https://example.com  # Should hang/fail
+sudo systemctl start wg-quick-wg-mullvad
+```
 
 ---
 

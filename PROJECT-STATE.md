@@ -112,7 +112,7 @@ All key hardening knobs are tunable per-profile without code changes:
 - `ptraceScope` (kernel.yama.ptrace_scope: 1 for EAC compatibility, 2 for hardening)
 - `swappiness` (vm.swappiness: lower values for gaming, higher for systems with limited RAM)
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
-- `mullvad.{enable, lockdown}`
+- `wireguardMullvad.enable` — `true` = self-owned WireGuard (paranoid), `false` = Mullvad app (daily, default)
 
 ## Gaming knobs
 - `myOS.gaming.controllers.enable` — Bluetooth/Xbox controller support (xpadneo, udev rules, blueman)
@@ -232,7 +232,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 | **Gamescope** | Enabled | Disabled (`programs.gamescope.enable = lib.mkForce false`) | PASS |
 | **Gamemode** | Enabled | Disabled (`programs.gamemode.enable = lib.mkForce false`) | PASS |
 | **Browser** | Base Firefox (`sandboxedBrowsers.enable = false`) | Sandboxed only (`sandboxedBrowsers.enable = lib.mkForce true`) | PASS |
-| **VPN** | Enabled, no local fallback (`mullvad.nftablesFallback = false`) | Enabled, with local fallback (`mullvad.nftablesFallback = lib.mkForce true`) | PASS |
+| **VPN** | Mullvad app (`wireguardMullvad.enable = false`, default) | Self-owned WireGuard (`wireguardMullvad.enable = lib.mkForce true`) | PASS |
 | **SMT/Hyperthreading** | Enabled (`disableSMT = false`) | Disabled (`disableSMT = lib.mkForce true`) | PASS |
 | **USB restriction** | Disabled (`usbRestrict = false`) | Enabled (`usbRestrict = lib.mkForce true`) | PASS |
 | **Audit logging** | Disabled (`auditd = false`) | Enabled (`auditd = lib.mkForce true`) | PASS |
@@ -250,14 +250,14 @@ All tunable via `myOS.security.kernelHardening.*`:
 
 ### Daily
 - Broad desktop convenience: gaming, VR, sync, messenger sprawl allowed.
-- No hard VPN killswitch required.
+- **VPN**: Mullvad app for convenience (key rotation, multihop, GUI controls). No strict killswitch required.
 - All proprietary apps sandboxed via Flatpak or bubblewrap wrappers.
 - **Privacy**: MAC stable per network, machine-id persistent (operational stability).
 
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
 - Vesktop, Steam, VR disabled by policy.
-- Mullvad intended as always-on; lockdown networking.
+- **VPN**: Self-owned WireGuard to Mullvad servers. No Mullvad app. NixOS owns tunnel state AND firewall policy (single source of truth). Deterministic killswitch generated from WireGuard config.
 - Lower persistence footprint (tmpfs home, selective allowlist).
 - Signal Desktop sandboxed via Flatpak.
 - **Privacy**: Randomized MAC per device appearance (typically at boot), random machine-id, TCP timestamps disabled.
@@ -305,7 +305,7 @@ This repository is materially stronger than the original gaming-first unstable-o
 - kernel module blacklist, coredump disable, debugfs off
 - USB authorization restricted on paranoid
 - IPv6 privacy extensions
-- Mullvad service path with defense-in-depth nftables killswitch
+- VPN: Mullvad app for daily; self-owned WireGuard for paranoid (single-source-of-truth firewall)
 - browser policy split; plain Firefox removed from paranoid
 - systemd service hardening for flatpak, ClamAV, AIDE
 - install/test/recovery docs
@@ -324,4 +324,4 @@ This repository is materially stronger than the original gaming-first unstable-o
 - NVIDIA in paranoid is a compatibility compromise
 - hardened allocator remains intentionally disabled until the rest is debugged
 - NVIDIA package: temporarily using `production` branch instead of ideal `legacy_580` due to nixpkgs#503740
-- Mullvad killswitch: converted from hardcoded IPs to interface-based (no IP maintenance needed)
+- VPN architecture: paranoid uses self-owned WireGuard (Mullvad as provider only, NixOS as authority)
