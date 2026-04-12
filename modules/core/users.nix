@@ -2,7 +2,14 @@
 let
   lockRoot = config.myOS.security.lockRoot;
 in {
-  users.mutableUsers = !lockRoot;
+  # CRITICAL: mutableUsers MUST be true for first-boot password setup.
+  # Users have no initial passwords - they must:
+  # 1. Switch to TTY (Ctrl+Alt+F3)
+  # 2. Log in as 'player' (no password required with mutableUsers=true)
+  # 3. Run 'passwd' to set password
+  # 4. Switch back to SDDM (Ctrl+Alt+F1/F7) and log in
+  # After passwords are set, you can set mutableUsers=false if desired.
+  users.mutableUsers = true;
 
   users.users.player = {
     isNormalUser = true;
@@ -22,7 +29,7 @@ in {
       "kvm"
       "flatpak"
     ];
-    initialHashedPassword = lib.mkIf lockRoot (lib.mkDefault "!");
+    # No initial password - user must set via TTY on first boot (see above)
   };
 
   users.users."ghost" = {
@@ -38,7 +45,7 @@ in {
       "render"
       "flatpak"
     ];
-    initialHashedPassword = lib.mkIf lockRoot (lib.mkDefault "!");
+    # No initial password - user must set via TTY on first boot (see above)
   };
 
   security.sudo = lib.mkIf lockRoot {

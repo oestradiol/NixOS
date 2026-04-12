@@ -44,8 +44,9 @@ Inside `cryptroot` Btrfs create:
 
 ## Phase 4 — first boot behavior
 - boot default system (daily)
-- log in as `player`
-- set real passwords for `player` and `ghost`
+- **Initial login**: Users have no initial password. Switch to TTY (Ctrl+Alt+F3), log in as `player` (no password required), run `passwd` to set a password
+- Switch back to SDDM (Ctrl+Alt+F1 or F7), log in as `player` with new password
+- Set password for `ghost` via terminal: `sudo passwd ghost`
 - confirm Plasma 6 Wayland works
 - confirm NVIDIA stack works
 - confirm Steam/VR not yet re-enabled by user data migration, only by config

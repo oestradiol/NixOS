@@ -12,6 +12,7 @@ in {
         directories = [
           "/var/lib/nixos"
           "/var/lib/systemd"
+          "/var/lib/aide"  # AIDE integrity database
           "/etc/NetworkManager/system-connections"
           "/var/lib/bluetooth"
           "/var/lib/flatpak"
@@ -38,7 +39,9 @@ in {
             ".steam"
             ".config/Signal"
             ".config/keepassxc"
+            ".local/share/KeePassXC"  # KeePassXC database storage
             ".local/share/keyrings"
+            ".local/share/applications"  # Custom desktop entries
             ".gnupg"
             ".ssh"
             # Flatpak app data
@@ -60,6 +63,9 @@ in {
             "Documents"
             ".config/Signal"
             ".config/keepassxc"
+            ".local/share/KeePassXC"  # KeePassXC database storage
+            ".local/share/keyrings"  # Password/key storage
+            ".local/share/applications"  # Custom desktop entries
             ".gnupg"
             ".ssh"
             ".local/share/flatpak"

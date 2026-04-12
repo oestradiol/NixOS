@@ -92,5 +92,6 @@ Status values:
 | Bubblewrap GPU passthrough acknowledgment | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md` | `modules/security/browser.nix` | Isolation claim adjusted; GPU = known escape vector |
 | SSH host key rotation policy | Audit finding (blind spot) | Documented+Manual | `docs/POST-STABILITY.md` | — | Procedure for post-stability key rotation |
 | Thunderbolt/DMA attack surface | Audit finding (blind spot) | Documented | `docs/POST-STABILITY.md` | — | Consider BIOS disable for paranoid; DMA bypasses all OS hardening |
+| First-boot login with mutableUsers | Audit finding (blind spot) | Implemented+Manual | `docs/INSTALL-GUIDE.md`, `docs/PRE-INSTALL.md` | `modules/core/users.nix` | mutableUsers=true required for initial password setup; TTY-first-login procedure documented |
 | Hardened compilation flags | Madaidan | Documented | `docs/POST-STABILITY.md`, this ledger | — | Decision needed: repo-wide hardened compilation |
 | Full nix-mineral diff analysis | nix-mineral / saylesss88 | Documented | `docs/POST-STABILITY.md`, this ledger | — | Decision needed: review and adopt applicable techniques |

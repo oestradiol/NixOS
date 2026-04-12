@@ -258,7 +258,7 @@ Repo effect:
 - daily/paranoid browser split documented in PRE-INSTALL.md, POST-STABILITY.md, TEST-PLAN.md
 
 Status:
-- `implemented` — arkenfox v140+ aligned with FPP/RFP profile split
+- `implemented` — arkenfox v140+ inspired (FPP for daily, RFP for paranoid)
 
 ### 9. GnuPG & gpg-agent
 Source:

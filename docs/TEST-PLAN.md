@@ -126,7 +126,8 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 
 ## Systemd service hardening
 - [ ] `systemctl show flatpak-repo | grep NoNewPrivileges` returns yes
-- [ ] `systemctl show clamav-daily-scan | grep NoNewPrivileges` returns yes
+- [ ] `systemctl show clamav-shallow-scan | grep NoNewPrivileges` returns yes
+- [ ] `systemctl show clamav-deep-scan | grep NoNewPrivileges` returns yes
 
 ## VM isolation (paranoid only)
 - [ ] libvirtd service is running (`systemctl status libvirtd`)
@@ -139,8 +140,9 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] `sudo aide --init` (initialize AIDE database - required before checks work)
 - [ ] `sudo aide --check` (verify AIDE can detect file changes)
 - [ ] `sudo freshclam` (update ClamAV virus definitions)
-- [ ] `sudo systemctl start clamav-daily-scan` (test ClamAV scan works)
-- [ ] optional: review `/var/log/clamav-daily-scan.log` for results
+- [ ] `sudo systemctl start clamav-shallow-scan` (test shallow scan works)
+- [ ] `sudo systemctl start clamav-deep-scan` (test deep scan works)
+- [ ] review `/var/log/clamav-shallow-scan.log` and `/var/log/clamav-deep-scan.log` for results
 
 ## Secrets and agenix
 - [ ] SSH host keys exist in `/persist/etc/ssh/` (impermanence working)

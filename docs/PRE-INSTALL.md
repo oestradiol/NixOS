@@ -116,6 +116,85 @@ Check: `/mnt`, `/mnt/boot`, `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, home sub
 
 ---
 
+## Phase 3 — Security audit checklist (VERIFY BEFORE TRUST)
+
+**Assumption: Everything is hallucinated until proven otherwise.**
+
+For each security claim, verify the code matches the documentation.
+
+### Browser sandboxing
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| UID isolation (100000:100000) | `modules/security/browser.nix:28` has `--uid 100000 --gid 100000` | ✅ VERIFIED |
+| **NO network namespace** | Code has `--unshare-user/ipc/pid/uts` but **NOT** `--unshare-net` | ✅ CORRECT (browsers need host VPN/Tor) |
+| GPU passthrough | `--dev-bind /dev/dri` exposes GPU attack surface | ⚠️ ACKNOWLEDGED |
+| Process namespace | `--unshare-pid` present | ✅ VERIFIED |
+
+**Action**: Confirm docs don't claim network isolation for browsers.
+
+### Networking / killswitch
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| nftables lockdown | `modules/security/networking.nix:30-65` | ✅ VERIFIED |
+| VPN interface whitelist | `wg-mullvad`, `tun0`, `tun1` accepted | ✅ VERIFIED |
+| **Mullvad IP constraint** | Lines 54-61 constrain UDP 51820 and TCP 443/1401 to specific Mullvad IPs | ✅ VERIFIED |
+| Firewall disabled in lockdown | `networking.firewall.enable = !config.myOS.security.mullvad.lockdown` | ✅ VERIFIED |
+
+**Mullvad infrastructure IPs (VERIFY CURRENT AT https://mullvad.net/en/servers BEFORE INSTALL):**
+```
+WireGuard relays: 185.65.134.0/24, 185.65.135.0/24, 193.138.219.0/24
+API/Bridge: 185.65.134.66, 185.65.135.1, 193.138.219.228
+```
+**CRITICAL**: If these IPs have rotated, the killswitch will block Mullvad connection. Verify current IPs and update `modules/security/networking.nix` before install.
+
+### Base security
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| 20+ hardened sysctls | `modules/security/base.nix:22-48` | ✅ VERIFIED |
+| Kernel module blacklist | `base.nix:52-55`: dccp, sctp, rds, tipc, firewire | ✅ VERIFIED |
+| Coredump disabled | `base.nix:12-15`: `Storage=none` | ✅ VERIFIED |
+| Root locked | `base.nix:18`: `hashedPassword = "!"` when lockRoot | ✅ VERIFIED |
+| su wheel-only | `base.nix:19`: `requireWheel = sec.lockRoot` | ✅ VERIFIED |
+
+### Governance assertions
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| 27 assertions | `modules/security/governance.nix` lines 7-119 | ✅ VERIFIED |
+| Paranoid requires sandboxed browsers | Lines 17-18 | ✅ VERIFIED |
+| Paranoid requires Mullvad lockdown | Lines 21-26 | ✅ VERIFIED |
+| Paranoid ghost not in wheel | Lines 61-62 | ✅ VERIFIED |
+| Daily no hardened memory | Lines 105-106 | ✅ VERIFIED |
+
+### Scanners
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| Daily shallow scan (daily) | `scanners.nix:47-73` | ✅ VERIFIED |
+| Deep scan (weekly) | `scanners.nix:78-103` | ✅ VERIFIED |
+| AIDE persistence | `impermanence.nix:15`: `/var/lib/aide` persisted | ✅ VERIFIED |
+| ClamAV signature updates | `scanners.nix:106-110`: `services.clamav.updater` | ✅ VERIFIED |
+
+### Users / first-boot
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| No initial password | `users.nix:25-29,45-49`: No `initialHashedPassword` set | ✅ VERIFIED |
+| TTY login required first | Documented in INSTALL-GUIDE.md Phase 4 | ✅ VERIFIED |
+
+### Secure Boot / TPM
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| Lanzaboote integration | `secure-boot.nix:6-9` | ✅ VERIFIED |
+| TPM requires systemd initrd | `secure-boot.nix:13-16` | ✅ VERIFIED |
+| Staged (disabled by default) | `hosts/nixos/default.nix:38-39` | ✅ VERIFIED |
+
+---
+
 ## Governance self-check
 
 1. Is this claim listed in `PROJECT-STATE.md`?

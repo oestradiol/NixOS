@@ -1,7 +1,11 @@
 { config, lib, pkgs, ... }:
 let
-  # National-level browser sandbox: UID isolation, network namespace, minimal FS access
-  # Even if browser is compromised by state-level actor, host UID is unmapped
+  # Browser sandboxing: UID isolation (100000:100000), process namespace, minimal FS access
+  # Note: Network namespace is NOT isolated (--unshare-net not used) because:
+  #   - safe-tor-browser needs host Tor daemon access
+  #   - safe-mullvad-browser needs host Mullvad VPN
+  #   - safe-firefox uses host network for VPN connectivity
+  # If browser is compromised, host UID is unmapped (UID 100000 not mapped to host)
   mkSandboxedBrowser = { name, package, binaryName ? name, extraBinds ? [] }: 
     pkgs.writeShellScriptBin "safe-${name}" ''
       set -eu
