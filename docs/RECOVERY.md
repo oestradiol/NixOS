@@ -88,7 +88,7 @@ ip route show
 sudo nft list ruleset
 
 # 5. If killswitch is blocking bootstrap, temporarily disable it
-# Set myOS.security.mullvad.lockdown = false in your profile, rebuild,
+# Set myOS.security.mullvad.nftablesFallback = false in your profile, rebuild,
 # then rely on Mullvad's built-in lockdown-mode (mullvad lockdown-mode set on)
 ```
 
@@ -100,10 +100,10 @@ sudo nft list ruleset
 **Known leakage** (documented tradeoff):
 - Bootstrap DNS: Brief clearnet DNS queries at boot before VPN tunnel is established.
   Unavoidable: must resolve VPN endpoint hostname. Mullvad daemon handles this securely.
-- Host is "ping dark" (no inbound ICMP replies) but not invisible to other scans.
+- Inbound ICMP blocked (no ping replies), but host is not invisible to other scan techniques.
 
-**Prevention**: The nftables rules are defense-in-depth only. Rely primarily on
-Mullvad's built-in lockdown-mode killswitch.
+**Prevention**: The local nftables fallback (`mullvad.nftablesFallback`) is defense-in-depth only. 
+For primary enforcement, rely on Mullvad's built-in lockdown-mode (`mullvad lockdown-mode set on`).
 
 ## If NVIDIA/Wayland breaks after update
 1. boot into previous generation: `nixos-rebuild --rollback`

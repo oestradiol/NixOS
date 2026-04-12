@@ -40,7 +40,30 @@
       impermanence.enable = lib.mkEnableOption "tmpfs root + explicit persistence";
       agenix.enable = lib.mkEnableOption "agenix secrets";
       mullvad.enable = lib.mkEnableOption "Mullvad daemon";
-      mullvad.lockdown = lib.mkEnableOption "Mullvad strict lockdown use-case";
+      mullvad.nftablesFallback = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Option B: Emergency fail-closed local fallback (paranoid-only recommended).
+          
+          Enables a minimal nftables policy that fails closed except for:
+          - Loopback traffic
+          - Bootstrap traffic (DHCP/NDP on non-VPN interfaces only)
+          - DNS to local systemd-resolved stub
+          - Traffic on configured VPN interfaces
+          
+          IMPORTANT: This is NOT Mullvad's built-in lockdown-mode. It is a
+          separate, simpler local policy that runs via nftables. It is:
+          - A best-effort emergency fallback, not authoritative enforcement
+          - Static and cannot model Mullvad's stateful behavior
+          - May break on VPN interface name drift
+          - Requires per-machine validation
+          - Intentionally narrower than Mullvad's actual app logic
+          
+          For real lockdown, use: mullvad lockdown-mode set on
+          This option provides defense-in-depth only.
+        '';
+      };
 
       # ── Profile policy ──────────────────────────────────────────
       sandboxedBrowsers.enable = lib.mkEnableOption "Use sandboxed browser wrappers exclusively (disables base Firefox). When enabled, only safe-firefox, safe-tor-browser, and safe-mullvad-browser are available. When disabled, base Firefox with moderate hardening is used.";

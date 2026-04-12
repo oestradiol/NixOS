@@ -138,10 +138,10 @@ For each security claim, verify the code matches the documentation.
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| nftables lockdown | `modules/security/networking.nix:31-68` | ✅ VERIFIED |
-| VPN interface whitelist | `wg-mullvad`, `tun0`, `tun1` accepted | ✅ VERIFIED |
-| Interface-based killswitch | No hardcoded IPs; physical interface allows only DHCP/DNS/ICMP | ✅ VERIFIED |
-| Firewall disabled in lockdown | `networking.firewall.enable = !config.myOS.security.mullvad.lockdown` | ✅ VERIFIED |
+| nftables fallback (Option B) | `modules/security/networking.nix:20-75` | ✅ VERIFIED |
+| VPN interface allowlist | `wg-mullvad`, `tun0`, `tun1` accepted | ✅ VERIFIED |
+| Bootstrap traffic scoped | DHCP/NDP only on non-VPN interfaces; ICMPv6 NDP-only | ✅ VERIFIED |
+| Firewall disabled when nftablesFallback active | `networking.firewall.enable = !config.myOS.security.mullvad.nftablesFallback` | ✅ VERIFIED |
 
 **Killswitch behavior**: Interface-based only (no hardcoded Mullvad IPs). Physical interface allows DHCP, DNS to systemd-resolved, and ICMP for bootstrap. All egress through VPN interfaces (`wg-mullvad`, `tun0`, `tun1`) when tunnel is up.
 
@@ -163,7 +163,7 @@ For each security claim, verify the code matches the documentation.
 |-------|--------------|--------|
 | 28 assertions | `modules/security/governance.nix` lines 7-118 | ✅ VERIFIED |
 | Paranoid requires sandboxed browsers | Lines 17-18 | ✅ VERIFIED |
-| Paranoid requires Mullvad lockdown | Lines 21-26 | ✅ VERIFIED |
+| Paranoid requires nftablesFallback | Lines 21-26 | ✅ VERIFIED |
 | Paranoid ghost not in wheel | Lines 61-62 | ✅ VERIFIED |
 | Daily no hardened memory | Lines 105-106 | ✅ VERIFIED |
 
