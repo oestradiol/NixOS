@@ -37,18 +37,20 @@ Inside `cryptroot` Btrfs create:
 
 **Note**: `@home-paranoid` mounts to `/mnt/persist/home/ghost` (runtime: `/persist/home/ghost`), not `/mnt/home/ghost`
 
-**CRITICAL**: Verify `hardware-target.nix` `uid=1001/gid=100` match your actual `ghost` user UID/GID before install. Mismatch causes permission failures on paranoid boot.
+**CRITICAL**: Verify `hardware-target.nix` tmpfs mount options derive from `config.users.users."ghost"` UID/GID. Mismatch causes permission failures on paranoid boot.
 
 **How to verify** (run on existing system or check `modules/core/users.nix`):
 ```bash
-# Check what UID/GID ghost will have in the new system
-grep -A5 'users.users."ghost"' modules/core/users.nix
-# Look for uid = 1001; and gid = 100; (or whatever values are set)
+# Check ghost user UID/GID in the new system
+grep -A10 'users.users."ghost"' modules/core/users.nix
+# Should show: uid = 1001; and group = "users";
+
+# Verify hardware-target.nix uses config derivation:
+grep -A5 'fileSystems."/home/ghost"' hosts/nixos/hardware-target.nix
+# Should show: uid=\${toString config.users.users."ghost".uid}
 
 # If already have a ghost user, check current values:
 id ghost  # Output: uid=1001(ghost) gid=100(users) groups=100(users)
-
-# If mismatch: edit hardware-target.nix line 62 to match your actual UID/GID
 ```
 
 ## Phase 3 — install repo
@@ -92,7 +94,7 @@ Follow [`TEST-PLAN.md`](./TEST-PLAN.md) for immediate runtime verification.
 Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 - Secure Boot / Lanzaboote
 - TPM2 enrollment
-- Mullvad setup
+- VPN setup (daily: Mullvad app, paranoid: WireGuard - see Section 15 of PRE-INSTALL.md)
 - agenix secrets creation
 
 **If issues occur during Phase 6**: See [`RECOVERY.md`](./RECOVERY.md) for troubleshooting.

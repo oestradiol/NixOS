@@ -52,30 +52,78 @@ Keep the recovery passphrase forever.
 
 **If TPM unlock breaks**: See [`RECOVERY.md`](./RECOVERY.md) "If TPM unlock breaks" section.
 
-## 6. Mullvad
+## 6. VPN
 
-> **WARNING**: Option B: Emergency fail-closed local fallback. This is NOT Mullvad's built-in lockdown-mode.
->
-> This nftables policy (`mullvad.nftablesFallback`) is:
-> - A best-effort emergency fallback, not authoritative enforcement
-> - Static and cannot model Mullvad's stateful behavior (connecting/connected/lockdown)
-> - May break on VPN interface name drift
-> - Requires per-machine validation
-> - Intentionally narrower than Mullvad's actual app logic
->
-> For real lockdown enforcement, use: `mullvad lockdown-mode set on`
-> This local policy provides defense-in-depth only and must be live-validated.
+### Daily: Mullvad App (convenience mode)
 
-Daily:
-- service installed and available
-- not required as a hard kill-switch path
+The Mullvad app is used for ease of use with features like:
+- Automatic key rotation
+- Multihop connections
+- GUI controls
+- Built-in lockdown-mode (`mullvad lockdown-mode set on`)
 
-Paranoid:
-- connect before browsing
-- run `mullvad lockdown-mode set on` for always-require-VPN
-- verify DNS and IP behavior
-- treat lockdown behavior as expected, not a bug
-- validate killswitch: `sudo nft list ruleset`
+No strict killswitch is enforced at the OS level - the app manages its own firewall state.
+
+### Paranoid: Self-Owned WireGuard (deterministic mode)
+
+> **ARCHITECTURE**: NixOS owns the tunnel state AND firewall policy. Mullvad is only the server provider.
+> 
+> Memory anchor: **Mullvad as provider, NixOS as authority**
+
+**Key properties**:
+- Single source of truth: WireGuard config generates firewall rules
+- Fixed interface name: `wg-mullvad` (hardcoded, no drift)
+- Default-deny nftables policy: only bootstrap (DHCP/NDP), DNS through tunnel, WG handshake, and tunnel traffic allowed
+- No Mullvad app daemon: `services.mullvad-vpn.enable = false`
+- Deterministic, auditable, self-owned enforcement
+
+**Required setup** (see PRE-INSTALL.md Section 15):
+```nix
+myOS.security.wireguardMullvad = {
+  enable = lib.mkForce true;
+  privateKey = config.age.secrets.wg-private-key.path;
+  address = "10.64.x.x/32";        # Your Mullvad-assigned IP
+  endpoint = "us-nyc-wg-001.mullvad.net:51820";  # Your chosen server
+  serverPublicKey = "<server-pubkey>";  # From Mullvad config
+  dns = "10.64.0.1";               # Mullvad DNS through tunnel
+};
+```
+
+**Verification commands**:
+```bash
+# Check WireGuard interface is up
+ip link show wg-mullvad
+
+# Check tunnel is established (should show handshake)
+sudo wg show wg-mullvad
+
+# Verify routing (default should be via wg-mullvad)
+ip route | grep default
+
+# Test for DNS leaks (should show Mullvad DNS)
+dig +short whoami.mullvad.net
+
+# Test for IP leaks (should show Mullvad exit IP)
+curl https://am.i.mullvad.net/connected
+
+# Validate killswitch: check nftables policy is default-deny
+sudo nft list table inet filter
+# Should see: chain output { type filter hook output priority filter; policy drop; ... }
+```
+
+**Killswitch test** (confirm no leaks when tunnel down):
+```bash
+# Stop WireGuard - all outbound should fail
+sudo systemctl stop wg-quick-wg-mullvad
+curl https://example.com  # Should hang/fail
+sudo systemctl start wg-quick-wg-mullvad
+```
+
+**Known limitations**:
+- Bootstrap DNS: Brief clearnet DNS queries at boot before tunnel is established (unavoidable - must resolve VPN endpoint hostname)
+- No automatic key rotation (unlike Mullvad app) - rotate keys manually via Mullvad web interface
+- No multihop or obfuscation features (plain WireGuard)
+- No split tunneling (full killswitch: all traffic through tunnel or blocked)
 
 **Killswitch architecture (best-effort fallback only):**
 The nftables rules are a narrow fallback policy, not authoritative enforcement.
@@ -531,7 +579,9 @@ Same steps as paranoid. Note that D-Bus filtering is disabled by default in dail
 | **ETP Strict active** | about:preferences#privacy → Enhanced Tracking Protection | Should show "Strict" selected |
 | **Safe-browsing local-only** | about:config `browser.safebrowsing.downloads.remote.enabled` | Should be `false` |
 | **Machine-id rotation + systemd state** | Paranoid: `cat /etc/machine-id` before/after reboot; check `journalctl --boot` for errors | Machine-id should change; no systemd service failures from state mismatch |
-| **VPN interface names match nftables** | Paranoid with lockdown: `ip link | grep -E "(mullvad|tun|wg)"` vs `vpnIfaces` in networking.nix | Actual tunnel names must match allowed list; FAIL checklist if mismatch |
+| **WireGuard killswitch active** | Paranoid: `sudo nft list table inet filter | grep 'policy drop'` | Should show default-deny policy; `wg-mullvad` interface explicitly allowed |
+| **WireGuard tunnel established** | `sudo wg show wg-mullvad` | Should show handshake and transfer stats |
+| **No leaks when tunnel down** | `sudo systemctl stop wg-quick-wg-mullvad; curl https://example.com; sudo systemctl start wg-quick-wg-mullvad` | Curl should fail/timeout when tunnel down; succeeds when up |
 
 **Key decision for you**: If FPP protection feels insufficient on daily, manually enable RFP:
 ```javascript

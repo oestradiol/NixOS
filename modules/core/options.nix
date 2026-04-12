@@ -39,29 +39,95 @@
       # ── Infrastructure toggles ──────────────────────────────────
       impermanence.enable = lib.mkEnableOption "tmpfs root + explicit persistence";
       agenix.enable = lib.mkEnableOption "agenix secrets";
-      mullvad.enable = lib.mkEnableOption "Mullvad daemon";
-      mullvad.nftablesFallback = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
+
+      # ── Self-owned WireGuard stack (paranoid: recommended over Mullvad app) ──
+      wireguardMullvad.enable = lib.mkEnableOption ''
+        Self-owned WireGuard tunnel to Mullvad servers (paranoid profile).
+        
+        Provider: Mullvad (servers only)
+        Control plane: NixOS (interface, routes, firewall, config)
+        
+        This removes the split-authority problem where Mullvad app owned
+        connection state but the repo owned a separate firewall story.
+        
+        With this option:
+        - No Mullvad app daemon (services.mullvad-vpn disabled)
+        - WireGuard config is the single source of truth
+        - Firewall rules are generated from the same config
+        - NixOS owns tunnel state AND firewall policy
+        - Deterministic, auditable, self-owned enforcement
+        
+        Required: wireguardMullvad.privateKey, endpoint, address, serverPublicKey
+      '';
+      wireguardMullvad.privateKey = lib.mkOption {
+        type = lib.types.str;
+        default = "";
         description = ''
-          Option B: Emergency fail-closed local fallback (paranoid-only recommended).
-          
-          Enables a minimal nftables policy that fails closed except for:
-          - Loopback traffic
-          - Bootstrap traffic (DHCP/NDP on non-VPN interfaces only)
-          - DNS to local systemd-resolved stub
-          - Traffic on configured VPN interfaces
-          
-          IMPORTANT: This is NOT Mullvad's built-in lockdown-mode. It is a
-          separate, simpler local policy that runs via nftables. It is:
-          - A best-effort emergency fallback, not authoritative enforcement
-          - Static and cannot model Mullvad's stateful behavior
-          - May break on VPN interface name drift
-          - Requires per-machine validation
-          - Intentionally narrower than Mullvad's actual app logic
-          
-          For real lockdown, use: mullvad lockdown-mode set on
-          This option provides defense-in-depth only.
+          WireGuard private key for this peer (your key).
+          Use agenix or sops to provide this securely.
+          Generate via: wg genkey | tee privatekey | wg pubkey > publickey
+        '';
+      };
+      wireguardMullvad.presharedKey = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Optional preshared key for additional symmetric encryption layer.
+          Provides post-quantum resistance to the handshake.
+          Generate via: wg genpsk > presharedkey
+        '';
+      };
+      wireguardMullvad.address = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "10.64.123.45/32";
+        description = ''
+          WireGuard tunnel IP address assigned by Mullvad.
+          Found in your Mullvad WireGuard config file.
+        '';
+      };
+      wireguardMullvad.dns = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "10.64.0.1";
+        description = ''
+          DNS server to use through the tunnel (Mullvad's DNS).
+          Leave empty to use system default (not recommended for paranoid).
+        '';
+      };
+      wireguardMullvad.endpoint = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "us-nyc-wg-001.mullvad.net:51820";
+        description = ''
+          Mullvad server endpoint (hostname:port or IP:port).
+          Choose from: https://mullvad.net/en/servers/
+        '';
+      };
+      wireguardMullvad.serverPublicKey = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Mullvad server's WireGuard public key.
+          Found in your Mullvad WireGuard config file.
+        '';
+      };
+      wireguardMullvad.allowedIPs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ "0.0.0.0/0" "::/0" ];
+        description = ''
+          IPs to route through the tunnel (default: all traffic / full killswitch).
+          0.0.0.0/0 and ::/0 routes ALL traffic through VPN.
+          Use specific subnets for split tunneling (not recommended for paranoid).
+        '';
+      };
+      wireguardMullvad.persistentKeepalive = lib.mkOption {
+        type = lib.types.int;
+        default = 25;
+        description = ''
+          Keepalive interval in seconds (default: 25).
+          Important for NAT traversal and maintaining connection.
+          Set to 0 to disable, but this may cause NAT timeout issues.
         '';
       };
 

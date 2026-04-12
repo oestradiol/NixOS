@@ -59,24 +59,25 @@ nixos-rebuild switch
 4. re-enroll TPM only after a stable generation is active
 5. `sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT` to check slots
 
-## If the paranoid profile blocks too much network
+## If the paranoid profile blocks too much network (WireGuard killswitch)
 1. boot default daily profile
-2. edit the Mullvad/nftables policy in `modules/security/networking.nix`
+2. edit the nftables policy in `modules/security/wireguard.nix`
 3. check `sudo nft list ruleset` to identify blocking rule
 4. rebuild and retest paranoid after daily is healthy again
 
-## If Mullvad VPN fails to connect
-**Symptom**: Mullvad cannot establish tunnel; "connecting" hangs indefinitely.
+**Emergency disable**: Set `myOS.security.wireguardMullvad.enable = false` in paranoid profile, rebuild, then debug the policy.
+
+## If WireGuard VPN fails to connect (paranoid)
+**Symptom**: WireGuard tunnel not established; no outbound connectivity.
 
 **Common causes and fixes**:
 
 ```bash
-# 1. Check interface names match your VPN tunnel
-# The killswitch allows: wg-mullvad, tun0, tun1
-# If Mullvad uses different interface names, update vpnIfaces in networking.nix:
-#   vpnIfaces = [ "wg-mullvad" "tun0" "tun1" "your-interface" ];
+# 1. Check WireGuard interface status
+ip link show wg-mullvad
+sudo wg show wg-mullvad  # Should show handshake/transfer stats
 
-# 2. Verify systemd-resolved is working (required for bootstrap)
+# 2. Verify systemd-resolved is working (required for bootstrap DNS)
 systemctl status systemd-resolved
 resolvectl status
 
@@ -86,24 +87,31 @@ ip route show
 
 # 4. Check nftables rules are blocking/unblocking as expected
 sudo nft list ruleset
+# Look for: chain output { type filter hook output priority filter; policy drop; }
+# Verify: oifname "wg-mullvad" accept is present
 
-# 5. If killswitch is blocking bootstrap, temporarily disable it
-# Set myOS.security.mullvad.nftablesFallback = false in your profile, rebuild,
-# then rely on Mullvad's built-in lockdown-mode (mullvad lockdown-mode set on)
+# 5. Check WireGuard handshake can reach endpoint
+# Extract endpoint from your config and test UDP connectivity:
+# (e.g., if endpoint is us-nyc-wg-001.mullvad.net:51820)
+nc -vzu us-nyc-wg-001.mullvad.net 51820
+
+# 6. If killswitch is blocking bootstrap, temporarily disable WireGuard mode
+# Set myOS.security.wireguardMullvad.enable = false in paranoid profile, rebuild,
+# then debug the WireGuard config separately
 ```
 
-**Killswitch exceptions documented** (allowed on physical interface):
+**Killswitch exceptions** (allowed on non-WG interfaces):
 - DHCP (v4: ports 67/547, v6: ports 547/546)
-- DNS to systemd-resolved (127.0.0.53:53)
-- Outbound ICMP only (path MTU discovery)
+- NDP (router/neighbor discovery for IPv6)
+- Outbound ICMP (path MTU discovery)
+- WireGuard handshake to endpoint port (UDP)
 
-**Known leakage** (documented tradeoff):
-- Bootstrap DNS: Brief clearnet DNS queries at boot before VPN tunnel is established.
-  Unavoidable: must resolve VPN endpoint hostname. Mullvad daemon handles this securely.
-- Inbound ICMP blocked (no ping replies), but host is not invisible to other scan techniques.
+**All other traffic** must go through `wg-mullvad` interface.
 
-**Prevention**: The local nftables fallback (`mullvad.nftablesFallback`) is defense-in-depth only. 
-For primary enforcement, rely on Mullvad's built-in lockdown-mode (`mullvad lockdown-mode set on`).
+**Known limitations**:
+- Bootstrap DNS: Brief clearnet DNS at boot before tunnel (unavoidable - must resolve endpoint hostname)
+- No automatic key rotation: Must rotate manually via Mullvad web interface
+- No split tunneling: Full killswitch (all traffic through tunnel or blocked)
 
 ## If NVIDIA/Wayland breaks after update
 1. boot into previous generation: `nixos-rebuild --rollback`

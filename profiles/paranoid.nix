@@ -23,9 +23,16 @@
     # Sleep states disabled (16GB RAM + 8GB swap insufficient; NVIDIA issues)
     allowSleep = lib.mkForce false;
 
-    # VPN and networking (strict)
-    mullvad.enable = lib.mkForce true;
-    mullvad.nftablesFallback = lib.mkForce true;  # Option B: Emergency fail-closed local fallback
+    # VPN: self-owned WireGuard stack (not Mullvad app)
+    # Provider: Mullvad servers | Control plane: NixOS (deterministic, auditable)
+    # See: docs/PRE-INSTALL.md Section 15 for WireGuard config generation
+    wireguardMullvad.enable = lib.mkForce true;
+    # WireGuard secrets: provide via agenix in host secrets file
+    # wireguardMullvad.privateKey = "<agenix-secret-reference>";
+    # wireguardMullvad.endpoint = "<your-mullvad-server>:51820";
+    # wireguardMullvad.address = "10.64.x.x/32";
+    # wireguardMullvad.serverPublicKey = "<mullvad-server-pubkey>";
+    # wireguardMullvad.dns = "10.64.0.1";  # Mullvad DNS through tunnel
 
     # Browser security (sandboxed only, with D-Bus filtering)
     sandboxedBrowsers.enable = lib.mkForce true;

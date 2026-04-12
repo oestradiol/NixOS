@@ -9,7 +9,7 @@
   # - WebRTC: ENABLED (required for Discord video, VRChat, streaming)
   # - ptraceScope: 1 (not 2) - EAC anti-cheat requirement
   # - disableSMT: false - 30-40% CPU performance loss unacceptable for gaming
-  # - mullvad.nftablesFallback: false - Gaming without VPN is common/expected
+  # - wireguardMullvad.enable: false (default) - Daily uses Mullvad app, not self-owned WireGuard
   # - sandboxedBrowsers: false - Base Firefox with maximal prefs instead
   # - auditd: false - Performance overhead, noise for daily use
   # - usbRestrict: false - External hubs/docks need to work
@@ -52,10 +52,6 @@
     # These require manual key enrollment after first successful boot
     secureBoot.enable = false;
     tpm.enable = false;
-
-    # VPN enabled but NOT lockdown (allows gaming without VPN)
-    mullvad.enable = true;
-    mullvad.nftablesFallback = false;  # Option B disabled: rely on Mullvad's built-in lockdown-mode if needed
 
     # Browser: base Firefox with moderate hardening (not sandboxed wrappers)
     # Compromise: sandboxedBrowsers.enable = false for gaming/streaming convenience
