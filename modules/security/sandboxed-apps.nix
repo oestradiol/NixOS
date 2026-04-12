@@ -140,6 +140,10 @@ let
         --setenv XDG_RUNTIME_DIR "$XDG_RUNTIME_DIR" \
         --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY" \
         --setenv DISPLAY "$DISPLAY" \
+        ${lib.optionalString sandbox.dbusFilter ''
+        --setenv DBUS_SESSION_BUS_ADDRESS "unix:path=/run/user/$(id -u)/bus" \
+        --setenv DBUS_SYSTEM_BUS_ADDRESS "unix:path=/run/user/$(id -u)/system-bus-proxy.sock" \
+        ''}\
         --cap-drop ALL \
         ${package}/bin/${binaryName} ${extraArgs} "$@"
     '';

@@ -150,9 +150,9 @@ For each security claim, verify the code matches the documentation.
 |-------|--------------|--------|
 | Single source of truth | `wireguard.nix`: WireGuard config generates firewall rules | ✅ VERIFIED |
 | Fixed interface name | `wg-mullvad` hardcoded, used in both WG config and firewall | ✅ VERIFIED |
-| Killswitch: default-deny output | Only DHCP/NDP bootstrap, DNS through tunnel, WG handshake, tunnel traffic | ✅ VERIFIED |
+| Killswitch: default-deny output | DHCP/NDP bootstrap, DNS through tunnel (normal), pre-tunnel DNS for hostname endpoints, WG handshake, tunnel traffic | ✅ VERIFIED |
 | No Mullvad app | `services.mullvad-vpn.enable = false` when WG mode active | ✅ VERIFIED |
-| DNS through tunnel only | `oifname "wg-mullvad" udp/tcp dport 53 accept` | ✅ VERIFIED |
+| DNS through tunnel (normal operation) | `oifname "wg-mullvad" udp/tcp dport 53 accept` (hostname endpoints: pre-tunnel DNS allowed on bootstrap interfaces) | ✅ VERIFIED |
 | No NixOS firewall conflict | `networking.firewall.enable = false` in WG mode | ✅ VERIFIED |
 
 **Required setup**: See Section 15 below for WireGuard config generation.

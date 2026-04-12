@@ -1,5 +1,7 @@
 # RECOVERY
 
+**Scope**: This document covers all major known design-time failure modes identified during development and audit. Real systems may have additional edge cases not documented here. Treat this as a comprehensive starting point, not an exhaustive list of all possible failures.
+
 ## Golden rules
 - keep the LUKS recovery passphrase
 - keep a recent exported copy of this repo outside the machine
