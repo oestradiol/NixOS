@@ -123,7 +123,7 @@ nc -vzu us-nyc-wg-001.mullvad.net 51820
 **All other traffic** must go through `wg-mullvad` interface.
 
 **Known limitations**:
-- Bootstrap DNS: Brief clearnet DNS at boot before tunnel (unavoidable - must resolve endpoint hostname)
+- DNS for hostname endpoints: Persistent non-WG DNS on port 53 when using hostname endpoints (unavoidable - must resolve endpoint hostname)
 - No automatic key rotation: Must rotate manually via Mullvad web interface
 - No split tunneling: Full killswitch (all traffic through tunnel or blocked)
 
@@ -458,7 +458,172 @@ sudo dmesg | grep -i apparmor > /tmp/apparmor-denials.txt
 # Include this in bug reports along with application name and action attempted
 ```
 
-**Prevention**: 
+**Prevention**:
 - Test critical applications after enabling paranoid profile
 - Keep AppArmor enabled but monitor `dmesg` for denials
 - Use `aa-complain` as temporary workaround for specific broken profiles
+
+---
+
+## If agenix secret decryption fails
+
+**Symptom**: System fails to boot or WireGuard cannot start due to missing or undecryptable secrets. Errors mention "age" decryption failures or missing secret files.
+
+**Common causes**:
+- Missing age identity (no SSH host key or age key available)
+- Lost persisted SSH host key used as age identity
+- Secret file missing or not decryptable
+- Paranoid WireGuard cannot come up because `privateKeyFile` path is unavailable
+
+**The connection**: Paranoid mode depends on file-based WireGuard secrets (privateKeyFile/presharedKeyFile). The repo uses agenix for secret management, with SSH host keys as age identities. If the identity is lost or the secret file is corrupted, WireGuard cannot establish the tunnel.
+
+**Quick diagnostic**:
+```bash
+# 1. Check if age identity exists
+# Agenix typically uses SSH host keys as age identities
+ls -la /etc/ssh/ssh_host_ed25519_key.pub
+# If missing, you cannot decrypt secrets encrypted with that key
+
+# 2. Check if secret files exist
+ls -la /run/agenix/  # Runtime decrypted secrets
+ls -la /persist/secrets/  # Persisted encrypted secrets (if configured)
+
+# 3. Check WireGuard secret file availability
+sudo ls -la /run/agenix/wg-private-key  # or your configured path
+# If missing, WireGuard cannot start
+
+# 4. Check systemd logs for agenix/WireGuard errors
+sudo journalctl -xe | grep -i "age\|agenix\|wireguard"
+```
+
+**Recovery scenarios**:
+
+### Scenario 1: Missing age identity (SSH host key lost)
+
+**Cause**: The SSH host key used as the age identity was not persisted or was corrupted. Without the identity, you cannot decrypt existing secrets.
+
+**Recovery**:
+```bash
+# 1. Boot installer USB, unlock LUKS, mount as in install guide
+
+# 2. Generate a new SSH host key (this will be your new age identity)
+nixos-enter
+ssh-keygen -A
+
+# 3. Extract the new age identity from the new SSH host key
+cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age
+
+# 4. Re-encrypt all your secrets with the new age identity
+# On a trusted machine with the new age public key:
+age -r age1yournewpublickey... -o secrets/wireguard-private.age <(echo "your-actual-private-key")
+age -r age1yournewpublickey... -o secrets/wireguard-preshared.age <(echo "your-actual-preshared-key")
+
+# 5. Copy the re-encrypted secrets to the persist location
+cp secrets/*.age /mnt/persist/secrets/
+
+# 6. Rebuild and reboot
+nixos-enter
+nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
+**Prevention**: Persist SSH host keys in impermanence configuration:
+```nix
+# In modules/security/impermanence.nix, ensure:
+/etc/ssh is persisted
+```
+
+### Scenario 2: Secret file missing or corrupted
+
+**Cause**: The encrypted secret file was deleted, corrupted, or not copied to the correct location.
+
+**Recovery**:
+```bash
+# 1. Check if you have a backup of the secret
+# Look in: /persist/secrets/, your external backup, or the original machine where you generated the key
+
+# 2. If you have the plaintext secret (from backup or original generation):
+# Re-encrypt it with the current age identity
+age -r $(cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age) -o /persist/secrets/wireguard-private.age <(echo "your-actual-private-key")
+
+# 3. If you have NO backup of the secret:
+# You must generate a new WireGuard key pair from Mullvad
+# Follow PRE-INSTALL.md Section 15 to generate new keys and re-encrypt them
+
+# 4. After re-encrypting, rebuild
+nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
+**Prevention**: Keep external backups of critical secrets (WireGuard private keys, preshared keys) in a secure location (encrypted USB, password manager, etc.).
+
+### Scenario 3: WireGuard secret path unavailable
+
+**Cause**: The agenix secret is not being decrypted to the expected path, or the path in the WireGuard configuration is incorrect.
+
+**Recovery**:
+```bash
+# 1. Check the actual path where agenix places the decrypted secret
+sudo ls -la /run/agenix/
+
+# 2. Compare with the path configured in your WireGuard module
+# In profiles/paranoid.nix or hosts/nixos/default.nix:
+grep -A 5 "wireguardMullvad" /etc/nixos/hosts/nixos/default.nix
+# Look for: privateKeyFile = config.age.secrets.wg-private-key.path;
+
+# 3. Check the age secrets configuration
+# In secrets/wireguard.nix or your secrets file:
+cat /etc/nixos/secrets/wireguard.nix
+# Verify the file path matches the WireGuard configuration
+
+# 4. If paths don't match, fix the configuration
+# Edit your secrets file to use the correct path, or edit the WireGuard config to match
+
+# 5. Rebuild
+nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
+### Scenario 4: Paranoid WireGuard cannot come up (blocking all network)
+
+**Symptom**: Paranoid profile boots but has no network connectivity. WireGuard interface is down or missing. All traffic is blocked by the killswitch.
+
+**Recovery**:
+```bash
+# 1. Boot into daily profile to regain network access
+# (Daily profile does not require WireGuard for basic connectivity)
+
+# 2. Check WireGuard status on paranoid (from daily profile, after mounting paranoid subvolume)
+sudo nixos-enter
+ip link show wg-mullvad
+sudo wg show wg-mullvad
+
+# 3. Check if the secret file is available
+ls -la /run/agenix/wg-private-key
+
+# 4. Check agenix logs for decryption errors
+journalctl -xe | grep -i "age\|agenix"
+
+# 5. If secret is missing, follow Scenario 2 or 3 above to fix it
+
+# 6. Once secret is available, test WireGuard manually
+sudo wg-quick up wg-mullvad
+sudo wg show wg-mullvad
+
+# 7. If working, rebuild paranoid profile and reboot into it
+nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
+**Emergency disable** (if you need network access immediately):
+```bash
+# Temporarily disable WireGuard requirement in paranoid profile
+# Edit profiles/paranoid.nix:
+myOS.security.wireguardMullvad.enable = lib.mkForce false;
+nixos-rebuild switch --flake /etc/nixos#nixos
+# This will allow network access but without the paranoid WireGuard tunnel
+# Use only for emergency recovery; re-enable WireGuard after fixing the secret issue
+```
+
+**Prevention**:
+- Test secret decryption after first boot: `sudo ls -la /run/agenix/`
+- Keep external backups of all age-encrypted secrets
+- Persist SSH host keys to prevent identity loss
+- Document your age identity public key in a secure location (password manager, encrypted USB)
+- Test WireGuard tunnel establishment immediately after first paranoid boot

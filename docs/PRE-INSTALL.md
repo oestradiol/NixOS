@@ -30,7 +30,7 @@ Never trust a status line by itself. For each claim, check four layers:
 - `modules/security/secrets.nix`
 
 ### Networking / browser / privacy
-- `modules/security/networking.nix` — Mullvad app mode networking, nftables fallback for app mode
+- `modules/security/networking.nix` — Mullvad app mode networking (NetworkManager, systemd-resolved, Mullvad daemon)
 - `modules/security/wireguard.nix` — Self-owned WireGuard stack for paranoid (single-source-of-truth config + firewall)
 - `modules/security/browser.nix` — Firefox policies or sandboxed browser wrappers (UID 100000, bubblewrap)
   - When `sandbox.browsers = false` (daily): Base Firefox with 60+ hardening prefs (all telemetry disabled, safe browsing local-only, prefetch blocked, HTTPS-only, dFPI, ETP strict, OCSP hard-fail, container tabs, shutdown sanitizing, FPP fingerprinting protection per arkenfox v140+)
@@ -141,7 +141,7 @@ For each security claim, verify the code matches the documentation.
 
 | Mode | Profile | Module | Authority |
 |------|---------|--------|-----------|
-| Mullvad app | daily | `networking.nix` | Mullvad daemon + optional nftables fallback |
+| Mullvad app | daily | `networking.nix` | Mullvad daemon (use built-in lockdown-mode) |
 | Self-owned WireGuard | paranoid | `wireguard.nix` | NixOS (config generates firewall) |
 
 #### Self-owned WireGuard (paranoid) — RECOMMENDED
@@ -163,7 +163,7 @@ For each security claim, verify the code matches the documentation.
 
 **Killswitch**: Use Mullvad's built-in `mullvad lockdown-mode set on` for enforcement.
 
-**Known leakage**: Brief DNS queries at boot before tunnel establishment (unavoidable - must resolve VPN endpoint).
+**Known leakage**: DNS queries at boot before tunnel establishment (unavoidable - must resolve VPN endpoint).
 
 ### Base security
 

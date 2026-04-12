@@ -121,6 +121,11 @@ in {
         # Keepalive: important for NAT traversal and maintaining connection
         persistentKeepalive = cfg.persistentKeepalive;
 
+        # Dynamic endpoint refresh: refresh DNS resolution for hostname endpoints
+        # WireGuard itself does not refresh DNS-based endpoints after initial resolution
+        # NixOS added this option to handle that gap
+        dynamicEndpointRefreshSeconds = lib.mkIf endpointParsed.isHostname 600;
+
         # Preshared key for additional symmetric encryption layer (optional but recommended)
         presharedKeyFile = lib.mkIf (cfg.presharedKeyFile != "") cfg.presharedKeyFile;
       }];
@@ -213,10 +218,13 @@ in {
             # ICMP for path MTU discovery (non-WG interfaces for bootstrap)
             ${bootstrapExceptionExpression} ip protocol icmp icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
 
-            # DNS: ONLY through the tunnel interface, EXCEPT for hostname endpoint bootstrap
+            # DNS: ONLY through the tunnel interface, EXCEPT for hostname endpoint resolution
             # When endpoint is a hostname, allow DNS on non-WG interfaces to resolve it
+            # NOTE: This is a standing exception, not time-limited bootstrap. The rule remains
+            # active as long as a hostname endpoint is configured. For maximum security, use
+            # literal IP endpoints to avoid this persistent DNS exposure.
             ${if endpointParsed.isHostname then ''
-            # Pre-tunnel DNS for hostname endpoint resolution (bootstrap only)
+            # DNS for hostname endpoint resolution (standing exception)
             ${bootstrapExceptionExpression} udp dport 53 accept
             ${bootstrapExceptionExpression} tcp dport 53 accept
             '' else ""}

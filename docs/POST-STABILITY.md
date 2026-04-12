@@ -120,71 +120,15 @@ sudo systemctl start wg-quick-wg-mullvad
 ```
 
 **Known limitations**:
-- Bootstrap DNS: Brief clearnet DNS queries at boot before tunnel is established (unavoidable - must resolve VPN endpoint hostname)
-  - **IP endpoints (recommended for paranoid)**: No bootstrap DNS leak - endpoint is already an IP address
-  - **Hostname endpoints**: Pre-tunnel DNS exception allows DNS queries on non-WG interfaces to resolve the endpoint hostname
+- DNS for hostname endpoints: When using hostname endpoints, the nftables output chain permanently allows non-WireGuard DNS on port 53 (UDP and TCP) to resolve the endpoint hostname. This is a standing exception, not time-limited bootstrap.
+  - **IP endpoints (recommended for paranoid)**: No DNS exception - endpoint is already an IP address
+  - **Hostname endpoints**: Standing DNS exception allows DNS queries on non-WG interfaces to resolve the endpoint hostname
     - This is a necessary trade-off for hostname-based configs
-    - DNS leak is brief and limited to endpoint resolution only
+    - DNS exposure is persistent as long as a hostname endpoint is configured
     - For maximum security, use literal IP endpoints instead of hostnames
 - No automatic key rotation (unlike Mullvad app) - rotate keys manually via Mullvad web interface
 - No multihop or obfuscation features (plain WireGuard)
 - No split tunneling (full killswitch: all traffic through tunnel or blocked)
-
-**Killswitch architecture (best-effort fallback only):**
-The nftables rules are a narrow fallback policy, not authoritative enforcement.
-- Bootstrap (non-VPN interfaces): minimal DHCP/NDP for tunnel establishment
-- VPN interfaces (`wg-mullvad`, `tun0`, `tun1`): unrestricted egress when tunnel up
-- Static rules cannot model Mullvad's stateful behavior (connecting/connected/lockdown)
-
-**Known tradeoffs:**
-- Brief DNS leak at boot before tunnel establishment (unavoidable - must resolve VPN endpoint)
-- Interface names are hand-maintained and must match actual tunnel names
-- ICMPv6 restricted to NDP/router-discovery only (no broad ICMPv6 allowance)
-
-**Hard validation required:**
-```bash
-# 1. Check actual tunnel interface names
-ip link show | grep -E "(mullvad|tun|wg)"
-
-# 2. Compare against allowed list in networking.nix
-#    vpnIfaces = [ "wg-mullvad" "tun0" "tun1" ]
-#    FAIL the checklist if actual names differ from allowed list
-
-# 3. Verify nftables loaded correctly
-sudo nft list ruleset
-
-# 4. Check ICMPv6 is restricted to NDP only (not broad allow)
-sudo nft list ruleset | grep "icmpv6 type"
-# Should show: nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert
-
-# 5. Test behavior across VPN states ( paranoid lockdown-mode on required )
-# These tests validate the nftables fallback works with Mullvad's state machine
-mullvad status  # Record: disconnected, connecting, or connected
-# Test 1: Disconnected state - verify no clearnet traffic escapes (should fail closed)
-# Test 2: Connecting state - verify bootstrap traffic allowed (DHCP/NDP/DNS to resolve endpoint)
-# Test 3: Connected state - verify tunnel traffic flows, check IP at https://mullvad.net/check/
-# Test 4: Disconnect command - verify traffic stops immediately
-
-# 6. Verify interaction with Mullvad's early-boot Linux blocker
-# Check if Mullvad's systemd early-boot unit is active (separate from daemon)
-systemctl status mullvad-early-boot-blocking  # Or check mullvad-daemon logs for early-boot messages
-# This is distinct from the nftables fallback; Mullvad handles pre-daemon boot protection
-journalctl -u mullvad-daemon | grep -i "early-boot\|blocking\|lockdown"
-```
-
-**If interface names mismatch**: Edit `vpnIfaces` in `modules/security/networking.nix` and rebuild.
-
-**State testing checklist**:
-- [ ] Disconnected: No clearnet traffic (use `curl https://ip.me` - should fail)
-- [ ] Connecting: Bootstrap works (DNS resolves, tunnel establishes)
-- [ ] Connected: Traffic flows through tunnel (check https://mullvad.net/check/)
-- [ ] Boot state: No leaks before daemon starts (hard to test; rely on early-boot blocker)
-- [ ] Early-boot blocker: Verify Mullvad's unit handles pre-daemon protection
-
-**Note on early-boot**: The nftables fallback covers the gap before Mullvad daemon starts, but Mullvad's own Linux early-boot blocking unit is the primary pre-daemon protection. The nftables layer is defense-in-depth, not the main early-boot enforcement.
-
-**Recommendation:** Rely primarily on Mullvad's built-in lockdown-mode killswitch.
-The nftables rules are defense-in-depth only.
 
 **If network issues occur**: See [`RECOVERY.md`](./RECOVERY.md) "If the paranoid profile blocks too much network" section.
 
@@ -205,7 +149,6 @@ Examples:
 - Review logs: `/var/log/clamav-impermanence-scan.log`, `/var/log/clamav-deep-scan.log`
 
 ## 9. Manual follow-ups
-- Validate Mullvad interface names match nftables rules (adjust `vpnIfaces` in networking.nix if needed)
 - Create real `.age` files under `secrets/`
 - Verify USB peripherals work on paranoid (authorized_default=2 allows internal hub devices)
 - Enable Bluetooth controllers: set `myOS.gaming.controllers.enable = true` in your profile
@@ -552,6 +495,13 @@ The following verification methods are **not implemented** and represent gaps in
 - **Implementation**: Benchmark suite measuring frametime, latency, boot time, memory usage
 - **Value**: Empirical validation of performance impact claims
 - **Limitation**: Requires consistent hardware and controlled test conditions
+
+### 5. Recovery scenario validation
+- **Status**: Documented but not tested
+- **What's missing**: Runtime validation of recovery procedures for agenix/secret decryption failures, WireGuard secret path unavailability, and paranoid network blocking scenarios
+- **Implementation**: Manual test on actual hardware or recovery environment to verify each recovery scenario in RECOVERY.md executes correctly
+- **Value**: Confirms recovery procedures work when needed (critical for paranoid profile where WireGuard failure blocks all network)
+- **Limitation**: Requires inducing failure states or simulating them in test environment
 
 ### Current verification level
 With these gaps, the repo is appropriately characterized as:

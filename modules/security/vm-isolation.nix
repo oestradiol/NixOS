@@ -43,6 +43,9 @@ in {
     virtualisation.libvirtd.qemu.verbatimConfig = ''
       # Hardened QEMU settings
       seccomp_sandbox = 1
+      # TLS settings for SPICE/VNC (requires certificate path configuration)
+      # These are enabled but require manual certificate setup to be effective
+      # See libvirt documentation for certificate/x509 path configuration
       spice_tls = 1
       vnc_tls = 1
       vnc_tls_x509_verify = 1

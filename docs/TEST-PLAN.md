@@ -202,6 +202,39 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] SSH host keys exist in `/persist/etc/ssh/` (impermanence working)
 - [ ] `agenix` command available
 - [ ] After creating `.age` files in `/etc/nixos/secrets/`, `nixos-rebuild switch` decrypts them correctly
+- [ ] WireGuard secrets decrypt to `/run/agenix/` (check: `ls -la /run/agenix/wg-private-key`)
+
+## WireGuard dynamic endpoint refresh (hostname endpoints only)
+- [ ] If using hostname endpoint: verify `dynamicEndpointRefreshSeconds` is set (check: `sudo wg show wg-mullvad` or inspect WireGuard config)
+- [ ] DNS resolution refreshes periodically: monitor endpoint IP changes over time (if Mullvad rotates endpoint IPs)
+- [ ] Tunnel re-establishes after endpoint IP change (if applicable)
+
+## Recovery scenario validation (post-stability)
+**Note**: These tests require inducing failure states or simulating them. Perform only after system is stable and you have recovery media ready.
+
+### Agenix/secret decryption recovery
+- [ ] **Scenario 1: Missing age identity test** (simulated):
+  - Backup current SSH host key: `cp /etc/ssh/ssh_host_ed25519_key.pub /tmp/backup.pub`
+  - Verify age identity extraction works: `cat /etc/ssh/ssh_host_ed25519_key.pub | ssh-to-age`
+  - Restore backup if needed
+- [ ] **Scenario 2: Secret file availability test**:
+  - Verify secret files exist in `/run/agenix/` after boot
+  - Verify secret files are persisted in `/persist/secrets/` (if configured)
+- [ ] **Scenario 3: WireGuard secret path test**:
+  - Verify WireGuard can read secret from configured path
+  - Check systemd logs for agenix/WireGuard errors: `journalctl -xe | grep -i "age\|agenix\|wireguard"`
+
+### Paranoid network failure recovery
+- [ ] **Emergency disable test** (from daily profile):
+  - Boot daily profile
+  - Edit paranoid profile to disable WireGuard temporarily: `wireguardMullvad.enable = lib.mkForce false`
+  - Rebuild and boot paranoid to verify network access without WireGuard
+  - Re-enable WireGuard after test
+- [ ] **Killswitch test** (already covered in VPN section above):
+  - Stop WireGuard, verify egress fails
+  - Restart WireGuard, verify egress succeeds
+
+**If recovery scenarios fail**: See [`RECOVERY.md`](./RECOVERY.md) "If agenix secret decryption fails" section.
 
 ## Browser hardening verification
 - [ ] Daily Firefox: `about:config` shows `privacy.resistFingerprinting` = false (FPP instead of RFP)

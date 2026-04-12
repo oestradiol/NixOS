@@ -39,6 +39,8 @@
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
 - ClamAV split scans: daily impermanence scan + weekly deep scan (comprehensive).
 - AIDE weekly integrity checks with persisted database.
+- WireGuard dynamic endpoint refresh: `dynamicEndpointRefreshSeconds = 600` for hostname endpoints to refresh DNS resolution periodically (addresses NixOS WireGuard DNS endpoint refresh gap).
+- Agenix/secret decryption recovery: comprehensive recovery procedures documented in RECOVERY.md for missing age identity, lost SSH host keys, secret file corruption, and WireGuard secret path unavailability.
 
 ## Privacy and anti-fingerprinting (profile-dependent)
 
@@ -56,7 +58,7 @@
 
 **WireGuard security note**: Uses file-based secrets (privateKeyFile/presharedKeyFile) following NixOS WireGuard best practices. Inline secrets are NOT used - they would expose keys in the nix store. All WireGuard keys must be provided via agenix or similar secrets manager.
 
-**WireGuard endpoint DNS bootstrap**: When using hostname endpoints (e.g., us-nyc-wg-001.mullvad.net:51820), a pre-tunnel DNS exception allows DNS queries on non-WG interfaces to resolve the endpoint hostname before tunnel establishment. This is a necessary trade-off for hostname-based configs. For maximum security, use literal IP endpoints instead of hostnames to avoid this brief DNS exposure.
+**WireGuard endpoint DNS bootstrap**: When using hostname endpoints (e.g., us-nyc-wg-001.mullvad.net:51820), the nftables output chain permanently allows non-WireGuard DNS on port 53 (UDP and TCP) to resolve the endpoint hostname. This is a standing exception, not a time-limited bootstrap. For maximum security, use literal IP endpoints instead of hostnames to avoid this persistent DNS exposure.
 
 **Residual fingerprinting vectors** (cannot fully mitigate without breakage):
 - **DMI/SMBIOS data** (`/sys/class/dmi/id/`): Hardware model, serial numbers - world-readable, required by kernel
@@ -171,7 +173,7 @@ All key hardening knobs are tunable per-profile without code changes:
 - Auto-detects AMD vs Intel KVM modules
 - IOMMU passthrough mode (`iommu=pt`, `amd_iommu=on`)
 - TPM emulation for VMs (swtpm)
-- QEMU hardening: seccomp sandbox, SPICE/VNC TLS
+- QEMU hardening: seccomp sandbox, SPICE/VNC TLS (TLS requires manual certificate/x509 path configuration)
 - virt-manager GUI enabled when knob active
 - Users `player` and `ghost` added to `libvirtd` group
 - **Knob**: `myOS.security.sandbox.vms` (default: false)
