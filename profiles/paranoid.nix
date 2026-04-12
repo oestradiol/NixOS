@@ -27,15 +27,22 @@
 
     # VPN: self-owned WireGuard stack (not Mullvad app)
     # Provider: Mullvad servers | Control plane: NixOS (deterministic, auditable)
+    # Paranoid profile REQUIRES pinned IP endpoint (no hostname, no DNS exception)
     # See: docs/PRE-INSTALL.md Section 15 for WireGuard config generation
+    # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
     wireguardMullvad.enable = lib.mkForce true;
     # WireGuard secrets: provide via agenix in host secrets file
     # wireguardMullvad.privateKeyFile = config.age.secrets.wg-private-key.path;
     # wireguardMullvad.presharedKeyFile = config.age.secrets.wg-preshared-key.path;  # optional
-    # wireguardMullvad.endpoint = "<your-mullvad-server>:51820";
+    # wireguardMullvad.endpoint = "146.70.xx.yy:51820";  # MUST be literal IP, not hostname
     # wireguardMullvad.address = "10.64.x.x/32";
     # wireguardMullvad.serverPublicKey = "<mullvad-server-pubkey>";
     # wireguardMullvad.dns = "10.64.0.1";  # Mullvad DNS through tunnel
+    #
+    # To get pinned IP: resolve Mullvad relay hostname once from trusted environment
+    # Example: dig +short se-got-wg-001.relays.mullvad.net
+    # If Mullvad changes the IP behind the relay, tunnel will stop handshaking until updated
+    # See docs/RECOVERY.md and docs/POST-STABILITY.md for maintenance procedure
 
     # Browser security (sandboxed only, with D-Bus filtering)
     sandbox.browsers = lib.mkForce true;

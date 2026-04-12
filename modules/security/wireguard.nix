@@ -77,6 +77,18 @@ in {
         message = "myOS.security.wireguardMullvad.endpoint must be set (Mullvad server endpoint)";
       }
       {
+        # This module is for paranoid profile only - requires pinned IP endpoint
+        # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
+        # WireGuard kernel side cannot perform DNS resolution. If you don't use IP endpoints,
+        # you need dynamicEndpointRefreshSeconds. This module uses pinned IP for cleaner killswitch.
+        assertion = endpointParsed.isIP;
+        message = "WireGuard module requires pinned IP endpoint (e.g., 146.70.xx.yy:51820), not hostname. " +
+          "Hostname endpoints require DNS exception which creates a standing leak path. " +
+          "Resolve your Mullvad relay hostname once and pin the literal IP. " +
+          "Example: dig +short se-got-wg-001.relays.mullvad.net " +
+          "Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint";
+      }
+      {
         # Validate endpoint format at evaluation time
         assertion = endpointParsed != null;
         message = "myOS.security.wireguardMullvad.endpoint format invalid. Must be one of: " +
@@ -121,10 +133,10 @@ in {
         # Keepalive: important for NAT traversal and maintaining connection
         persistentKeepalive = cfg.persistentKeepalive;
 
-        # Dynamic endpoint refresh: refresh DNS resolution for hostname endpoints
+        # Dynamic endpoint refresh: NOT used - this module requires pinned IP endpoint
         # WireGuard itself does not refresh DNS-based endpoints after initial resolution
-        # NixOS added this option to handle that gap
-        dynamicEndpointRefreshSeconds = lib.mkIf endpointParsed.isHostname 600;
+        # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
+        # Since we require pinned IP endpoint, no DNS refresh is needed
 
         # Preshared key for additional symmetric encryption layer (optional but recommended)
         presharedKeyFile = lib.mkIf (cfg.presharedKeyFile != "") cfg.presharedKeyFile;
@@ -218,16 +230,9 @@ in {
             # ICMP for path MTU discovery (non-WG interfaces for bootstrap)
             ${bootstrapExceptionExpression} ip protocol icmp icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
 
-            # DNS: ONLY through the tunnel interface, EXCEPT for hostname endpoint resolution
-            # When endpoint is a hostname, allow DNS on non-WG interfaces to resolve it
-            # NOTE: This is a standing exception, not time-limited bootstrap. The rule remains
-            # active as long as a hostname endpoint is configured. For maximum security, use
-            # literal IP endpoints to avoid this persistent DNS exposure.
-            ${if endpointParsed.isHostname then ''
-            # DNS for hostname endpoint resolution (standing exception)
-            ${bootstrapExceptionExpression} udp dport 53 accept
-            ${bootstrapExceptionExpression} tcp dport 53 accept
-            '' else ""}
+            # DNS: ONLY through the tunnel interface
+            # This module requires pinned IP endpoint, so no DNS exception is needed
+            # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
             # DNS through tunnel (normal operation)
             oifname "${wgInterface}" udp dport 53 accept
             oifname "${wgInterface}" tcp dport 53 accept

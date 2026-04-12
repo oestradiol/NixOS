@@ -39,7 +39,7 @@
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
 - ClamAV split scans: daily impermanence scan + weekly deep scan (comprehensive).
 - AIDE weekly integrity checks with persisted database.
-- WireGuard dynamic endpoint refresh: `dynamicEndpointRefreshSeconds = 600` for hostname endpoints to refresh DNS resolution periodically (addresses NixOS WireGuard DNS endpoint refresh gap).
+- WireGuard endpoint configuration (paranoid only): Requires pinned IP endpoint (literal IP:port) for maximum security with no DNS exception. Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
 - Agenix/secret decryption recovery: comprehensive recovery procedures documented in RECOVERY.md for missing age identity, lost SSH host keys, secret file corruption, and WireGuard secret path unavailability.
 
 ## Privacy and anti-fingerprinting (profile-dependent)
@@ -58,7 +58,7 @@
 
 **WireGuard security note**: Uses file-based secrets (privateKeyFile/presharedKeyFile) following NixOS WireGuard best practices. Inline secrets are NOT used - they would expose keys in the nix store. All WireGuard keys must be provided via agenix or similar secrets manager.
 
-**WireGuard endpoint DNS bootstrap**: When using hostname endpoints (e.g., us-nyc-wg-001.mullvad.net:51820), the nftables output chain permanently allows non-WireGuard DNS on port 53 (UDP and TCP) to resolve the endpoint hostname. This is a standing exception, not a time-limited bootstrap. For maximum security, use literal IP endpoints instead of hostnames to avoid this persistent DNS exposure.
+**WireGuard endpoint configuration** (paranoid only): Requires pinned IP endpoint (literal IP:port) with no DNS exception and no dynamic refresh (maximum security, cleaner killswitch). Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint. Tradeoff: Requires manual endpoint IP update if Mullvad changes relay IP; see RECOVERY.md for recovery procedure.
 
 **Residual fingerprinting vectors** (cannot fully mitigate without breakage):
 - **DMI/SMBIOS data** (`/sys/class/dmi/id/`): Hardware model, serial numbers - world-readable, required by kernel
@@ -275,7 +275,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
 - Vesktop, Steam, VR disabled by policy.
-- **VPN**: Self-owned WireGuard to Mullvad servers. No Mullvad app. NixOS owns tunnel state AND firewall policy (single source of truth). Deterministic killswitch generated from WireGuard config.
+- **VPN**: Self-owned WireGuard to Mullvad servers. No Mullvad app. NixOS owns tunnel state AND firewall policy (single source of truth). Deterministic killswitch generated from WireGuard config. Uses pinned IP endpoints (literal IP:port) for maximum security - no DNS exception, no dynamic refresh.
 - Lower persistence footprint (tmpfs home, selective allowlist).
 - Signal Desktop sandboxed via Flatpak.
 - **Privacy**: Randomized MAC per device appearance (typically at boot); machine-id is Whonix shared ID (deliberate privacy exception to blend with Whonix users, conflicts with systemd unique-id guidance); TCP timestamps disabled.
@@ -325,7 +325,7 @@ This repository is materially stronger than the original gaming-first unstable-o
 - kernel module blacklist, coredump disable, debugfs off
 - USB authorization restricted on paranoid
 - IPv6 privacy extensions
-- VPN: Mullvad app for daily; self-owned WireGuard for paranoid (single-source-of-truth firewall)
+- VPN: Mullvad app for daily; self-owned WireGuard for paranoid (single-source-of-truth firewall). Paranoid uses pinned IP endpoints for maximum security (no DNS exception, cleaner killswitch)
 - browser policy split; plain Firefox removed from paranoid
 - systemd service hardening for flatpak, ClamAV, AIDE
 - install/test/recovery docs

@@ -111,10 +111,9 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Tunnel is established (`sudo wg show wg-mullvad` shows handshake/transfer)
 - [ ] Default route is via tunnel (`ip route | grep default` shows dev wg-mullvad)
 - [ ] nftables policy is default-deny (`sudo nft list table inet filter | grep 'policy drop'`)
-- [ ] **Endpoint-type specific nftables rules** (verify based on your endpoint):
-  - **IPv4 endpoint**: `sudo nft list table inet filter | grep "ip saddr.*udp sport"` should show rule with your endpoint IP
-  - **IPv6 endpoint**: `sudo nft list table inet filter | grep "ip6 saddr.*udp sport"` should show rule with your endpoint IP
-  - **Hostname endpoint**: `sudo nft list table inet filter | grep "udp sport.*accept"` should show port-only rule (no IP restriction)
+- [ ] **Paranoid requires pinned IP endpoint**: verify endpoint is literal IP, not hostname (check `grep endpoint /etc/nixos/profiles/paranoid.nix`)
+- [ ] **No DNS exception for pinned IP**: verify no DNS allow rules on non-WG interfaces (`sudo nft list table inet filter | grep "dport 53" | grep -v wg-mullvad`)
+- [ ] **No dynamicEndpointRefreshSeconds for pinned IP**: verify disabled (check WireGuard config or `sudo wg show wg-mullvad`)
 - [ ] **Killswitch test**: Stop WireGuard, verify egress fails, restart, verify works:
   ```bash
   sudo systemctl stop wg-quick-wg-mullvad
@@ -235,10 +234,12 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] Understand security implications: trusted-users can build as root, set config, perform GC as root
 - [ ] If you need to add users for Steam/development, modify `modules/core/base-desktop.nix` directly
 
-## WireGuard dynamic endpoint refresh (hostname endpoints only)
-- [ ] If using hostname endpoint: verify `dynamicEndpointRefreshSeconds` is set (check: `sudo wg show wg-mullvad` or inspect WireGuard config)
-- [ ] DNS resolution refreshes periodically: monitor endpoint IP changes over time (if Mullvad rotates endpoint IPs)
-- [ ] Tunnel re-establishes after endpoint IP change (if applicable)
+## WireGuard endpoint configuration (paranoid only)
+- [ ] Verify endpoint is pinned IP (literal IP:port, not hostname)
+- [ ] Verify no DNS exception (no port 53 allow rules on non-WG interfaces)
+- [ ] Verify no dynamicEndpointRefreshSeconds (disabled for static IP)
+- [ ] Test pinned endpoint IP recovery procedure (see RECOVERY.md "If WireGuard pinned endpoint IP changes")
+- [ ] Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
 
 ## New recovery scenario validation (post-stability)
 - [ ] EFI partition space exhaustion: check ESP size with `df -h /boot`, verify >= 512MB
@@ -247,6 +248,7 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] First-boot lockout: verify user creation and password setting during install, test login immediately after first boot
 - [ ] Secure Boot state migration: verify sbctl status after firmware reset, test key re-enrollment
 - [ ] Live rollback with persistence changes: test rollback after impermanence config changes, verify no missing files
+- [ ] WireGuard pinned endpoint IP changes (paranoid): verify recovery procedure works (simulate IP change, update config, verify handshake)
 
 ## Recovery scenario validation (post-stability)
 **Note**: These tests require inducing failure states or simulating them. Perform only after system is stable and you have recovery media ready.

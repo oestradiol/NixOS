@@ -1318,4 +1318,58 @@ For each breakage incident, log to this section:
 
 ---
 
+## 22. WireGuard endpoint configuration (paranoid only)
+
+**Context**: WireGuard module is for paranoid profile only. Requires pinned IP endpoint (literal IP:port) for maximum security with no DNS exception.
+
+**Reference**: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
+
+### Configuration
+
+```nix
+wireguardMullvad.endpoint = "146.70.xx.yy:51820";  # Literal IP, not hostname
+```
+
+**Behavior**:
+- No `dynamicEndpointRefreshSeconds` (not needed for static IP)
+- No DNS exception on non-tunnel interfaces (cleaner killswitch)
+- Only exact endpoint IP:port allowed outside tunnel
+- Privacy: no DNS leak path
+- Tradeoff: less automatic resilience to endpoint IP changes
+
+**Why pinned IP is required**:
+- WireGuard kernel side cannot perform DNS resolution
+- Hostname endpoints require DNS exception which creates a standing leak path
+- Pinned IP eliminates DNS exception for cleaner killswitch
+- Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
+> "WireGuard kernel side cannot perform DNS resolution. If you don't use IP endpoints, you likely want to set networking.wireguard.dynamicEndpointRefreshSeconds to refresh the IPs periodically."
+
+**How to get pinned IP**:
+```bash
+# Resolve Mullvad relay hostname once from trusted environment
+dig +short se-got-wg-001.relays.mullvad.net
+# Output: 146.70.123.45
+```
+
+**Maintenance procedure**:
+If Mullvad changes the IP behind the relay hostname:
+1. Tunnel stops handshaking (`sudo wg show wg-mullvad` shows no recent handshake)
+2. Resolve relay hostname again: `dig +short <relay-hostname>.relays.mullvad.net`
+3. Update pinned IP in `profiles/paranoid.nix`
+4. Rebuild: `nixos-rebuild switch`
+5. Verify handshake: `sudo wg show wg-mullvad`
+
+See `docs/RECOVERY.md` "If WireGuard pinned endpoint IP changes" for full recovery procedure.
+
+**Tradeoff documentation**:
+- Paranoid uses pinned IP for cleaner killswitch (no DNS exception)
+- Tradeoff: Less automatic resilience to endpoint IP changes
+- If Mullvad changes relay IP, tunnel stops handshaking until IP is updated manually
+- This is the correct paranoid tradeoff: privacy/killswitch over convenience
+- Daily profile uses Mullvad app, not WireGuard (different architecture)
+
+**Decision**: WireGuard module requires pinned IP endpoint (maximum security). Daily uses Mullvad app with its own endpoint management.
+
+---
+
 **Summary**: 4 items fixed (LUKS header backup, EFI backup, bubblewrap acknowledgment, SSH rotation); 7 items require your explicit decision (added PAM risk documentation).

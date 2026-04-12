@@ -267,6 +267,14 @@ wg genpsk > mullvad-preshared.key
    - **Your assigned IP**: The tunnel IP Mullvad assigns you (e.g., `10.64.123.45/32`)
    - **DNS server**: Usually `10.64.0.1` (Mullvad's ad-blocking DNS)
 
+**CRITICAL for paranoid profile**: Resolve the server hostname to a pinned IP:
+```bash
+# Resolve the hostname to get the literal IP
+dig +short us-nyc-wg-001.mullvad.net
+# Output example: 146.70.123.45
+```
+Paranoid profile REQUIRES using the literal IP (e.g., `146.70.123.45:51820`), not the hostname. This eliminates the DNS exception for maximum security. Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
+
 Alternative: Use Mullvad's CLI config generator:
 ```bash
 # Install mullvad-vpn temporarily on another machine
@@ -319,7 +327,7 @@ myOS.security = {
     privateKeyFile = config.age.secrets.wg-private-key.path;
     presharedKeyFile = config.age.secrets.wg-preshared-key.path;  # optional
     address = "10.64.123.45/32";  # Your Mullvad-assigned tunnel IP
-    endpoint = "us-nyc-wg-001.mullvad.net:51820";  # Your chosen server
+    endpoint = "146.70.123.45:51820";  # MUST be literal IP, not hostname (see step 15.2)
     serverPublicKey = "<server-public-key-here>";  # From Mullvad config
     dns = "10.64.0.1";  # Mullvad DNS through tunnel
   };

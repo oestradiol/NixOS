@@ -1698,3 +1698,96 @@ nixos-rebuild switch
 - Test rollback after persistence changes
 - Keep backup of critical persisted data
 - Use git to track configuration changes
+
+---
+
+## If WireGuard pinned endpoint IP changes (paranoid profile)
+
+**Symptom**: WireGuard tunnel stops handshaking, `sudo wg show wg-mullvad` shows no recent handshake, connection to Mullvad fails.
+
+**Causes**:
+- Mullvad changed the IP address behind the relay hostname
+- Pinned endpoint IP in config no longer matches actual relay IP
+- This is the tradeoff for using pinned IP (cleaner killswitch, no DNS exception)
+
+**Diagnostics**:
+```bash
+# Check WireGuard handshake status
+sudo wg show wg-mullvad
+# Look for "latest handshake" - if old/missing, handshake failing
+
+# Check if endpoint is reachable
+ping -c 3 <pinned-endpoint-ip>
+
+# Resolve the relay hostname to see if IP changed
+dig +short <your-mullvad-relay-hostname>.relays.mullvad.net
+
+# Compare with pinned IP in config
+grep "endpoint" /etc/nixos/profiles/paranoid.nix
+```
+
+**Recovery**:
+
+### Scenario 1: Mullvad changed relay IP
+
+**Cause**: Mullvad rotated the IP address behind the selected relay hostname.
+
+**Recovery**:
+```bash
+# 1. Resolve the relay hostname from a trusted environment
+# (Do this from a trusted network, not through the broken tunnel)
+dig +short se-got-wg-001.relays.mullvad.net
+# Output example: 146.70.123.45
+
+# 2. Update the pinned endpoint IP in paranoid profile
+# Edit profiles/paranoid.nix:
+wireguardMullvad.endpoint = "146.70.123.45:51820";  # New IP
+
+# 3. Rebuild
+nixos-rebuild switch
+
+# 4. Verify handshake
+sudo wg show wg-mullvad
+# Should show recent handshake
+
+# 5. Verify tunnel is working
+curl https://am.i.mullvad.net/connected
+```
+
+### Scenario 2: Wrong relay selected
+
+**Cause**: User selected a relay that is offline or deprecated.
+
+**Recovery**:
+```bash
+# 1. Check Mullvad server status
+# Visit https://mullvad.net/servers to verify relay is online
+
+# 2. Select a different relay from Mullvad servers page
+# Get the hostname, resolve it to IP, and update config
+
+# 3. Update paranoid profile with new relay IP
+# Edit profiles/paranoid.nix:
+wireguardMullvad.endpoint = "<new-relay-ip>:51820";
+wireguardMullvad.serverPublicKey = "<new-relay-pubkey>";
+
+# 4. Rebuild
+nixos-rebuild switch
+
+# 5. Verify
+sudo wg show wg-mullvad
+curl https://am.i.mullvad.net/connected
+```
+
+**Prevention**:
+- Monitor Mullvad relay status periodically
+- Keep a backup of working relay configurations
+- Consider setting up monitoring to detect handshake failures
+- Document your chosen relay in external notes for reference
+
+**Tradeoff documentation**:
+- Paranoid profile uses pinned IP for cleaner killswitch (no DNS exception)
+- Tradeoff: Less automatic resilience to endpoint IP changes
+- If Mullvad changes relay IP, tunnel stops handshaking until IP is updated manually
+- This is the correct paranoid tradeoff: privacy/killswitch over convenience
+
