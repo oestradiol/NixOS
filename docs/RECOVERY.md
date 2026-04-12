@@ -2,6 +2,22 @@
 
 **Scope**: This document covers all major known design-time failure modes identified during development and audit. Real systems may have additional edge cases not documented here. Treat this as a comprehensive starting point, not an exhaustive list of all possible failures.
 
+## Mount context discipline
+
+**Critical**: Recovery commands must distinguish between:
+- **Live system**: Commands run from your running NixOS installation (paths like `/`, `/persist`, `/nix`)
+- **Installer environment**: Commands run from NixOS installer USB after mounting target to `/mnt`
+
+This doc marks commands with context where ambiguous:
+- `# (from live system: use /; from installer: use /mnt)` - Adjust path accordingly
+- `# Inside the nixos-enter shell` - Commands run inside chroot, not from live installer
+
+When in doubt, check your current context:
+```bash
+# Check if you're in installer or live system
+test -d /mnt && echo "Installer context" || echo "Live system context"
+```
+
 ## Golden rules
 - keep the LUKS recovery passphrase
 - keep a recent exported copy of this repo outside the machine
@@ -713,10 +729,10 @@ nixos-rebuild switch --flake /etc/nixos#nixos
 
 **Diagnostics**:
 ```bash
-# Check if /persist is mounted
+# Check if /persist is mounted (from live system)
 findmnt /persist
 
-# Check Btrfs subvolumes
+# Check Btrfs subvolumes (from live system: use /; from installer: use /mnt)
 sudo btrfs subvolume list /
 
 # Check if LUKS device is open
@@ -792,7 +808,7 @@ findmnt -o OPTIONS /persist
 
 **Diagnostics**:
 ```bash
-# Check Btrfs health
+# Check Btrfs health (from live system: use /; from installer: use /mnt)
 sudo btrfs filesystem status /
 sudo btrfs scrub start /
 
@@ -904,11 +920,16 @@ mount --bind /dev /mnt/dev
 mount --bind /proc /mnt/proc
 mount --bind /sys /mnt/sys
 
-# 4. Reinstall bootloader
+# 4. Enter the target system (this drops you into a shell inside /mnt)
 nixos-enter --root /mnt
+
+# Inside the nixos-enter shell, run:
 nixos-rebuild switch --install-bootloader --flake /etc/nixos#nixos
 
-# 5. Verify entries
+# Exit the nixos-enter shell when done:
+exit
+
+# 5. Verify entries (back in live installer environment)
 bootctl list
 ```
 
@@ -933,11 +954,16 @@ mount --bind /dev /mnt/dev
 mount --bind /proc /mnt/proc
 mount --bind /sys /mnt/sys
 
-# 5. Reinstall bootloader
+# 5. Enter the target system (this drops you into a shell inside /mnt)
 nixos-enter --root /mnt
+
+# Inside the nixos-enter shell, run:
 nixos-rebuild switch --install-bootloader --flake /etc/nixos#nixos
 
-# 6. Verify entries
+# Exit the nixos-enter shell when done:
+exit
+
+# 6. Verify entries (back in live installer environment)
 bootctl list
 ```
 
@@ -1070,22 +1096,23 @@ nixos-rebuild switch
 
 **Recovery**:
 ```bash
-# 1. Check current subvolume layout
+# 1. Check current subvolume layout (from live system or installer)
 sudo btrfs subvolume list /
 
-# Expected subvolumes for this repo:
-# ID 256 (top level)
-#   ID 257 @ (root)
-#   ID 258 @home
-#   ID 259 @persist
-#   ID 260 @nix
-#   ID 261 @swap
+# Expected subvolume paths/names for this repo:
+# @ (root)
+# @home
+# @persist
+# @nix
+# @swap
+
+# Note: Subvolume IDs are not stable; focus on path names instead.
 
 # 2. Compare with expected layout from config
 # Check hosts/nixos/default.nix for subvolume definitions
 
 # 3. Create missing subvolumes (example for @persist)
-sudo btrfs subvolume create /mnt/@persist
+sudo btrfs subvolume create /@persist
 
 # 4. Or update config to match actual layout if subvolume naming changed
 # Edit hosts/nixos/default.nix to use actual subvolume names
@@ -1114,10 +1141,10 @@ nixos-rebuild switch
 
 **Diagnostics**:
 ```bash
-# Check all mounts
+# Check all mounts (from live system)
 findmnt -R
 
-# Check Btrfs subvolumes
+# Check Btrfs subvolumes (from live system: use /; from installer: use /mnt)
 sudo btrfs subvolume list /
 
 # Check systemd mount units
@@ -1135,14 +1162,17 @@ grep -r "subvol=" /etc/nixos/
 
 **Recovery**:
 ```bash
-# 1. Check what subvolumes exist
+# 1. Check what subvolumes exist (from live system: use /; from installer: use /mnt)
 sudo btrfs subvolume list /
 
 # 2. Identify expected subvolume name from config
 grep -r "subvol=" /etc/nixos/hosts/nixos/default.nix
 
 # 3. Option A: Create missing subvolume (example for @persist)
+# From live system:
 sudo btrfs subvolume create /@persist
+# From installer (after mounting to /mnt):
+sudo btrfs subvolume create /mnt/@persist
 
 # 4. Option B: Update config to use existing subvolume
 # Edit hosts/nixos/default.nix to use actual subvolume name
