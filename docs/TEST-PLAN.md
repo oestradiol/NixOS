@@ -14,6 +14,12 @@ For post-stability configuration, see [`POST-STABILITY.md`](./POST-STABILITY.md)
 - [ ] reboot drops non-persisted files
 - [ ] persistence verification: create file in `/tmp`, reboot, verify it's gone; create file in `~/Data`, reboot, verify it survives
 
+## Machine ID persistence (both profiles)
+- [ ] `/etc/machine-id` is persisted (check: `findmnt /etc/machine-id` shows bind from `/persist`)
+- [ ] **Daily**: Machine-id is systemd-generated unique ID (check: `cat /etc/machine-id` - should NOT be `b08dfa6083e7567a1921a715000001fb`)
+- [ ] **Paranoid**: Machine-id is Whonix shared ID `b08dfa6083e7567a1921a715000001fb` (check: `cat /etc/machine-id`)
+- [ ] Machine-id survives reboot on both profiles (record before reboot, verify same after)
+
 **If boot fails**: See [`RECOVERY.md`](./RECOVERY.md) "If the new system does not boot" section.
 **If impermanence issues**: See [`RECOVERY.md`](./RECOVERY.md) "If impermanence causes app issues" section.
 
@@ -40,6 +46,7 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Vesktop run if installed
 - [ ] Firefox Sync is disabled (`identity.fxaccounts.enabled = false` in about:config)
 - [ ] Bluetooth controllers pair and work (Xbox/8BitDo/etc.)
+- [ ] ntsync kernel module loaded (`lsmod | grep ntsync`)
 - [ ] no obvious gaming regression versus current setup baseline
 
 **If gaming performance regresses**: See [`RECOVERY.md`](./RECOVERY.md) "If gaming performance regresses" section.
@@ -49,7 +56,8 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] VR absent/disabled
 - [ ] Vesktop absent/disabled
 - [ ] `safe-firefox` launches
-- [ ] Tor Browser launches
+- [ ] `safe-tor-browser` launches
+- [ ] `safe-mullvad-browser` launches
 - [ ] Signal (Flatpak) launches
 - [ ] separate user home is respected
 
@@ -68,7 +76,7 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Desktop notifications work (if enabled)
 - [ ] No D-Bus errors in `journalctl --user -u xdg-dbus-proxy`
 
-**If D-Bus filtering breaks functionality**: Disable in paranoid.nix: `sandboxedBrowsers.dbusFilter = lib.mkForce false`
+**If D-Bus filtering breaks functionality**: Disable in paranoid.nix: `sandbox.dbusFilter = lib.mkForce false`
 
 ## VPN and leak testing
 
@@ -138,9 +146,17 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] `sysctl kernel.unprivileged_bpf_disabled` returns 1
 - [ ] `sysctl fs.suid_dumpable` returns 0
 - [ ] `sysctl net.ipv6.conf.all.use_tempaddr` returns 2
+- [ ] `sysctl vm.swappiness` returns 150 on daily, 180 on paranoid
 - [ ] `cat /proc/cmdline` includes `debugfs=off`
 - [ ] `coredumpctl` shows no stored dumps / storage disabled
 - [ ] `lsmod | grep -E 'dccp|sctp|rds|tipc|firewire'` returns empty
+
+### Paranoid-only kernel controls (Madaidan-aligned)
+- [ ] `sysctl kernel.kexec_load_disabled` returns 1 (paranoid only)
+- [ ] `sysctl kernel.sysrq` returns 4 (paranoid only: restricted)
+- [ ] `sysctl kernel.io_uring_disabled` returns 1 (paranoid only)
+- [ ] `sysctl net.ipv4.tcp_timestamps` returns 0 (paranoid only; daily: 1)
+- [ ] EarlyOOM is running (`systemctl status earlyoom`) — OOM killer for desktop systems
 
 ## Root and privilege hardening
 - [ ] `sudo -u root whoami` works only from wheel user

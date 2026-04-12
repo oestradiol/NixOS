@@ -6,8 +6,8 @@ in {
   config = lib.mkMerge [
     # === PARANOID: Comprehensive anti-fingerprinting ===
     (lib.mkIf paranoid {
-      # 1. machine-id: Already handled via persistMachineId = false
-      #    Regenerates unique ID on every boot
+      # 1. machine-id: Handled via machineIdValue = Whonix shared ID
+      #    Uses stable Whonix ID to blend with all Whonix users
 
       # 2. MAC Address Randomization
       # Use systemd.link for persistent randomization across boots
@@ -43,8 +43,8 @@ in {
 
     # === DAILY: Relaxed fingerprinting protection ===
     (lib.mkIf daily {
-      # Machine-id: Persistent for operational stability (D-Bus, Steam, etc.)
-      # persistMachineId = true in daily.nix
+      # Machine-id: Systemd-generated unique stable ID
+      # Both profiles persist machine-id; daily uses default generated ID
       
       # MAC: Stable per-network (default NetworkManager behavior)
       # WiFi uses stable cloned MAC per network (privacy without breaking WiFi)

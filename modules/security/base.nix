@@ -26,6 +26,12 @@ in {
     "kernel.unprivileged_bpf_disabled" = 1;
     "net.core.bpf_jit_harden" = 2;
     "kernel.perf_event_paranoid" = 3;
+
+    # Stronger kernel controls (Madaidan-aligned)
+    "kernel.kexec_load_disabled" = lib.mkIf sec.kernelHardening.kexecLoadDisabled 1;
+    "kernel.sysrq" = lib.mkIf sec.kernelHardening.sysrqRestrict 4;  # 4 = only sync/reboot
+    "kernel.modules_disabled" = lib.mkIf sec.kernelHardening.modulesDisabled 1;
+    "kernel.io_uring_disabled" = lib.mkIf sec.kernelHardening.ioUringDisabled 1;
     "fs.protected_symlinks" = 1;
     "fs.protected_hardlinks" = 1;
     "fs.protected_fifos" = 2;

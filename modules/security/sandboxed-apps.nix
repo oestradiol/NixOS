@@ -10,12 +10,13 @@
 # - GPU device nodes exposed (required for rendering)
 # - /run partially bound (D-Bus, XDG runtime - not full /run)
 # - /var bound readonly (system state compatibility)
+# - D-Bus: filtered via xdg-dbus-proxy when sandbox.dbusFilter = true
 #
 # This is DAMAGE REDUCTION, not strong hostile-content isolation.
-# For strong isolation, use VM isolation (vmIsolation.enable) instead.
+# For strong isolation, use VM isolation (sandbox.vms) instead.
 { config, lib, pkgs, ... }:
 let
-  cfg = config.myOS.security.sandboxedApps;
+  sandbox = config.myOS.security.sandbox;
   inherit (config.myOS) profile;
 
   # Generic bubblewrap wrapper for GUI applications
@@ -53,12 +54,51 @@ let
       [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]] && PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
       [[ -d /dev/dri ]] && GPU_DEV="/dev/dri"
       
+      # D-Bus filtering setup (when enabled via sandbox.dbusFilter)
+      DBUS_PROXY_SOCK=""
+      DBUS_SYSTEM_PROXY_SOCK=""
+      ${if sandbox.dbusFilter then ''
+      DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
+      DBUS_SYSTEM_PROXY_SOCK="$RUNTIME/dbus-system-proxy.sock"
+      
+      # Start xdg-dbus-proxy for filtered SESSION bus access
+      # More permissive than browsers: allow broader portal and app communication
+      ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
+        "$DBUS_SESSION_BUS_ADDRESS" \
+        "$DBUS_PROXY_SOCK" \
+        --filter \
+        --talk=org.freedesktop.portal.* \
+        --talk=org.a11y.Bus \
+        --talk=org.mpris.MediaPlayer2.* \
+        --broadcast=org.freedesktop.portal.*=@/org/freedesktop/portal/* &
+      DBUS_PID=$!
+      
+      # Start xdg-dbus-proxy for filtered SYSTEM bus access
+      ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
+        "unix:path=/run/dbus/system_bus_socket" \
+        "$DBUS_SYSTEM_PROXY_SOCK" \
+        --filter \
+        --talk=org.freedesktop.NetworkManager \
+        --talk=org.freedesktop.login1 &
+      DBUS_SYSTEM_PID=$!
+      
+      cleanup() { 
+        kill $DBUS_PID 2>/dev/null || true
+        kill $DBUS_SYSTEM_PID 2>/dev/null || true
+      }
+      trap cleanup EXIT
+      '' else "# D-Bus filtering disabled — direct D-Bus access for compatibility
+      :"}
+      
       # Build runtime bindings - daily gets compatibility, paranoid would get minimal
       # (but sandboxed apps are disabled on paranoid anyway)
       ${if minimal then "RUN_BINDS=\"\"" else ''
       # Daily profile: selective /run binds for compatibility
       RUN_BINDS=""
       [[ -d /run/user/$(id -u) ]] && RUN_BINDS="$RUN_BINDS --ro-bind /run/user/$(id -u) /run/user/$(id -u)"
+      ''}
+      # Only bind D-Bus socket directly if NOT using filtered proxy
+      ${lib.optionalString (!minimal && !sandbox.dbusFilter) ''
       [[ -S /run/dbus/system_bus_socket ]] && RUN_BINDS="$RUN_BINDS --ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket"
       ''}
       
@@ -80,7 +120,7 @@ let
         --ro-bind /lib /lib \
         --ro-bind /lib64 /lib64 \
         ''${RUN_BINDS} \
-        ''${lib.optionalString bindVar "--ro-bind /var /var \\`"} \
+        ''${lib.optionalString bindVar "--ro-bind /var /var"} \
         --bind "$RUNTIME" "$HOME" \
         --tmpfs /tmp \
         ''${WAYLAND_SOCK:+--ro-bind "$WAYLAND_SOCK" "$WAYLAND_SOCK"} \
@@ -151,7 +191,7 @@ let
   };
 
 in {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf sandbox.apps {
     environment.systemPackages = lib.mkMerge [
       # Daily profile: VRCX and Windsurf with /var bind for compatibility
       (lib.mkIf (profile == "daily") [

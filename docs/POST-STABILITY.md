@@ -237,7 +237,7 @@ For apps not available as Flatpak, use the bubblewrap wrappers:
 - **GPU passthrough** (`--dev-bind /dev/dri`) — GPU drivers are a known escape vector via DMA attacks
 - These wrappers provide **helpful containment**, not "trustworthy hostile-content isolation"
 
-**For maximum isolation of untrusted content**, use VM isolation (`vmIsolation.enable`) instead of bubblewrap.
+**For maximum isolation of untrusted content**, use VM isolation (`sandbox.vms`) instead of bubblewrap.
 
 ## 12. Setup KeePassXC with permanence (paranoid profile only)
 KeePassXC is available in the paranoid profile only. Daily uses Bitwarden (Flatpak). The configuration is persisted via impermanence:
@@ -506,10 +506,12 @@ myOS.security.aide.enable = false;
 - AIDE + ClamAV: Maximum coverage (known + unknown threats), but AIDE may alert on legitimate changes
 - ClamAV-only: Fewer false positives, but zero-day malware won't be detected until signatures exist
 
-### D-Bus filtering for sandboxed browsers
+### D-Bus filtering for sandboxed browsers and apps
 **Status**: Enabled by default in paranoid; optional in daily
 
-**The problem**: Bubblewrap docs warn that unfiltered D-Bus access can allow systemd exploitation. Currently, sandboxed browsers bind `/run` read-only, exposing full D-Bus sockets.
+**The problem**: Bubblewrap docs warn that unfiltered D-Bus access can allow systemd exploitation. Sandboxed browsers and apps bind `/run` read-only, exposing full D-Bus sockets.
+
+**Scope**: D-Bus filtering now applies to both sandboxed browsers (`safe-firefox`, `safe-tor-browser`, `safe-mullvad-browser`) and sandboxed apps (`safe-vrcx`, `safe-windsurf`).
 
 **The solution**: `xdg-dbus-proxy` provides filtered D-Bus access with a deny-by-default policy.
 
@@ -527,12 +529,12 @@ myOS.security.aide.enable = false;
 
 **To enable in daily** (optional hardening):
 ```nix
-myOS.security.sandboxedBrowsers.dbusFilter = true;
+myOS.security.sandbox.dbusFilter = true;
 ```
 
 **To disable in paranoid** (if functionality breaks):
 ```nix
-myOS.security.sandboxedBrowsers.dbusFilter = lib.mkForce false;
+myOS.security.sandbox.dbusFilter = lib.mkForce false;
 ```
 
 **Test in paranoid** (verify D-Bus filtering works correctly):
@@ -586,7 +588,7 @@ Same steps as paranoid. Note that D-Bus filtering is disabled by default in dail
 
 **Verdict**: The D-Bus filter reduces **one IPC surface**. It does not provide "trustworthy browser isolation" against motivated attackers. For hostile content, use VM isolation.
 
-**For maximum isolation**: Use `vmIsolation.enable` and run browsers in a VM instead of relying on bubblewrap D-Bus filtering.
+**For maximum isolation**: Use `sandbox.vms` and run browsers in a VM instead of relying on bubblewrap D-Bus filtering.
 
 ### Manual User Checks (verify personally)
 **After install, personally verify these items that cannot be automated:**
@@ -603,7 +605,7 @@ Same steps as paranoid. Note that D-Bus filtering is disabled by default in dail
 | **Cookie behavior** | Check lock icon on any site → Cookies | Should show dFPI/cross-site blocking active |
 | **ETP Strict active** | about:preferences#privacy → Enhanced Tracking Protection | Should show "Strict" selected |
 | **Safe-browsing local-only** | about:config `browser.safebrowsing.downloads.remote.enabled` | Should be `false` |
-| **Machine-id rotation + systemd state** | Paranoid: `cat /etc/machine-id` before/after reboot; check `journalctl --boot` for errors | Machine-id should change; no systemd service failures from state mismatch |
+| **Machine-id (paranoid)** | `cat /etc/machine-id` | Should show `b08dfa6083e7567a1921a715000001fb` (Whonix shared ID) |
 | **WireGuard killswitch active** | Paranoid: `sudo nft list table inet filter | grep 'policy drop'` | Should show default-deny policy; `wg-mullvad` interface explicitly allowed |
 | **WireGuard tunnel established** | `sudo wg show wg-mullvad` | Should show handshake and transfer stats |
 | **No leaks when tunnel down** | `sudo systemctl stop wg-quick-wg-mullvad; curl https://example.com; sudo systemctl start wg-quick-wg-mullvad` | Curl should fail/timeout when tunnel down; succeeds when up |
@@ -672,7 +674,7 @@ These options are available but not enabled by default. Enable one at a time and
 ### Entropy hardening (already partially implemented)
 The safe entropy hardening techniques are **already enabled automatically**:
 - `randomize_kstack_offset=on` — kernel stack randomization per-syscall
-- `page_alloc.shuffle=1` — randomize free page list order (enabled on paranoid, daily has it too)
+- `page_alloc.shuffle=1` — randomize free page list order (enabled on both profiles)
 
 **Why no manual steps needed:**
 Modern CPUs (Ryzen 5 3600 included) have hardware RNG (RDRAND) providing plenty of entropy. The remaining "entropy hardening" techniques from hardening guides are **high-risk, low-value** for desktops:
@@ -685,7 +687,7 @@ Modern CPUs (Ryzen 5 3600 included) have hardware RNG (RDRAND) providing plenty 
 # Check randomize_kstack_offset
 cat /proc/cmdline | grep randomize_kstack_offset
 
-# Check page_alloc.shuffle (paranoid should show 1, daily shows 1 too now)
+# Check page_alloc.shuffle (paranoid should show 1, daily shows 1)
 sysctl vm.page_alloc.shuffle
 
 # Check entropy availability (should be >1000 on modern hardware)
@@ -693,6 +695,116 @@ cat /proc/sys/kernel/random/entropy_avail
 ```
 
 **Recommendation:** Leave as-is. The implemented techniques provide security benefit without the breakage risk of full entropy hardening.
+
+### Secure Boot end-state: modules_disabled=1 (optional paranoid hardening)
+
+**Current baseline**: `module.sig_enforce=1` (only signed modules load)
+
+**Optional end-state**: `kernel.modules_disabled=1` (no new modules after boot)
+
+**Difference**:
+- `module.sig_enforce=1`: Validates module signatures but allows runtime module loading
+- `modules_disabled=1`: One-way toggle; once set, NO new modules can load until reboot
+
+**Why this is staged to POST-STABILITY**:
+- `modules_disabled=1` is a **one-way operation** — you cannot re-enable module loading without rebooting
+- Required modules must be loaded at boot (NVIDIA, WireGuard, etc.) — if any are missing, system may not function
+- `module.sig_enforce=1` provides most of the security benefit without the operational risk
+
+**To enable (paranoid only, after stability verified)**:
+```nix
+# In profiles/paranoid.nix:
+myOS.security.kernelHardening.modulesDisabled = lib.mkForce true;
+```
+
+**Prerequisites before enabling**:
+1. System must be stable for 2+ weeks with all hardware working
+2. Verify all required modules load at boot:
+   ```bash
+   lsmod | grep -E "(nvidia|wireguard|kvm|amdgpu)"  # Your required modules
+   ```
+3. Test that no late-loading modules are needed (USB devices, etc.)
+4. Have recovery USB ready (if modules_disabled breaks something, you can't load fixes)
+
+**Verification after enabling**:
+```bash
+# Check modules_disabled is active
+sysctl kernel.modules_disabled  # Should show 1
+
+# Try to load a module (should fail)
+sudo modprobe floppy  # Or any unused module
+# Expected: "module loading is disabled"
+```
+
+**Recovery if broken**:
+1. Reboot into previous generation (modules_disabled resets to 0 on boot)
+2. Disable the option in profile, rebuild
+3. If can't boot: use NixOS installer USB, mount, edit profile, rebuild
+
+**Recommendation**: Keep `modulesDisabled = false` (default). The marginal security gain over `module.sig_enforce=1` is small; the operational risk is high. Enable only if your threat model requires absolute kernel attack surface reduction.
+
+---
+
+### Kernel lockdown mode (optional paranoid hardening)
+
+**Status**: Not implemented by default. May auto-enable with Secure Boot depending on kernel config.
+
+**What it is**: Linux Security Module (LSM) that prevents direct/indirect kernel image access. Added in kernel 5.4.
+
+**Two modes**:
+- **Integrity** (`lockdown=integrity`): Less restrictive - prevents kernel modification
+- **Confidentiality** (`lockdown=confidentiality`): Most restrictive - also blocks kernel memory inspection
+
+**What it blocks**:
+- `/dev/mem`, `/dev/kmem`, `/dev/kcore`, `/dev/ioports`
+- BPF kprobes, MSR register access, PCI BAR access
+- ACPI table override, debugfs access
+- Unsigned kexec, unencrypted hibernation
+
+**To enable**:
+```nix
+# In modules/core/boot.nix, add to kernelParams:
+boot.kernelParams = [
+  "lsm=lockdown"           # Enable lockdown LSM
+  "lockdown=integrity"     # Or "confidentiality" for maximum restriction
+];
+```
+
+**Prerequisites before enabling**:
+1. System stable with Secure Boot working (lockdown often auto-enables with SB)
+2. Check if already active: `dmesg | grep -i lockdown`
+3. **CRITICAL**: Test NVIDIA driver compatibility:
+   ```bash
+   # After enabling, verify NVIDIA still works
+   nvidia-smi
+   glxinfo | grep "NVIDIA"
+   # Test game/Steam launch
+   ```
+4. Verify debug tools still work if needed: `perf`, `bpftool`, `dd` to `/dev/mem` (should fail)
+
+**Verification after enabling**:
+```bash
+# Check lockdown is active
+dmesg | grep -i "lockdown:.*mode"
+# Should show: "Lockdown: integrity" or "Lockdown: confidentiality"
+
+# Test restriction
+echo 1 | sudo tee /dev/mem  # Should fail with "Lockdown: ... is restricted"
+```
+
+**Recovery if broken**:
+1. Remove kernel parameters from boot menu (press 'e' in systemd-boot)
+2. Boot, then edit `modules/core/boot.nix` to remove lockdown params
+3. Rebuild: `sudo nixos-rebuild switch --flake /etc/nixos#nixos`
+
+**Trade-offs**:
+- **Pro**: Major kernel attack surface reduction; prevents many kernel exploitation techniques
+- **Con**: May break NVIDIA proprietary driver (needs kernel access), debugging tools, some hardware monitoring
+- **Auto-enable**: Many kernels auto-enable lockdown when Secure Boot is active
+
+**Recommendation**: Test after Secure Boot is stable. Start with `integrity` mode. Skip if NVIDIA breaks or if you need debugging access.
+
+---
 
 ### AppArmor profiles (currently framework-only)
 AppArmor is enabled but no custom profiles are loaded. The framework provides minimal baseline protection. Add profiles only after system is stable:
@@ -752,6 +864,36 @@ The code currently uses `graphene-hardened-light` (not full), which is less aggr
 # environment.memoryAllocator.provider =
 #   lib.mkIf sec.hardenedMemory.enable "graphene-hardened";  # No -light suffix
 ```
+
+---
+
+## 22. System services verification
+
+The following services are enabled but tested implicitly via desktop functionality. Verify they work:
+
+### polkit (PolicyKit)
+- [ ] Authentication dialogs work (mounting USB drives, changing network settings)
+- [ ] `systemctl status polkit` shows active (running)
+- [ ] No polkit errors in `journalctl -u polkit`
+
+### udisks2 (Disk Management)
+- [ ] USB drives auto-mount when inserted
+- [ ] `systemctl status udisks2` shows active (running)
+- [ ] KDE partition manager or GNOME disks can view drive info
+
+### fwupd (Firmware Updates)
+- [ ] `fwupdmgr get-devices` lists your hardware
+- [ ] `fwupdmgr refresh` updates metadata successfully
+- [ ] Check for available updates: `fwupdmgr get-updates` (if any exist)
+- [ ] **Note**: Most firmware updates require reboot to Windows or vendor tools on this hardware
+
+### fstrim (SSD TRIM)
+- [ ] TRIM is enabled: `systemctl status fstrim.timer` shows active (waiting)
+- [ ] Check last run: `systemctl list-timers fstrim.timer`
+- [ ] Verify SSD supports TRIM: `lsblk -D` (shows DISC-GRAN and DISC-MAX values)
+- [ ] Manual test (optional): `sudo fstrim -v /` (shows bytes trimmed)
+
+**If services fail**: Check logs with `journalctl -u <service-name>` and report issues.
 
 ---
 
@@ -878,7 +1020,7 @@ lsusb | grep -i -E "(yubi|fido|u2f)"
 **Fix**: Documentation updated to acknowledge this limitation.  
 **Current claim**: "National-level" isolation is overstated for GPU-bound apps.  
 **Actual isolation**: UID namespace + process namespace + FS isolation = strong, but GPU passthrough is a known escape vector (historical GPU driver bugs allow DMA attacks). Network namespace is NOT isolated for browsers.  
-**Recommendation**: For maximum isolation of untrusted content, use VM isolation (`vmIsolation.enable`) instead of bubblewrap, or run `safe-firefox` on a system without GPU passthrough (software rendering).
+**Recommendation**: For maximum isolation of untrusted content, use VM isolation (`sandbox.vms`) instead of bubblewrap, or run `safe-firefox` on a system without GPU passthrough (software rendering).
 
 ### [TRIAL] Test Browser Without GPU Passthrough
 **Purpose**: Evaluate usability of software rendering for maximum isolation.  

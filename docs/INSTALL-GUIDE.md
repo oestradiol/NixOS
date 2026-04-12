@@ -114,9 +114,11 @@ Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 ### System persistence allowlist
 `/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth`, `/var/lib/flatpak`, `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn`, SSH host keys, `/etc/{passwd,shadow,group,gshadow,subuid,subgid}`
 
-**Note**: `/etc/machine-id` is **profile-dependent**:
-- **daily**: persisted (operational stability for D-Bus, Steam, network)
-- **paranoid**: ephemeral (randomized each boot for privacy)
+**Note**: `/etc/machine-id` is **persisted on both profiles**:
+- **daily**: systemd-generated unique stable ID (operational stability for D-Bus, Steam, network)
+- **paranoid**: Whonix shared ID `b08dfa6083e7567a1921a715000001fb` (privacy: blends with all Whonix users)
+
+Reference: https://github.com/Whonix/dist-base-files/blob/master/etc/machine-id
 
 ### User data persistence model (profile-dependent)
 

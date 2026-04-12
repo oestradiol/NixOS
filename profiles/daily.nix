@@ -10,11 +10,11 @@
   # - ptraceScope: 1 (not 2) - EAC anti-cheat requirement
   # - disableSMT: false - 30-40% CPU performance loss unacceptable for gaming
   # - wireguardMullvad.enable: false (default) - Daily uses Mullvad app, not self-owned WireGuard
-  # - sandboxedBrowsers: false - Base Firefox with maximal prefs instead
+  # - sandbox.browsers: false - Base Firefox with maximal prefs instead
   # - auditd: false - Performance overhead, noise for daily use
   # - usbRestrict: false - External hubs/docks need to work
-  # - vmIsolation: false - Significant resource overhead
-  # - Kernel: base tier only (initOnFree/pageAllocShuffle/oopsPanic disabled)
+  # - sandbox.vms: false - Significant resource overhead
+  # - Kernel: base tier only (initOnFree/oopsPanic disabled)
   #
   # What IS maximally enabled:
   # - All base kernel hardening (initOnAlloc, slabNomerge, pti, vsyscallNone, moduleBlacklist)
@@ -42,8 +42,10 @@
     impermanence.enable = true;
     agenix.enable = true;
 
-    # Machine ID: persistent on daily for operational stability (D-Bus, Steam, network)
+    # Machine ID: systemd-generated stable ID (operational stability)
+    # Paranoid uses Whonix shared ID for privacy
     persistMachineId = true;
+    # machineIdValue = null (default) - let systemd generate unique ID
 
     # Sleep states disabled (16GB RAM + 8GB swap insufficient; NVIDIA issues)
     allowSleep = false;
@@ -54,8 +56,8 @@
     tpm.enable = false;
 
     # Browser: base Firefox with moderate hardening (not sandboxed wrappers)
-    # Compromise: sandboxedBrowsers.enable = false for gaming/streaming convenience
-    sandboxedBrowsers.enable = false;
+    # Compromise: sandbox.browsers = false for gaming/streaming convenience
+    sandbox.browsers = false;
 
     # CPU: SMT enabled for gaming performance (nosmt would cost 30-40% throughput)
     disableSMT = false;
@@ -87,8 +89,9 @@
     lockRoot = true;     # Locked root account - no compromise here
 
     # VM/App sandboxing: enabled for untrusted apps
-    vmIsolation.enable = false;   # Significant overhead, manual enable if needed
-    sandboxedApps.enable = true;  # VRCX, Windsurf wrapped
+    sandbox.vms = false;   # Significant overhead, manual enable if needed
+    sandbox.apps = true;     # VRCX, Windsurf wrapped
+    sandbox.dbusFilter = false;  # Direct D-Bus access for compatibility
 
     # Kernel hardening (maximal for daily - only disable what breaks apps or severe perf)
     kernelHardening = {
@@ -112,6 +115,13 @@
       initOnFree = false;
       # oopsPanic: GPU driver bugs (common with VRChat/NVIDIA) become crashes
       oopsPanic = false;
+
+      # Stronger kernel controls (Madaidan-aligned): DISABLED on daily
+      # These are one-way toggles that could break gaming/VR workflows
+      kexecLoadDisabled = false;   # Could break kdump for debugging
+      sysrqRestrict = false;       # May need SysRq for GPU crash recovery
+      modulesDisabled = false;     # May need to load modules for VR/gaming
+      ioUringDisabled = false;     # Gaming/Steam may use io_uring for I/O
     };
 
     # Hardened allocator: DISABLED (stability risk)

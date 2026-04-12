@@ -1,6 +1,8 @@
 { config, lib, pkgs, ... }:
 let
-  cfg = config.myOS.security.sandboxedBrowsers;
+  cfg = config.myOS.security.sandbox;
+  browsersEnabled = config.myOS.security.sandbox.browsers;
+  dbusFilterEnabled = config.myOS.security.sandbox.dbusFilter;
 
   # Browser sandboxing: UID isolation (100000:100000), process namespace, minimal FS access
   #
@@ -15,7 +17,7 @@ let
   # - Network namespace is NOT isolated (--unshare-net not used) — browser has full host network
   # - Selective /run binds: XDG runtime, D-Bus system socket (not full /run)
   # - GPU passthrough (--dev-bind /dev/dri) — GPU drivers are known escape vectors via DMA
-  # - D-Bus filtering is OPTIONAL (disabled by default) — enable via myOS.security.sandboxedBrowsers.dbusFilter
+  # - D-Bus filtering is OPTIONAL (disabled by default) — enable via myOS.security.sandbox.dbusFilter
   #   When disabled: D-Bus system socket still exposed — potential breakout path
   # - Even with D-Bus filtering, these wrappers provide DAMAGE REDUCTION, not strong isolation
   #
@@ -29,7 +31,7 @@ let
   # They do NOT provide "trustworthy hostile-content isolation" against motivated attackers.
   # For malicious PDFs, suspicious executables, or untrusted web content: use VM isolation.
   #
-  # For maximum isolation: enable myOS.security.vmIsolation and run browsers in a VM.
+  # For maximum isolation: enable myOS.security.sandbox.vms and run browsers in a VM.
   #
   # References:
   # - Tor Browser D-Bus namespace: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
@@ -71,10 +73,10 @@ let
       [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]] && PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
       [[ -d /dev/dri ]] && GPU_DEV="/dev/dri"
       
-      # D-Bus filtering setup (when enabled)
+      # D-Bus filtering setup (when enabled via sandbox.dbusFilter)
       DBUS_PROXY_SOCK=""
       DBUS_SYSTEM_PROXY_SOCK=""
-      ${if cfg.dbusFilter then ''
+      ${if dbusFilterEnabled then ''
       DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
       DBUS_SYSTEM_PROXY_SOCK="$RUNTIME/dbus-system-proxy.sock"
       
@@ -366,11 +368,11 @@ let
   };
 
 in {
-  environment.systemPackages = lib.optionals config.myOS.security.sandboxedBrowsers.enable [
+  environment.systemPackages = lib.optionals browsersEnabled [
     safeFirefox safeTor safeMullvad safeFirefoxDesktop safeTorDesktop safeMullvadDesktop
   ];
 
-  programs.firefox = lib.mkIf (!config.myOS.security.sandboxedBrowsers.enable) {
+  programs.firefox = lib.mkIf (!browsersEnabled) {
     enable = true;
     policies = {
       DisableTelemetry = true;

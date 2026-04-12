@@ -33,8 +33,8 @@ Never trust a status line by itself. For each claim, check four layers:
 - `modules/security/networking.nix` — Mullvad app mode networking, nftables fallback for app mode
 - `modules/security/wireguard.nix` — Self-owned WireGuard stack for paranoid (single-source-of-truth config + firewall)
 - `modules/security/browser.nix` — Firefox policies or sandboxed browser wrappers (UID 100000, bubblewrap)
-  - When `sandboxedBrowsers.enable = false` (daily): Base Firefox with 60+ hardening prefs (all telemetry disabled, safe browsing local-only, prefetch blocked, HTTPS-only, dFPI, ETP strict, OCSP hard-fail, container tabs, shutdown sanitizing, FPP fingerprinting protection per arkenfox v140+)
-  - When `sandboxedBrowsers.enable = true` (paranoid): Base Firefox disabled, only sandboxed wrappers available (safe-firefox with full hardened user.js including RFP, safe-tor-browser, safe-mullvad-browser)
+  - When `sandbox.browsers = false` (daily): Base Firefox with 60+ hardening prefs (all telemetry disabled, safe browsing local-only, prefetch blocked, HTTPS-only, dFPI, ETP strict, OCSP hard-fail, container tabs, shutdown sanitizing, FPP fingerprinting protection per arkenfox v140+)
+  - When `sandbox.browsers = true` (paranoid): Base Firefox disabled, only sandboxed wrappers available (safe-firefox with full hardened user.js including RFP, safe-tor-browser, safe-mullvad-browser)
 - `modules/security/flatpak.nix` — flatpak + xdg portals
 - `modules/security/sandboxed-apps.nix` — bubblewrap wrappers for non-Flatpak apps (VRCX, Windsurf)
 - `modules/home/ghost.nix` — Signal (Flatpak) only; browsers via system wrappers
@@ -48,7 +48,7 @@ Never trust a status line by itself. For each claim, check four layers:
 - `modules/security/vm-isolation.nix` — KVM/QEMU, virt-manager, AMD/Intel IOMMU
 
 ### Governance
-- `modules/security/governance.nix` — 28 build-time assertions
+- `modules/security/governance.nix` — 30 build-time assertions
 - `modules/security/scanners.nix` — ClamAV, AIDE timers
 
 ---
@@ -179,7 +179,7 @@ For each security claim, verify the code matches the documentation.
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| 28 assertions | `modules/security/governance.nix` lines 7-118 | ✅ VERIFIED |
+| 30 assertions | `modules/security/governance.nix` lines 7-140 | ✅ VERIFIED |
 | Paranoid requires sandboxed browsers | Lines 17-18 | ✅ VERIFIED |
 | Paranoid requires wireguardMullvad | Lines 21-26 | ✅ VERIFIED |
 | Paranoid ghost not in wheel | Lines 61-62 | ✅ VERIFIED |

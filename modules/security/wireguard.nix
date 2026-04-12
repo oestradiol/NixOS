@@ -189,13 +189,6 @@ in {
           }
         }
 
-        # NAT for WireGuard interface (masquerade outgoing traffic)
-        table ip nat {
-          chain postrouting {
-            type nat hook postrouting priority srcnat; policy accept;
-            oifname "${wgInterface}" masquerade
-          }
-        }
       '';
     };
 
@@ -207,15 +200,13 @@ in {
       fallbackDns = [];  # No fallback - if tunnel DNS fails, queries fail (secure)
     };
 
-    # sysctl settings for WireGuard and security
+    # sysctl settings for WireGuard interface security
+    # Note: IP forwarding NOT enabled - this is a single-host client, not a router
     boot.kernel.sysctl = {
-      # Enable IP forwarding (required for WireGuard routing)
-      "net.ipv4.ip_forward" = true;
-      "net.ipv6.conf.all.forwarding" = true;
-
       # Strict reverse path filtering (prevent IP spoofing)
       "net.ipv4.conf.all.rp_filter" = 1;
       "net.ipv4.conf.default.rp_filter" = 1;
+      "net.ipv4.conf.${wgInterface}.rp_filter" = 1;
 
       # Don't accept redirects (security)
       "net.ipv4.conf.all.accept_redirects" = 0;

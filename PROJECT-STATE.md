@@ -16,7 +16,7 @@
 - Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
 - AppArmor on daily: keep enabled, monitor for breakage.
 - All negligible-impact hardening on daily: keep enabled, monitor post-install.
-- `init_on_free=1` and `page_alloc.shuffle=1`: paranoid-only (measurable impact).
+- `init_on_free=1`: paranoid-only (measurable impact).
 - `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
 - Browser sandboxing: UID isolation (100000), bubblewrap process namespaces. Firefox hardening is arkenfox-inspired with custom preferences; not clean arkenfox alignment.
 - VM isolation: implemented as knob, disabled by default, compatible with daily driver.
@@ -33,7 +33,7 @@
 - Dangerous kernel module blacklist (dccp, sctp, rds, tipc, firewire).
 - USB device authorization restricted on paranoid (`myOS.security.usbRestrict`).
 - `debugfs=off`, `randomize_kstack_offset=on` boot parameters.
-- Browser policy module with two modes: base Firefox with arkenfox-inspired hardening (geo disabled, DoH disabled for VPN DNS, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandboxedBrowsers.enable = true` (paranoid).
+- Browser policy module with two modes: base Firefox with arkenfox-inspired hardening (geo disabled, DoH disabled for VPN DNS, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandbox.browsers = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandbox.browsers = true` (paranoid).
 - Networking killswitch with DHCP/DNS exceptions for tunnel establishment.
 - Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
@@ -46,7 +46,7 @@
 **Goal**: Minimize trackable hardware/software identifiers that can fingerprint the system across boots/sessions.
 
 **Implemented mitigations**:
-- **machine-id**: Randomized per boot (`persistMachineId = false`) - systemd generates new ID each boot
+- **machine-id**: Whonix shared ID on paranoid (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) - blends with Whonix users; systemd-generated stable ID on daily
 - **MAC addresses**: Randomized for all interfaces via `systemd.network.links` with `MACAddressPolicy = "random"`
 - **WiFi scanning**: Random MAC during network scans (`wifi.scanRandMacAddress = true`)
 - **IPv6**: Privacy extensions enabled (randomized temporary addresses)
@@ -62,7 +62,7 @@
 - **USB device topology**: Persistent port/device relationships
 
 ### Daily profile (operational stability prioritized)
-- **machine-id**: Persistent (`persistMachineId = true`) - required for D-Bus, Steam, systemd state
+- **machine-id**: Systemd-generated stable ID (`persistMachineId = true`) - required for D-Bus, Steam, systemd state
 - **MAC addresses**: Stable per network (`MACAddressPolicy = "stable"`) - prevents WiFi captive portal re-auth issues
 - **WiFi scanning**: Random MAC during scans only
 - **IPv6**: Privacy extensions enabled (standard privacy)
@@ -97,7 +97,7 @@
 
 Users should not sideload untrusted binaries into these directories. The Nix store (`/nix/store`) is read-only, hash-verified, and excluded from scans by design.
 
-- 28 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
+- 30 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
 - **Build-time checks**: `flake.nix` includes `checks.x86_64-linux` with nixos-config and paranoid-config evaluation tests; run via `nix flake check`.
 - **Audit script**: `scripts/audit-tutorial.sh` runs static checks; failures now propagate (removed `|| true` masking).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
@@ -109,8 +109,8 @@ Users should not sideload untrusted binaries into these directories. The Nix sto
 ## Configurable myOS.security options
 All key hardening knobs are tunable per-profile without code changes:
 - `kernelHardening.{initOnAlloc, initOnFree, slabNomerge, pageAllocShuffle, moduleBlacklist, pti, vsyscallNone, oopsPanic, moduleSigEnforce, disableIcmpEcho}`
-- `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `vmIsolation.enable`, `sandboxedApps.enable`
-- `disableSMT`, `sandboxedBrowsers.enable`, `hardenedMemory.enable`
+- `apparmor`, `auditd`, `lockRoot`, `usbRestrict`, `sandbox.vms`, `sandbox.apps`
+- `disableSMT`, `sandbox.browsers`, `hardenedMemory.enable`
 - `ptraceScope` (kernel.yama.ptrace_scope: 1 for EAC compatibility, 2 for hardening)
 - `swappiness` (vm.swappiness: lower values for gaming, higher for systems with limited RAM)
 - `secureBoot.enable`, `tpm.enable`, `impermanence.enable`, `agenix.enable`
@@ -162,7 +162,7 @@ All key hardening knobs are tunable per-profile without code changes:
 - QEMU hardening: seccomp sandbox, SPICE/VNC TLS
 - virt-manager GUI enabled when knob active
 - Users `player` and `ghost` added to `libvirtd` group
-- **Knob**: `myOS.security.vmIsolation.enable` (default: false)
+- **Knob**: `myOS.security.sandbox.vms` (default: false)
 - **Compatible with daily driver**, significant resource overhead when enabled
 
 ## Kernel hardening knobs (Madaidan-research grounded)
@@ -174,6 +174,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 - `moduleBlacklist` — blacklist dangerous kernel modules (dccp, sctp, rds, tipc, firewire)
 - `pti=on` — Kernel Page Table Isolation (Meltdown mitigation)
 - `vsyscall=none` — disable vsyscalls (ROP prevention)
+- `pageAllocShuffle` — randomize page allocator freelists (<1% impact, no gaming breakage)
 
 **Enabled on paranoid (explicit with mkForce):**
 - `initOnFree` — zero pages on free (1-7% overhead)
@@ -233,14 +234,14 @@ All tunable via `myOS.security.kernelHardening.*`:
 | **Controllers** | Enabled (`controllers.enable = true`) | Disabled (`controllers.enable = lib.mkForce false`) | PASS |
 | **Gamescope** | Enabled | Disabled (`programs.gamescope.enable = lib.mkForce false`) | PASS |
 | **Gamemode** | Enabled | Disabled (`programs.gamemode.enable = lib.mkForce false`) | PASS |
-| **Browser** | Base Firefox (`sandboxedBrowsers.enable = false`) | Sandboxed only (`sandboxedBrowsers.enable = lib.mkForce true`) | PASS |
+| **Browser** | Base Firefox (`sandbox.browsers = false`) | Sandboxed only (`sandbox.browsers = lib.mkForce true`) | PASS |
 | **VPN** | Mullvad app (`wireguardMullvad.enable = false`, default) | Self-owned WireGuard (`wireguardMullvad.enable = lib.mkForce true`) | PASS |
 | **SMT/Hyperthreading** | Enabled (`disableSMT = false`) | Disabled (`disableSMT = lib.mkForce true`) | PASS |
 | **USB restriction** | Disabled (`usbRestrict = false`) | Enabled (`usbRestrict = lib.mkForce true`) | PASS |
 | **Audit logging** | Disabled (`auditd = false`) | Enabled (`auditd = lib.mkForce true`) | PASS |
-| **VM isolation** | Disabled (`vmIsolation.enable = false`) | Enabled (`vmIsolation.enable = lib.mkForce true`) | PASS |
+| **VM isolation** | Disabled (`sandbox.vms = false`) | Enabled (`sandbox.vms = lib.mkForce true`) | PASS |
 | **Home persistence** | Full Btrfs subvolume | Selective tmpfs + allowlist | PASS |
-| **Machine-id** | Persistent (`persistMachineId = true`) | Random per boot (`persistMachineId = lib.mkForce false`) | PASS |
+| **Machine-id** | Systemd-generated stable (`persistMachineId = true`) | Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) | PASS |
 | **MAC addresses** | Stable per network | Random per device appearance (typically at boot) | PASS |
 | **ptrace scope** | 1 (EAC compatible) | 2 (strictest) | PASS |
 | **init_on_free** | Disabled (performance) | Enabled (`initOnFree = lib.mkForce true`) | PASS |
@@ -254,7 +255,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 - Broad desktop convenience: gaming, VR, sync, messenger sprawl allowed.
 - **VPN**: Mullvad app for convenience (key rotation, multihop, GUI controls). No strict killswitch required.
 - All proprietary apps sandboxed via Flatpak or bubblewrap wrappers.
-- **Privacy**: MAC stable per network, machine-id persistent (operational stability).
+- **Privacy**: MAC stable per network; machine-id is systemd-generated stable unique ID.
 
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
@@ -262,7 +263,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 - **VPN**: Self-owned WireGuard to Mullvad servers. No Mullvad app. NixOS owns tunnel state AND firewall policy (single source of truth). Deterministic killswitch generated from WireGuard config.
 - Lower persistence footprint (tmpfs home, selective allowlist).
 - Signal Desktop sandboxed via Flatpak.
-- **Privacy**: Randomized MAC per device appearance (typically at boot), random machine-id, TCP timestamps disabled.
+- **Privacy**: Randomized MAC per device appearance (typically at boot); machine-id is Whonix shared ID (blends with Whonix users); TCP timestamps disabled.
 
 ### Isolation truth
 - Boot specialisations separate behavior, not compromise.

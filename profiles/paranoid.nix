@@ -16,9 +16,11 @@
     impermanence.enable = lib.mkForce true;
     agenix.enable = lib.mkForce true;
 
-    # Machine ID: random on paranoid for privacy (less fingerprintable to local software)
-    # daily keeps it persistent for operational stability (D-Bus, systemd state)
-    persistMachineId = lib.mkForce false;
+    # Machine ID: Whonix shared ID for privacy (blends with all Whonix users)
+    # Default systemd-generated ID on daily for operational stability
+    # Reference: https://github.com/Whonix/dist-base-files/blob/master/etc/machine-id
+    persistMachineId = lib.mkForce true;
+    machineIdValue = lib.mkForce "b08dfa6083e7567a1921a715000001fb";
 
     # Sleep states disabled (16GB RAM + 8GB swap insufficient; NVIDIA issues)
     allowSleep = lib.mkForce false;
@@ -35,8 +37,8 @@
     # wireguardMullvad.dns = "10.64.0.1";  # Mullvad DNS through tunnel
 
     # Browser security (sandboxed only, with D-Bus filtering)
-    sandboxedBrowsers.enable = lib.mkForce true;
-    sandboxedBrowsers.dbusFilter = lib.mkForce true;  # Filtered D-Bus for stronger isolation
+    sandbox.browsers = lib.mkForce true;
+    sandbox.dbusFilter = lib.mkForce true;  # Filtered D-Bus for stronger isolation
 
     # CPU/System hardening
     disableSMT = lib.mkForce true;
@@ -58,8 +60,8 @@
 
     # VM tooling enabled (libvirtd, QEMU, KVM) — capability available, not automatic enforcement
     # To actually isolate browsers/apps in VMs: manually create VMs and run workloads there
-    vmIsolation.enable = lib.mkForce true;
-    sandboxedApps.enable = lib.mkForce true;
+    sandbox.vms = lib.mkForce true;
+    sandbox.apps = lib.mkForce true;
 
     # Kernel hardening - ALL paranoid-tier options enabled
     kernelHardening = {
@@ -76,6 +78,15 @@
       oopsPanic = lib.mkForce true;
       moduleSigEnforce = lib.mkForce true;
       disableIcmpEcho = lib.mkForce true;
+
+      # Stronger kernel controls (Madaidan-aligned): ENABLED on paranoid
+      # One-way toggles for attack surface reduction
+      kexecLoadDisabled = lib.mkForce true;   # Prevent runtime kernel replacement
+      sysrqRestrict = lib.mkForce true;       # Disable magic SysRq key
+      modulesDisabled = lib.mkForce false;    # DEFERRED: staged to POST-STABILITY
+      # modules_disabled=1 breaks late module loading; enable only after all
+      # required modules (NVIDIA, wireguard, etc.) are confirmed loaded at boot
+      ioUringDisabled = lib.mkForce true;     # Reduce io_uring attack surface
     };
 
     # Staged enablement (explicitly disabled until post-install)

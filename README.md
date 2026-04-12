@@ -13,7 +13,7 @@ Public-safe: no real secrets, `secrets/` is scaffolding only.
 - Browser policy split: FPP-hardened Firefox (daily) vs sandboxed UID-isolated wrappers (paranoid)
 - Systemd service hardening for flatpak-repo, ClamAV (daily shallow + weekly deep), AIDE with weekly timers
 - Agenix secrets scaffold, Secure Boot + TPM staged after first boot
-- 28 governance assertions catch config drift at build time
+- 30 governance assertions catch config drift at build time
 - All hardening knobs configurable via `myOS.security.*` options per-profile
 
 ## Repository layout

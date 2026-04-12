@@ -14,8 +14,8 @@ in {
       message = "Governance invariant: paranoid user 'ghost' must exist.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.sandboxedBrowsers.enable;
-      message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox).";
+      assertion = !isParanoid || config.myOS.security.sandbox.browsers;
+      message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox). Set myOS.security.sandbox.browsers = true.";
     }
     {
       # Paranoid must use self-owned WireGuard (not Mullvad app)
@@ -73,8 +73,9 @@ in {
       message = "Paranoid profile must enable audit daemon.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.vmIsolation.enable;
-      message = "Paranoid profile must enable VM isolation layer.";
+      # Check both new and legacy option paths
+      assertion = !isParanoid || config.myOS.security.sandbox.vms;
+      message = "Paranoid profile must enable VM isolation layer. Set myOS.security.sandbox.vms = true.";
     }
     {
       assertion = !isParanoid || !config.myOS.gaming.sysctls;
@@ -87,6 +88,18 @@ in {
     {
       assertion = !isParanoid || config.myOS.security.kernelHardening.pageAllocShuffle;
       message = "Paranoid profile must enable pageAllocShuffle kernel hardening.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.kernelHardening.kexecLoadDisabled;
+      message = "Paranoid profile must disable kexec_load (kernel.kexec_load_disabled=1).";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.kernelHardening.sysrqRestrict;
+      message = "Paranoid profile must restrict SysRq key (kernel.sysrq).";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.kernelHardening.ioUringDisabled;
+      message = "Paranoid profile must disable io_uring (kernel.io_uring_disabled=1).";
     }
     {
       assertion = !isParanoid || !config.programs.gamescope.enable;
@@ -109,12 +122,13 @@ in {
       message = "GPU option must be set to either 'nvidia' or 'amd'.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.sandboxedApps.enable;
-      message = "Paranoid profile must enable sandboxed applications.";
+      # Check both new and legacy option paths
+      assertion = !isParanoid || config.myOS.security.sandbox.apps;
+      message = "Paranoid profile must enable sandboxed applications. Set myOS.security.sandbox.apps = true.";
     }
     {
-      assertion = !isParanoid || !config.myOS.security.persistMachineId;
-      message = "Paranoid profile must NOT persist machine-id (privacy: randomized each boot).";
+      assertion = !isParanoid || (config.myOS.security.persistMachineId && config.myOS.security.machineIdValue == "b08dfa6083e7567a1921a715000001fb");
+      message = "Paranoid profile must use Whonix shared machine-id (privacy: blends with Whonix users).";
     }
   ];
 }

@@ -131,18 +131,56 @@
         '';
       };
 
-      # ── Profile policy ──────────────────────────────────────────
-      sandboxedBrowsers.enable = lib.mkEnableOption "Use sandboxed browser wrappers exclusively (disables base Firefox). When enabled, only safe-firefox, safe-tor-browser, and safe-mullvad-browser are available. When disabled, base Firefox with moderate hardening is used.";
-      sandboxedBrowsers.dbusFilter = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = ''
-          EXPERIMENTAL: Enable D-Bus filtering via xdg-dbus-proxy in sandboxed browsers.
-          Bubblewrap docs warn that unfiltered D-Bus can allow systemd exploitation.
-          However, this may break browser functionality (extensions, native messaging).
-          Enable only after post-stability testing. See POST-STABILITY.md Section 20.
-        '';
+      # ── Sandboxing (unified group) ──────────────────────────────
+      sandbox = {
+        browsers = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Use sandboxed browser wrappers exclusively (disables base Firefox).
+            When enabled, only safe-firefox, safe-tor-browser, and safe-mullvad-browser are available.
+            When disabled, base Firefox with moderate hardening is used.
+            
+            This provides UID isolation (100000:100000), process namespace, and minimal filesystem access
+            via bubblewrap. Note: Network namespace is NOT isolated - browser has full host network.
+          '';
+        };
+        apps = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Enable bubblewrap sandboxed applications for high-risk proprietary apps not available as Flatpak.
+            Provides UID isolation (100000:100000), process namespace, and minimal filesystem access.
+            Apps: VRCX, Windsurf (daily profile only; paranoid uses Flatpak + VM isolation instead).
+          '';
+        };
+        vms = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Enable KVM/QEMU VM isolation layer for untrusted workloads.
+            Provides the strongest practical isolation: separate kernel, isolated memory,
+            hardware-enforced boundaries. Significantly stronger than bubblewrap.
+            
+            WARNING: This does NOT affect or configure other sandboxes (browsers/apps).
+            Each sandbox type (bwrap browsers, bwrap apps, VMs) is independent and must be
+            configured separately. Enable this if you need VM isolation beyond what
+            bubblewrap can provide (suspicious documents, untrusted code, etc.).
+          '';
+        };
+        dbusFilter = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = ''
+            Enable D-Bus filtering via xdg-dbus-proxy for bubblewrap sandboxes (browsers and apps).
+            Applies to both sandbox.browsers and sandbox.apps when enabled.
+            Bubblewrap docs warn that unfiltered D-Bus can allow systemd exploitation.
+            However, this may break functionality (extensions, native messaging, file pickers).
+            Enable only after post-stability testing. See POST-STABILITY.md Section 20.
+          '';
+        };
       };
+
       disableSMT = lib.mkEnableOption "Disable SMT (nosmt=force)";
       ptraceScope = lib.mkOption {
         type = lib.types.int;
@@ -176,7 +214,11 @@
           default = true;
           description = "Prevent slab cache merging (slab_nomerge). Negligible impact.";
         };
-        pageAllocShuffle = lib.mkEnableOption "Randomize free page list (page_alloc.shuffle=1)";
+        pageAllocShuffle = lib.mkOption {
+          type = lib.types.bool;
+          default = true; # Negligible impact
+          description = "Randomize free page list (page_alloc.shuffle=1)";
+        };
         moduleBlacklist = lib.mkOption {
           type = lib.types.bool;
           default = true;
@@ -197,6 +239,26 @@
         oopsPanic = lib.mkEnableOption "Panic on kernel oops (oops=panic). Prevents exploit continuation but may crash on bad drivers.";
         moduleSigEnforce = lib.mkEnableOption "Only load signed kernel modules (module.sig_enforce=1). Breaks with custom/unsigned modules.";
         disableIcmpEcho = lib.mkEnableOption "Ignore ICMP echo requests (ping). Prevents network enumeration. May break some diagnostics.";
+
+        # Stronger kernel controls (Madaidan-aligned)
+        kexecLoadDisabled = lib.mkEnableOption ''
+          Disable kexec (kernel.kexec_load_disabled=1). Prevents loading a new kernel
+          from userland at runtime. One-way toggle; requires reboot to re-enable.
+        '';
+        sysrqRestrict = lib.mkEnableOption ''
+          Restrict SysRq key (kernel.sysrq). 0=disable, 4=only sync/reboot.
+          Prevents debugging/inspection via magic SysRq key.
+        '';
+        modulesDisabled = lib.mkEnableOption ''
+          Disable module loading after boot (kernel.modules_disabled=1).
+          One-way toggle; breaks loading any new modules after boot.
+          Only useful with all required modules built-in or loaded at boot.
+        '';
+        ioUringDisabled = lib.mkEnableOption ''
+          Disable io_uring system-wide (kernel.io_uring_disabled=1).
+          Reduces attack surface; io_uring has had multiple CVEs.
+          May break applications using io_uring (high-performance I/O).
+        '';
       };
 
       # ── System hardening (tunable per profile) ──────────────────
@@ -225,21 +287,6 @@
         '';
       };
 
-      # ── VM isolation layer (strongest practical sandbox) ───────
-      vmIsolation.enable = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = ''
-          Enable KVM/QEMU VM isolation layer for untrusted workloads.
-          Provides stronger isolation than bubblewrap (separate kernel, hardware virtualization).
-          Intended for paranoid profile use or specific untrusted applications.
-          WARNING: Significant resource overhead. daily driver: compatible but not enabled by default.
-        '';
-      };
-
-      # ── Sandboxed applications ─────────────────────────────────────
-      sandboxedApps.enable = lib.mkEnableOption "Bubblewrap sandboxed applications for high-risk proprietary apps";
-
       # ── PAM profile-binding (high-risk, opt-in) ────────────────────
       pamProfileBinding.enable = lib.mkOption {
         type = lib.types.bool;
@@ -252,15 +299,25 @@
         '';
       };
 
-      # ── Machine ID persistence ────────────────────────────────────
+      # ── Machine ID configuration ────────────────────────────────────
       persistMachineId = lib.mkOption {
         type = lib.types.bool;
         default = true;
         description = ''
           Persist /etc/machine-id across reboots via impermanence.
-          When true (default), machine-id is stable (daily: operational stability).
-          When false, machine-id is ephemeral and regenerated each boot
-          (paranoid: less fingerprintable to local software).
+          Both profiles persist machine-id for operational stability.
+          See machineIdValue for privacy options (Whonix shared ID on paranoid).
+        '';
+      };
+      machineIdValue = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          Explicit machine-id value to set. When null, systemd generates the ID.
+          Daily: null (systemd generates stable ID at first boot).
+          Paranoid: "b08dfa6083e7567a1921a715000001fb" (Whonix shared ID for privacy).
+          Using the Whonix ID blends with all Whonix users instead of being unique.
+          Reference: https://github.com/Whonix/dist-base-files
         '';
       };
 

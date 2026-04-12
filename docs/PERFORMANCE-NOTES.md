@@ -35,13 +35,13 @@
 | Core dump disable | **Zero** | |
 | Mullvad app (daily only) | **Optional** | When active: ~5-15ms latency. Off by default on daily |
 | Self-owned WireGuard (paranoid only) | **Required** | Deterministic, always-on. Minimal overhead vs Mullvad app |
+| `page_alloc.shuffle=1` | **<1%** | Randomizes free page list — enabled on both profiles now |
 
 ### Moved to paranoid-only (would have had measurable gaming impact)
 | Knob | Why moved | Impact if kept |
 |---|---|---|
 | `init_on_free=1` | Zeroes ALL freed pages — expensive in alloc-heavy workloads | **1-7%** in microbenchmarks |
-| `page_alloc.shuffle=1` | Randomizes free page list — enabled on both profiles now | **<1%** |
-| `usbcore.authorized_default=2` | Blocks unauthorized USB — could interfere with peripherals | Functional, not perf |
+| `usbcore.authorized_default=2` | Blocks unauthorized USB — paranoid only | Functional, not perf |
 | `nosmt=force` (via disableSMT) | Already daily=false | **30-40%** CPU throughput loss |
 
 ### Missing from new daily (compared to Old)

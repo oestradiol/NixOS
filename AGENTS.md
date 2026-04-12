@@ -50,7 +50,7 @@ Goal: keep code, docs, and audit surfaces aligned.
 
 **Rule**: `options.nix` defaults must balance:
 1. **Transparent hardening** enabled (initOnAlloc, slabNomerge, root lock, PTI)
-2. **Painful hardening** disabled or permissive (ptrace=1 for games, apparmor off, sandboxedBrowsers off)
+2. **Painful hardening** disabled or permissive (ptrace=1 for games, apparmor off, sandbox.browsers and sandbox.vms off)
 3. **Escalation path** clear via profile opt-in (paranoid hardens everything with mkForce)
 
 **Rationale**: Default user didn't choose pain. Paranoid user did.

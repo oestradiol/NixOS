@@ -1,8 +1,9 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 let
   persistRoot = config.myOS.persistence.root;
   impermanenceEnabled = config.myOS.security.impermanence.enable;
   persistMachineId = config.myOS.security.persistMachineId;
+  machineIdValue = config.myOS.security.machineIdValue;
   profile = config.myOS.profile;
 in {
   config = lib.mkMerge [
@@ -12,14 +13,17 @@ in {
 
         directories = [
           "/var/lib/nixos"
-          # OPERATIONAL RISK: /var/lib/systemd persists while paranoid rotates machine-id
-          # systemd state may have machine-id dependencies; this combination needs live testing
+          # NOTE: Both profiles now persist stable machine-id (daily: systemd-generated,
+          # paranoid: Whonix shared ID). No machine-id rotation issues.
           "/var/lib/systemd"
           "/var/lib/aide"  # AIDE integrity database
           "/var/lib/sbctl"  # Secure Boot keys (Lanzaboote/sbctl)
           "/etc/NetworkManager/system-connections"
-          "/var/lib/bluetooth"
           "/var/lib/flatpak"
+        ]
+        # Daily-only persistence: Bluetooth (controllers), Mullvad app state
+        ++ lib.optionals (profile == "daily") [
+          "/var/lib/bluetooth"
           "/var/lib/mullvad-vpn"
           "/etc/mullvad-vpn"
         ]
@@ -40,8 +44,9 @@ in {
           "/etc/subuid"
           "/etc/subgid"
         ]
-        # machine-id: daily gets persistence (operational stability)
-        # paranoid gets random (privacy - less fingerprintable)
+        # machine-id: persisted for both profiles
+        # daily: systemd generates unique stable ID
+        # paranoid: set to Whonix shared ID for privacy (blends with Whonix users)
         ++ lib.optionals persistMachineId [
           "/etc/machine-id"
         ]
@@ -105,6 +110,20 @@ in {
           files = [ ".zsh_history" ];
         };
       };
+    })
+    
+    # Set explicit machine-id if configured (paranoid: Whonix shared ID)
+    (lib.mkIf (impermanenceEnabled && persistMachineId && machineIdValue != null) {
+      # Use systemd tmpfiles to set the machine-id at boot
+      # This runs before systemd-machine-id-commit.service
+      systemd.tmpfiles.rules = [
+        "f /etc/machine-id 0444 root root - ${machineIdValue}"
+      ];
+      
+      # Ensure the file is writable during early boot so tmpfiles can set it
+      boot.initrd.systemd.tmpfiles.rules = [
+        "f /etc/machine-id 0444 root root - ${machineIdValue}"
+      ];
     })
     
     {

@@ -21,14 +21,15 @@
 
 { config, lib, pkgs, ... }:
 let
-  cfg = config.myOS.security.vmIsolation;
+  # Support both old and new option paths during transition
+  vmsEnabled = config.myOS.security.sandbox.vms;
   
   # Determine KVM module based on CPU - defaults to AMD for this hardware
   kvmModule = if config.hardware.cpu.intel.updateMicrocode or false 
                 then "kvm-intel" 
                 else "kvm-amd";
 in {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf vmsEnabled {
     # Core virtualization stack
     # NixOS Wiki: https://wiki.nixos.org/wiki/Libvirt
     virtualisation.libvirtd.enable = true;
@@ -56,7 +57,7 @@ in {
     # IOMMU for device passthrough (optional, advanced use)
     # AMD Ryzen 5 3600: AMD-V supported, AMD-Vi (IOMMU) limited for PCI passthrough
     # NixOS typically enables AMD IOMMU by default; intel_iommu only for Intel CPUs
-    boot.kernelParams = lib.optionals cfg.enable (
+    boot.kernelParams = lib.optionals vmsEnabled (
       if kvmModule == "kvm-intel" 
       then [ "iommu=pt" "intel_iommu=on" ]
       else [ "iommu=pt" "amd_iommu=on" ]  # AMD IOMMU explicit enable

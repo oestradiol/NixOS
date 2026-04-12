@@ -17,7 +17,7 @@
 ## If Secure Boot breaks boot
 1. disable Secure Boot in firmware
 2. boot the previous known-good entry or installer
-3. inspect `/var/lib/secureboot`
+3. inspect `/var/lib/sbctl`
 4. rebuild and re-enroll keys only after identifying the issue
 5. check `sbctl status` and `sbctl verify` for signature issues
 
@@ -28,9 +28,20 @@
 # 1. Boot NixOS installer USB
 # 2. Unlock and mount everything as in INSTALL-GUIDE.md Phase 2-3
 sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
-sudo mount /dev/mapper/cryptroot /mnt
-sudo mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
-for subvol in nix persist var/log; do sudo mount /mnt/$subvol; done
+
+# Mount tmpfs root (as the running system does)
+mount -t tmpfs none /mnt -o mode=755,size=4G
+
+# Create mountpoints and mount subvolumes
+mkdir -p /mnt/{boot,nix,persist,var/log,home/player,persist/home/ghost,swap}
+mount -o subvol=@nix,compress=zstd,noatime /dev/mapper/cryptroot /mnt/nix
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
+mount -o subvol=@log,compress=zstd,noatime /dev/mapper/cryptroot /mnt/var/log
+mount -o subvol=@home-daily,compress=zstd,noatime /dev/mapper/cryptroot /mnt/home/player
+mount -o subvol=@home-paranoid,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist/home/ghost
+mount -o subvol=@swap,compress=zstd,noatime /dev/mapper/cryptroot /mnt/swap
+mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
+
 sudo nixos-enter
 
 # 3. Inside chroot, check signature status
@@ -65,7 +76,7 @@ nixos-rebuild switch
 3. check `sudo nft list ruleset` to identify blocking rule
 4. rebuild and retest paranoid after daily is healthy again
 
-**Emergency disable**: Set `myOS.security.wireguardMullvad.enable = false` in paranoid profile, rebuild, then debug the policy.
+**Emergency disable**: Boot into daily profile to regain network access, then debug the WireGuard policy in paranoid.
 
 ## If WireGuard VPN fails to connect (paranoid)
 **Symptom**: WireGuard tunnel not established; no outbound connectivity.
@@ -95,9 +106,9 @@ sudo nft list ruleset
 # (e.g., if endpoint is us-nyc-wg-001.mullvad.net:51820)
 nc -vzu us-nyc-wg-001.mullvad.net 51820
 
-# 6. If killswitch is blocking bootstrap, temporarily disable WireGuard mode
-# Set myOS.security.wireguardMullvad.enable = false in paranoid profile, rebuild,
-# then debug the WireGuard config separately
+# 6. If killswitch is blocking bootstrap, the issue is likely endpoint connectivity
+# Check that the WireGuard endpoint is reachable and that DNS resolution works
+# You cannot disable WireGuard in paranoid (enforced by governance), so fix the config
 ```
 
 **Killswitch exceptions** (allowed on non-WG interfaces):
@@ -146,6 +157,106 @@ nc -vzu us-nyc-wg-001.mullvad.net 51820
 4. update either the option default or the profile setting
 5. ensure `PROJECT-STATE.md` reflects the intended behavior
 
+## If login fails after reboot (mutableUsers persistence failure)
+
+**Symptom**: "Password not surviving reboot" — password worked before reboot, now login fails. User exists but password is rejected. Password changes via `passwd` appear to work but are lost after restart.
+
+**Root cause**: With `users.mutableUsers = true` and tmpfs root, identity files must persist to `/persist`. If persistence fails or files are corrupted, password changes are lost.
+
+**The connection**: tmpfs root wipes `/etc` on every boot. Impermanence restores it from `/persist/etc`. If `/etc/shadow` (password hashes) isn't properly persisted, your password changes vanish on reboot:
+- `mutableUsers = true` allows imperative password changes
+- tmpfs root means those changes must be explicitly persisted
+- Impermanence handles this, but if it's misconfigured or fails, passwords don't survive
+
+**Quick diagnostic** (if you can still log in):
+```bash
+# Check if /etc/shadow is a bind mount from persist
+findmnt /etc/shadow
+# Expected: should show /persist/etc/shadow as the source
+
+# If not mounted from persist, impermanence is broken
+# Check impermanence status
+systemctl status impermanence-daemon
+```
+
+**Critical identity files** (must persist):
+- `/etc/passwd` — user accounts
+- `/etc/shadow` — password hashes
+- `/etc/group` — group membership
+- `/etc/gshadow` — group passwords
+- `/etc/subuid` — user namespace mappings
+- `/etc/subgid` — group namespace mappings
+
+**Recovery**:
+```bash
+# 1. Boot installer USB, unlock LUKS, mount as in install guide
+
+# 2. Check if identity files exist on persist
+ls -la /mnt/persist/etc/{passwd,shadow,group,gshadow}
+
+# 3. If missing or empty, check backup locations:
+#    - /mnt/persist/etc/ssh/ (sometimes backed up together)
+#    - Your external backup of /persist
+
+# 4. Emergency user recreation (if no backup available):
+nixos-enter
+groupadd -g 1000 player
+useradd -u 1000 -g 1000 -G wheel,audio,video,input,libvirtd -m player
+passwd player  # Set new password
+```
+
+**Prevention**: Verify persistence is working before relying on imperative user management:
+```bash
+# On running system: make a test change, verify it persists
+grep "testuser" /etc/passwd || sudo useradd testuser
+# reboot, then: grep "testuser" /etc/passwd
+```
+
+---
+
+## If systemd services fail after reboot (machine-id/systemd state)
+
+**Symptom**: Services fail to start, journal shows machine-id warnings, systemd state appears inconsistent.
+
+**Current design**: Both profiles now persist machine-id for operational stability:
+- **Daily**: Systemd generates a unique stable ID at first boot
+- **Paranoid**: Uses the **Whonix shared machine-id** (`b08dfa6083e7567a1921a715000001fb`) for privacy
+
+The Whonix ID blends your system with all Whonix users rather than being uniquely fingerprintable, while remaining stable for systemd state consistency.
+
+**Design rationale**: 
+- `/var/lib/systemd` is persisted because it contains:
+  - Service enablement/disablement state
+  - Timer last-run timestamps
+  - Some runtime tracking that NixOS expects to survive reboots
+- Machine-id is persisted on both profiles to avoid operational issues
+- Paranoid uses the shared Whonix ID for privacy (not unique per boot)
+
+**Reference**: https://github.com/Whonix/dist-base-files/blob/master/etc/machine-id
+
+**Recovery** (if services actually break):
+```bash
+# 1. Check current machine-id vs persisted systemd state
+cat /etc/machine-id
+ls -la /var/lib/systemd/
+
+# 2. If services are broken, clear systemd state (it regenerates):
+sudo systemctl stop systemd-timesyncd  # stop services first
+sudo rm -rf /var/lib/systemd/timesync /var/lib/systemd/random-seed
+# Or clear all systemd state (nuclear option):
+sudo rm -rf /var/lib/systemd/*
+
+# 3. Reboot - systemd regenerates fresh state
+
+# 4. Alternative: check if machine-id mismatch is the cause
+# Compare the machine-id in /etc/machine-id with what systemd expects
+# If mismatch, the systemd state may need clearing as above
+```
+
+**Decision**: Current design uses stable machine-id for both profiles. Daily gets unique systemd-generated ID; paranoid gets Whonix shared ID for privacy (blends with all Whonix users rather than being unique per boot). No operational issues.
+
+---
+
 ## If D-Bus filtering breaks browser functionality (paranoid)
 **Symptom**: safe-firefox, safe-tor, or safe-mullvad-browser fail to start, file picker doesn't work, or portals break after browser/KDE update.
 
@@ -162,7 +273,7 @@ journalctl -xe | grep -i dbus
 
 # 2. Test browser without D-Bus filtering (temporary)
 # Edit profiles/paranoid.nix:
-myOS.security.sandboxedBrowsers.dbusFilter = lib.mkForce false;
+myOS.security.sandbox.dbusFilter = lib.mkForce false;
 nixos-rebuild switch
 
 # 3. If browser works without filtering, the D-Bus policy needs updating
