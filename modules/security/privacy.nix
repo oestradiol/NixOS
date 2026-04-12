@@ -8,6 +8,8 @@ in {
     (lib.mkIf paranoid {
       # 1. machine-id: Handled via machineIdValue = Whonix shared ID
       #    Uses stable Whonix ID to blend with all Whonix users
+      #    Note: This conflicts with systemd's guidance that machine-id should be unique per host.
+      #    This is a deliberate privacy-over-compatibility tradeoff. Monitor for service compatibility issues.
 
       # 2. MAC Address Randomization
       # Use systemd.link for persistent randomization across boots

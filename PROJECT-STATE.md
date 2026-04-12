@@ -4,7 +4,7 @@
 - Fresh reinstall on the NVMe target.
 - One NixOS install, two boot specialisations: `daily` and `paranoid`.
 - Separate users: `player` and `ghost`, selected through SDDM.
-- KDE Plasma 6 on Wayland for both profiles.
+- KDE Plasma 6 (user sessions on Wayland, SDDM on X11 for NVIDIA compatibility - see Wayland roadmap below).
 - NVIDIA enabled initially in both profiles for hardware reliability.
 - Windows may be removed. The separate SATA disk is intentionally left unused.
 - LUKS2 + Btrfs + tmpfs root + explicit `/persist` model.

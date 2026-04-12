@@ -318,7 +318,12 @@
           Explicit machine-id value to set. When null, systemd generates the ID.
           Daily: null (systemd generates stable ID at first boot).
           Paranoid: "b08dfa6083e7567a1921a715000001fb" (Whonix shared ID for privacy).
-          Using the Whonix ID blends with all Whonix users instead of being unique.
+
+          **Design note**: Using the Whonix ID blends with all Whonix users instead of being
+          uniquely fingerprintable, but this conflicts with systemd's guidance that machine-id
+          should be unique per host. This is a deliberate privacy-over-compatibility tradeoff.
+          Some services may expect unique machine-ids; monitor for compatibility issues.
+
           Reference: https://github.com/Whonix/dist-base-files
         '';
       };

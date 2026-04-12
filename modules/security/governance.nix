@@ -128,7 +128,7 @@ in {
     }
     {
       assertion = !isParanoid || (config.myOS.security.persistMachineId && config.myOS.security.machineIdValue == "b08dfa6083e7567a1921a715000001fb");
-      message = "Paranoid profile must use Whonix shared machine-id (privacy: blends with Whonix users).";
+      message = "Paranoid profile must use Whonix shared machine-id (privacy: blends with Whonix users). Note: This conflicts with systemd's unique-id guidance and may cause compatibility issues. This is a deliberate privacy-over-compatibility tradeoff.";
     }
   ];
 }

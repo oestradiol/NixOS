@@ -1059,27 +1059,11 @@ lsusb | grep -i -E "(yubi|fido|u2f)"
 ```
 **Current**: Defense-in-depth exists (nftables killswitch), but explicit WireGuard hardening not implemented.
 
-### [TODO] Bootloader Recovery Documentation Enhancement
-**Risk**: Lanzaboote/Secure Boot lockout scenarios beyond current RECOVERY.md coverage.  
-**Gap**: No explicit "Secure Boot disabled, system still won't boot" procedure.  
-**Decision needed**: Create emergency ISO with pre-enrolled keys for recovery?
-```bash
-# Extended recovery procedure (also documented in RECOVERY.md):
-# 1. If even disabling SB in firmware doesn't help:
-#    - Boot NixOS installer USB
-#    - cryptsetup open /dev/nvme0n1p2 cryptroot
-#    - mount /dev/mapper/cryptroot /mnt
-#    - mount /dev/nvme0n1p1 /mnt/boot
-#    - nixos-enter
-#    - sbctl verify  # Check which files have signature issues
-#    - sbctl reset  # Clear signature database (nuclear option)
-# 2. If Lanzaboote completely broken:
-#    - Temporarily switch to standard systemd-boot:
-#    - boot.loader.systemd-boot.enable = true;
-#    - boot.lanzaboote.enable = false;
-#    - nixos-rebuild switch
-```
-**If issues occur**: See [`RECOVERY.md`](./RECOVERY.md) "If Secure Boot breaks boot" and "If disabling Secure Boot still doesn't boot" sections.
+### [FIXED] Bootloader Recovery Documentation Enhancement
+**Status**: Addressed - recovery procedures documented in RECOVERY.md
+- "If Secure Boot breaks boot" section
+- "If disabling Secure Boot still doesn't boot (Lanzaboote nuclear recovery)" section with full sbctl reset and systemd-boot fallback procedure
+**Note**: Emergency ISO with pre-enrolled keys remains a potential future enhancement for advanced lockout scenarios.
 
 ### [FIXED] Bubblewrap GPU Passthrough Acknowledgment
 **Risk**: `safe-firefox` uses `--dev-bind /dev/dri` which exposes GPU attack surface. GPU drivers have history of DMA attacks.  
