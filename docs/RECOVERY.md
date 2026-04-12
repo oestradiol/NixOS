@@ -65,6 +65,32 @@ nixos-rebuild switch
 3. check `sudo nft list ruleset` to identify blocking rule
 4. rebuild and retest paranoid after daily is healthy again
 
+## If Mullvad VPN fails to connect (stale IP ranges)
+**Symptom**: Mullvad cannot establish tunnel; "connecting" hangs indefinitely.  
+**Cause**: Hardcoded Mullvad IPs in nftables rules may have rotated.
+
+```bash
+# 1. Check current Mullvad infrastructure IPs
+# Visit: https://mullvad.net/en/servers
+# Note the current WireGuard relay IPs and API server IPs for your region
+
+# 2. Edit modules/security/networking.nix
+# Update the hardcoded IP ranges in the nftables ruleset:
+#   - WireGuard relays: UDP 51820 to current relay ranges
+#   - API/Bridge: TCP 443/1401 to current API servers
+
+# 3. Rebuild and test
+sudo nixos-rebuild switch --flake /etc/nixos#nixos
+mullvad status
+
+# 4. If still failing, temporarily disable nftables killswitch
+# Set myOS.security.mullvad.lockdown = false in your profile, rebuild,
+# then rely on Mullvad's built-in lockdown-mode (mullvad lockdown-mode set on)
+```
+
+**Prevention**: The nftables rules are defense-in-depth only. Rely primarily on
+Mullvad's built-in lockdown-mode killswitch, which doesn't require IP maintenance.
+
 ## If NVIDIA/Wayland breaks after update
 1. boot into previous generation: `nixos-rebuild --rollback`
 2. check NVIDIA driver version: `nvidia-smi`

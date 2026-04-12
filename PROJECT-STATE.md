@@ -37,8 +37,19 @@
 - Networking killswitch with DHCP/DNS exceptions for tunnel establishment.
 - Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
-- ClamAV split scans: daily shallow scan (quick check) + weekly deep scan (comprehensive).
+- ClamAV split scans: daily impermanence scan + weekly deep scan (comprehensive).
 - AIDE weekly integrity checks with persisted database.
+
+## Security monitoring exclusions (documented for awareness)
+
+**ClamAV/AIDE exclusions** (intentionally not scanned for performance/isolation):
+- `/persist/etc/ssh` — SSH keys (sensitive, low malware risk)
+- Steam directories (`~/.steam`, `~/.local/share/Steam`) — massive game files, trusted platform
+- `/var/lib/systemd` — runtime state (noisy)
+- `/var/log/journal` — volatile logs
+- **`/persist/home-ghost`** — Ghost profile isolation (NEVER accessible from daily)
+
+**Implication**: Steam games are NOT virus-scanned. Only install games from trusted sources (Steam store, verified publishers). Avoid sideloading untrusted game binaries into Steam directories.
 - 27 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
 - **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
@@ -81,7 +92,7 @@ All key hardening knobs are tunable per-profile without code changes:
 - Flatpak provides namespace isolation, capability dropping, read-only filesystem by default
 - Apps installed: Signal, Spotify, Bitwarden, Vesktop, Obsidian, Telegram, Element
 - Flathub remote configured automatically via systemd service (flatpak-repo)
-- Packages installed manually after first boot (see POST-INSTALL.md)
+- Packages installed manually after first boot (see POST-STABILITY.md)
 - App data persisted via impermanence: `~/.var/app/com.example.App`
 
 ### Bubblewrap wrappers (non-Flatpak apps)

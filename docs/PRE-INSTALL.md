@@ -182,8 +182,11 @@ API/Bridge: 185.65.134.66, 185.65.135.1, 193.138.219.228
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| No initial password | `users.nix:25-29,45-49`: No `initialHashedPassword` set | ✅ VERIFIED |
-| TTY login required first | Documented in INSTALL-GUIDE.md Phase 4 | ✅ VERIFIED |
+| No initial password | `users.nix`: No `initialHashedPassword` or `hashedPassword` set | ✅ VERIFIED |
+| Password setup BEFORE first boot | Documented in INSTALL-GUIDE.md Phase 4: set via chroot or `initialPassword` | ✅ VERIFIED |
+
+**CRITICAL**: NixOS users WITHOUT a password **CANNOT** log in via password-based mechanisms (TTY, SDDM).
+See: https://nixos.org/manual/nixos/stable/options#opt-users.mutableUsers
 
 ### Secure Boot / TPM
 

@@ -2,31 +2,38 @@
 let
   daily = config.myOS.profile == "daily";
 
-  # Daily shallow scan: quick check of high-risk locations
-  clamScanShallow = pkgs.writeShellScript "clamav-shallow-scan" ''
+  # Daily impermanence scan: all persisted data (impermanence directories)
+  # Critical: runs daily to catch malware in persisted locations
+  clamScanImpermanence = pkgs.writeShellScript "clamav-impermanence-scan" ''
     set -eu
-    # Shallow scan: home downloads, tmp, and persist (where user data lives)
-    # Excludes large media dirs and SSH keys
-    targets="/home/player/Downloads /tmp /persist /var/tmp"
+    # Scan ALL impermanence directories daily
+    # These are the only places malware can survive a reboot
+    # Plus /tmp and /var/tmp (common malware drop zones)
+    targets="/home/player /persist /var/lib /var/log /tmp /var/tmp"
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
       --exclude-dir='^/home/player/.*\.steam$' \
       --exclude-dir='^/home/player/\.local/share/Steam$' \
-      --max-filesize=50M \
-      --max-scansize=100M \
+      --exclude-dir='^/var/log/journal$' \
+      --max-filesize=100M \
+      --max-scansize=200M \
       $targets
   '';
 
-  # Weekly deep scan: full recursive scan of all persisted data
+  # Weekly deep scan: comprehensive scan with higher limits
+  # More thorough but resource-intensive, runs weekly when idle
   clamScanDeep = pkgs.writeShellScript "clamav-deep-scan" ''
     set -eu
     # Deep scan: comprehensive check of all persisted locations
     # Higher limits for thoroughness, runs weekly when system is idle
-    targets="/home/player /persist /var/lib"
+    # NOTE: /persist/home-ghost is NOT scanned - ghost files isolated from daily
+    # Includes /tmp and /var/tmp (common malware drop zones)
+    targets="/home/player /persist /var/lib /var/log /tmp /var/tmp"
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
       --exclude-dir='^/home/player/.*\.steam$' \
       --exclude-dir='^/home/player/\.local/share/Steam/steamapps$' \
+      --exclude-dir='^/var/log/journal$' \
       $targets
   '';
 
@@ -41,11 +48,11 @@ let
   '';
 in {
   config = lib.mkIf daily {
-    # --- DAILY SHALLOW SCAN ---
-    # Quick daily check of high-risk locations (downloads, temp dirs)
-    # Fast, low resource impact, catches obvious threats
-    systemd.services.clamav-shallow-scan = {
-      description = "Daily shallow ClamAV scan (quick check of high-risk locations)";
+    # --- DAILY IMPERMANENCE SCAN ---
+    # Daily scan of all impermanence directories - critical for security
+    # These are the only places malware can survive a reboot
+    systemd.services.clamav-impermanence-scan = {
+      description = "Daily ClamAV scan of impermanence directories (persisted data)";
       path = [ pkgs.clamav pkgs.coreutils pkgs.findutils ];
       serviceConfig = {
         Type = "oneshot";
@@ -59,10 +66,10 @@ in {
         RestrictSUIDSGID = true;
         LockPersonality = true;
       };
-      script = ''${clamScanShallow} > /var/log/clamav-shallow-scan.log 2>&1'';
+      script = ''${clamScanImpermanence} > /var/log/clamav-impermanence-scan.log 2>&1'';
     };
 
-    systemd.timers.clamav-shallow-scan = {
+    systemd.timers.clamav-impermanence-scan = {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnBootSec = "30m";
@@ -108,6 +115,40 @@ in {
       interval = "daily";
       frequency = 12;  # Check twice daily if interval is daily
     };
+
+    # --- AIDE INTEGRITY MONITORING ---
+    # Weekly integrity check of critical persisted directories
+    # AIDE must be initialized first: sudo aide --init (stored in /persist)
+    # Database location persisted via impermanence.nix
+    # NOTE: /persist/home-ghost is NOT monitored - ghost files isolated from daily
+    environment.etc."aide.conf".text = lib.mkDefault (lib.concatStringsSep "\n" [
+      "# AIDE configuration for impermanence integrity monitoring"
+      "# Monitors all persisted directories (where malware can survive reboot)"
+      "# NOTE: /persist/home-ghost excluded - ghost profile files isolated from daily"
+      ""
+      "# Database settings"
+      "database=file:/var/lib/aide/aide.db.gz"
+      "database_out=file:/var/lib/aide/aide.db.new.gz"
+      ""
+      "# Rule definitions"
+      "R=p+u+g+md5+sha256"
+      "L=p+u+g+sha256"
+      ""
+      "# Impermanence directories (all persisted data)"
+      "/persist R"
+      "/home/player R"
+      "/var/lib R"
+      "/var/log L"
+      "/tmp L"
+      "/var/tmp L"
+      ""
+      "# Exclude noisy/volatile paths"
+      "!/persist/var/lib/aide"
+      "!/home/player/.local/share/Steam"
+      "!/home/player/.steam"
+      "!/var/lib/systemd"
+      "!/var/log/journal"
+    ]);
 
     systemd.services.aide-daily-check = {
       description = "Periodic AIDE integrity check";

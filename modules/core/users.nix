@@ -2,13 +2,19 @@
 let
   lockRoot = config.myOS.security.lockRoot;
 in {
-  # CRITICAL: mutableUsers MUST be true for first-boot password setup.
-  # Users have no initial passwords - they must:
-  # 1. Switch to TTY (Ctrl+Alt+F3)
-  # 2. Log in as 'player' (no password required with mutableUsers=true)
-  # 3. Run 'passwd' to set password
-  # 4. Switch back to SDDM (Ctrl+Alt+F1/F7) and log in
-  # After passwords are set, you can set mutableUsers=false if desired.
+  # NOTE: mutableUsers=true with tmpfs root requires /etc/{passwd,group,shadow,
+  # gshadow,subuid,subgid} to be persisted. These are now in impermanence.nix.
+  #
+  # FIRST BOOT PASSWORD SETUP (before first boot):
+  # You must set an initial password via configuration before first boot:
+  #   users.users.player.initialPassword = "temp123";
+  # Or use a hashed password:
+  #   users.users.player.hashedPassword = "...";
+  # Or set interactively during install:
+  #   sudo nixos-install --flake ... && sudo passwd player (in chroot)
+  #
+  # CRITICAL: NixOS users WITHOUT a password CANNOT log in via password-based
+  # mechanisms (including TTY). See: https://nixos.org/manual/nixos/stable/options#opt-users.mutableUsers
   users.mutableUsers = true;
 
   users.users.player = {

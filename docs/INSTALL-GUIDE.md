@@ -42,18 +42,35 @@ Inside `cryptroot` Btrfs create:
    - `nixos-install --flake /mnt/etc/nixos#nixos`
 4. Reboot.
 
-## Phase 4 — first boot behavior
+## Phase 4 — password setup (CRITICAL: before first boot)
+
+**IMPORTANT**: Users without a password cannot log in via password-based mechanisms (TTY, SDDM).
+Set passwords BEFORE rebooting, while still in the installer chroot:
+
+```bash
+# Enter the chroot environment
+nixos-enter --root /mnt
+
+# Set initial passwords
+passwd player
+passwd ghost
+
+# Exit chroot
+exit
+```
+
+Alternative: Set `users.users.player.initialPassword = "temp"` in config before install.
+
+## Phase 5 — first boot verification
 - boot default system (daily)
-- **Initial login**: Users have no initial password. Switch to TTY (Ctrl+Alt+F3), log in as `player` (no password required), run `passwd` to set a password
-- Switch back to SDDM (Ctrl+Alt+F1 or F7), log in as `player` with new password
-- Set password for `ghost` via terminal: `sudo passwd ghost`
+- log in as `player` with the password you set
 - confirm Plasma 6 Wayland works
 - confirm NVIDIA stack works
 - confirm Steam/VR not yet re-enabled by user data migration, only by config
 
 **If first boot fails**: See [`RECOVERY.md`](./RECOVERY.md) "If the new system does not boot" section.
 
-## Phase 5 — only after first clean boot
+## Phase 6 — only after first clean boot
 Follow [`TEST-PLAN.md`](./TEST-PLAN.md) for immediate runtime verification.
 
 Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
@@ -62,32 +79,42 @@ Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 - Mullvad setup
 - agenix secrets creation
 
-**If issues occur during Phase 5**: See [`RECOVERY.md`](./RECOVERY.md) for troubleshooting.
+**If issues occur during Phase 6**: See [`RECOVERY.md`](./RECOVERY.md) for troubleshooting.
 
 ## Persistence map
 
 ### Btrfs subvolumes
-- `@nix` → `/nix`
-- `@persist` → `/persist`
-- `@log` → `/var/log`
-- `@home-daily` → `/home/player`
-- `@home-paranoid` → `/home/ghost`
+- `@nix` → `/nix` (fully persistent)
+- `@persist` → `/persist` (fully persistent)
+- `@log` → `/var/log` (fully persistent)
+- `@home-daily` → `/home/player` (fully persistent subvolume)
+- `@home-paranoid` → `/persist/home-ghost` (persistent storage for selective impermanence)
 
 ### tmpfs root
 `/` is tmpfs — everything not allowlisted is discarded on reboot.
 
 ### System persistence allowlist
-`/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth`, `/var/lib/flatpak`, `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn`, SSH host keys
+`/var/lib/nixos`, `/var/lib/systemd`, `/etc/NetworkManager/system-connections`, `/var/lib/bluetooth`, `/var/lib/flatpak`, `/var/lib/mullvad-vpn`, `/etc/mullvad-vpn`, SSH host keys, `/etc/{passwd,shadow,group,gshadow,subuid,subgid}`
 
 **Note**: `/etc/machine-id` is **profile-dependent**:
 - **daily**: persisted (operational stability for D-Bus, Steam, network)
 - **paranoid**: ephemeral (randomized each boot for privacy)
 
-### Daily user persistence
-Data, Steam state, Vesktop/Signal state, Bitwarden config, keyrings, GPG, SSH, shell history
+### User data persistence model (profile-dependent)
 
-### Paranoid user persistence
-Downloads, Documents, Signal state, KeePassXC config, GPG, SSH, shell history
+**Daily profile** (`/home/player`):
+- Fully persistent Btrfs subvolume (`@home-daily`)
+- All data survives reboot
+- Impermanence allowlist manages dotfiles within persistent home
+
+**Paranoid profile** (`/home/ghost`):
+- **Selective impermanence**: tmpfs home + allowlist
+- `/home/ghost` is tmpfs (wiped on boot)
+- `@home-paranoid` mounted to `/persist/home-ghost` for persistence
+- Only allowlisted items are bind-mounted into tmpfs home
+- Malware/ransomware in home is wiped on reboot
+
+**Persisted dotfiles (both profiles)**: Steam, Signal, KeePassXC, keyrings, GPG, SSH, shell history
 
 ### Explicitly non-persistent
 Browser session junk, arbitrary root filesystem writes, most caches and temp files

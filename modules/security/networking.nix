@@ -23,10 +23,12 @@ in {
   # If Mullvad's built-in always-require-VPN works correctly, these rules
   # serve as defense-in-depth. Adjust interface names after live testing.
   #
-  # Mullvad infrastructure IPs (as of 2024) - constrain pre-tunnel traffic:
-  # - WireGuard relays: UDP 51820 to specific Mullvad server IPs
-  # - API/Bridge: TCP 443, 1401 to mullvad.net infrastructure
-  # These are narrowed to prevent general internet egress before VPN is up.
+  # WARNING: Mullvad infrastructure IPs below are hardcoded and may become stale.
+  # These IPs were current as of 2024 but Mullvad's server infrastructure is dynamic.
+  # If VPN fails to connect, see docs/RECOVERY.md "If Mullvad VPN fails to connect".
+  #
+  # RECOMMENDATION: Rely primarily on Mullvad's built-in lockdown-mode killswitch.
+  # These nftables rules are defense-in-depth only and require manual IP maintenance.
   networking.nftables = lib.mkIf config.myOS.security.mullvad.lockdown {
     enable = true;
     ruleset = ''
