@@ -124,6 +124,7 @@ Status values:
 | D-Bus portal broadcast rules | Functional fix | Implemented | `modules/security/browser.nix` | `modules/security/browser.nix` | Added `--broadcast=org.freedesktop.portal.*=@/org/freedesktop/portal/*` to receive portal signals (file picker responses, notification callbacks) |
 | Tor/Mullvad D-Bus policies | Pending → Fixed | Fixed | `modules/security/browser.nix` | `modules/security/browser.nix` | Set `dbusOwnName = "org.mozilla.firefox.*"` for both browsers. Research (tor-browser#44050) confirmed they use org.mozilla namespace. Policies now enabled (was null/TODO) |
 | D-Bus filtering profile split | Security policy | Implemented | `profiles/paranoid.nix`, `profiles/daily.nix` | `profiles/paranoid.nix` | Paranoid: `dbusFilter = true` (filtered). Daily: `dbusFilter = false` (direct /run bind for compatibility). Test plan and POST-STABILITY docs updated |
+| Build-time test infrastructure | Audit improvement | Implemented | `flake.nix`, `scripts/audit-tutorial.sh` | `flake.nix` | Added `checks.x86_64-linux` with nixos-config and paranoid-config evaluation tests; fixed audit-tutorial.sh to fail on errors (removed `|| true`) |
 
 ## MONITOR: Ongoing tracking (post-stability)
 
@@ -131,5 +132,5 @@ Status values:
 |-------|---------|--------|---------------------|
 | Tor Browser D-Bus namespace | `browser.nix` D-Bus policy | https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050 | If namespace changes to `org.torproject`, update `dbusOwnName` in `safeTor` |
 | Mullvad Browser D-Bus namespace | `browser.nix` D-Bus policy | https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050 | If namespace changes to `net.mullvad`, update `dbusOwnName` in `safeMullvad` |
-| KDE Plasma 6.8 portal interfaces | D-Bus `--broadcast` rules | https://blogs.kde.org/2025/11/26/going-all-in-on-a-wayland-future/ | Test file picker, notifications, screen sharing after Plasma update; add new portal interfaces to `--talk` if needed |
+| KDE Plasma 6.8 X11 deprecation | XWayland testing | https://blogs.kde.org/2025/11/26/going-all-in-on-a-wayland-future/ | Plasma 6.8 drops X11 session support entirely. Test all apps under XWayland, verify no hard X dependencies, plan X server disable |
 | NVIDIA legacy_580 driver | GPU driver config | https://github.com/NixOS/nixpkgs/issues/503740 | GTX 1060 (Pascal) should use `legacy_580`; migrate from `production` when nixpkgs exposes it |

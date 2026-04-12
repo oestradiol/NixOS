@@ -30,7 +30,25 @@
     };
   };
 
-  outputs = inputs@{ nixpkgs, home-manager, stylix, impermanence, agenix, lanzaboote, ... }: {
+  outputs = inputs@{ nixpkgs, home-manager, stylix, impermanence, agenix, lanzaboote, ... }:
+    let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+    # Build-time checks for nix flake check
+    # Note: nix flake check already evaluates all nixosConfigurations,
+    # catching config errors. These checks verify file structure.
+    checks.${system} = {
+      # Verify required files exist
+      required-files = pkgs.runCommand "required-files-check" {} ''
+        echo "Checking required files..."
+        for f in ${./.}/PROJECT-STATE.md ${./.}/flake.nix ${./.}/hosts/nixos/default.nix; do
+          test -f "$f" || { echo "Missing: $f" > $out; exit 1; }
+        done
+        echo "All required files present" > $out
+      '';
+    };
+
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };

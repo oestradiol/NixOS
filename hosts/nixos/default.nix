@@ -1,5 +1,7 @@
 { config, lib, pkgs, inputs, ... }:
-{
+let
+  system = "x86_64-linux";
+in {
   imports = [
     ./hardware-target.nix
     ./install-layout.nix
@@ -53,7 +55,7 @@
     sbctl
     tpm2-tools
     age
-    agenix
+    inputs.agenix.packages.${system}.default
     bubblewrap
     flatpak
     mullvad-vpn

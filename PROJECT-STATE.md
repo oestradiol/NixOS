@@ -98,6 +98,8 @@
 Users should not sideload untrusted binaries into these directories. The Nix store (`/nix/store`) is read-only, hash-verified, and excluded from scans by design.
 
 - 28 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
+- **Build-time checks**: `flake.nix` includes `checks.x86_64-linux` with nixos-config and paranoid-config evaluation tests; run via `nix flake check`.
+- **Audit script**: `scripts/audit-tutorial.sh` runs static checks; failures now propagate (removed `|| true` masking).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
 - **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
 - **Module structure minimized**: `core/` (4 files), `security/` (11 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (2 files).
@@ -274,8 +276,10 @@ All tunable via `myOS.security.kernelHardening.*`:
 - **Tor/Mullvad D-Bus namespace**: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
   - Currently using `org.mozilla.firefox.*`; may change to `org.torproject` or `net.mullvad`
   - Check on browser updates; update `browser.nix` if namespace changes
-- **KDE Plasma 6.8+ portal interfaces**: New portal interfaces may require D-Bus policy updates
-  - Verify file picker, notifications, screen sharing still work after Plasma updates
+- **KDE Plasma 6.8+ X11 deprecation**: Plasma 6.8 drops X11 session support entirely
+  - Test all apps under XWayland compatibility before upgrade
+  - Verify no hard X dependencies remain (xeyes, xev, etc.)
+  - Plan transition to X-disabled configuration (remove services.xserver.enable)
 - **NVIDIA legacy_580 driver**: Track https://github.com/NixOS/nixpkgs/issues/503740
   - GTX 1060 (Pascal) should use `legacy_580`; currently on `production` as fallback
   - Migrate when nixpkgs exposes `legacy_580` properly

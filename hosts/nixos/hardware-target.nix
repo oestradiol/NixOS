@@ -64,7 +64,7 @@
       "size=2G"
       "mode=700"
       "uid=${toString config.users.users."ghost".uid}"
-      "gid=${toString config.users.users."ghost".gid}"
+      "gid=${toString config.users.groups.${config.users.users."ghost".group}.gid}"
     ];
   };
   fileSystems."/persist/home/ghost" = {

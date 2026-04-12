@@ -151,10 +151,6 @@ let
   };
 
 in {
-  options.myOS.security.sandboxedApps = {
-    enable = lib.mkEnableOption "Sandboxed applications with bubblewrap";
-  };
-
   config = lib.mkIf cfg.enable {
     environment.systemPackages = lib.mkMerge [
       # Daily profile: VRCX and Windsurf with /var bind for compatibility
