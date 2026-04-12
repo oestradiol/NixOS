@@ -3,6 +3,7 @@ let
   persistRoot = config.myOS.persistence.root;
   impermanenceEnabled = config.myOS.security.impermanence.enable;
   persistMachineId = config.myOS.security.persistMachineId;
+  profile = config.myOS.profile;
 in {
   config = lib.mkMerge [
     (lib.mkIf impermanenceEnabled {
@@ -21,6 +22,11 @@ in {
           "/var/lib/flatpak"
           "/var/lib/mullvad-vpn"
           "/etc/mullvad-vpn"
+        ]
+        # NetworkManager full state: daily gets persistence (operational stability for Wi-Fi leases)
+        # paranoid gets minimal (connections only, state regenerates)
+        ++ lib.optionals (profile == "daily") [
+          "/var/lib/NetworkManager"
         ];
 
         # CRITICAL: /etc identity files must persist with tmpfs root + mutableUsers

@@ -433,43 +433,76 @@ myOS.security.aide.enable = false;
 - AIDE + ClamAV: Maximum coverage (known + unknown threats), but AIDE may alert on legitimate changes
 - ClamAV-only: Fewer false positives, but zero-day malware won't be detected until signatures exist
 
-### Experimental: D-Bus filtering for sandboxed browsers
-**Status**: Implemented but disabled by default (breakage risk + browser-specific policies need verification)
+### D-Bus filtering for sandboxed browsers
+**Status**: Enabled by default in paranoid; optional in daily
 
 **The problem**: Bubblewrap docs warn that unfiltered D-Bus access can allow systemd exploitation. Currently, sandboxed browsers bind `/run` read-only, exposing full D-Bus sockets.
 
 **The solution**: `xdg-dbus-proxy` provides filtered D-Bus access with a deny-by-default policy.
 
-**Important limitation**: D-Bus policies are browser-specific (own-name patterns), but Tor Browser and Mullvad Browser policies are **not yet verified**:
+**D-Bus namespace status** (verified via research):
 - `safe-firefox`: `--own=org.mozilla.firefox.*` (correct for Firefox)
-- `safe-tor-browser`: Own namespace disabled pending verification (see code TODO)
-- `safe-mullvad-browser`: Own namespace disabled pending verification (see code TODO)
+- `safe-tor-browser`: `--own=org.mozilla.firefox.*` (Tor uses org.mozilla currently, not org.torproject)
+- `safe-mullvad-browser`: `--own=org.mozilla.firefox.*` (Mullvad uses org.mozilla currently, not net.mullvad)
 
-**Enable after post-stability testing**:
+**Reference**: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
+**MONITOR**: Check if Tor/Mullvad change D-Bus namespace in future releases
+
+**Profile defaults**:
+- **Paranoid**: `dbusFilter = true` (filtered D-Bus for stronger isolation)
+- **Daily**: `dbusFilter = false` (full D-Bus access for compatibility)
+
+**To enable in daily** (optional hardening):
 ```nix
-# In your profile (paranoid recommended)
 myOS.security.sandboxedBrowsers.dbusFilter = true;
 ```
 
-**Test after enabling**:
-1. Launch `safe-firefox` and verify it starts
-2. Test browser extensions (may break with filtering)
-3. Test native messaging (KeePassXC, etc.) — **expected to break** without `org.freedesktop.NativeMessagingProxy` allowlist
-4. Check PipeWire/WebRTC audio/video still works
-5. If anything breaks, disable immediately: `dbusFilter = false`
-
-**To verify Tor/Mullvad Browser D-Bus names** (post-stability manual step):
-```bash
-# Run with D-Bus filtering disabled, monitor actual D-Bus traffic:
-dbus-monitor --session 2>&1 | grep -E "(tor|mullvad)"  # Look for own-name requests
-# Then update browser.nix with correct --own= patterns
+**To disable in paranoid** (if functionality breaks):
+```nix
+myOS.security.sandboxedBrowsers.dbusFilter = lib.mkForce false;
 ```
 
-**What the filter allows on D-Bus (Firefox only)**:
-- Own namespace: `org.mozilla.firefox.*` (only for safe-firefox; others disabled until verified)
-- Portal access: `org.freedesktop.portal.*` (file picker, notifications)
-- Accessibility: `org.a11y.Bus`
-- Everything else on D-Bus: **BLOCKED**
+**Test in paranoid** (verify D-Bus filtering works correctly):
+1. Launch `safe-firefox` and verify it starts
+2. Test browser extensions (may break with filtering)
+3. Test file pickers and desktop notifications (via xdg-dbus-proxy)
+4. Check PipeWire/WebRTC audio/video still works
+5. If anything breaks, disable: `dbusFilter = lib.mkForce false`
+
+**Test in daily** (only if you enable it):
+Same steps as paranoid. Note that D-Bus filtering is disabled by default in daily for maximum compatibility.
+
+**D-Bus implementation by profile**:
+
+| Profile | Session Bus | System Bus | D-Bus Filter | Implementation |
+|---------|-------------|------------|--------------|------------------|
+| **Daily** | Selective `/run` binds (XDG runtime + direct system socket) | Direct `/run/dbus/system_bus_socket` | `false` | `mkSandboxedBrowser` with `cfg.dbusFilter = false` |
+| **Paranoid** | Filtered via `xdg-dbus-proxy` | Filtered via `xdg-dbus-proxy` | `true` | `mkSandboxedBrowser` with `cfg.dbusFilter = true` |
+
+**Daily D-Bus binds** (when `dbusFilter = false`):
+- `--ro-bind /run/user/$(id -u) /run/user/$(id -u)` - XDG runtime directory
+- `--ro-bind /run/dbus/system_bus_socket /run/dbus/system_bus_socket` - System D-Bus socket
+- Full session bus access via XDG_RUNTIME_DIR/bus (if present)
+**Paranoid D-Bus policy** (when `dbusFilter = true`):
+- **Session bus**: `--own=org.mozilla.firefox.* --talk=org.freedesktop.portal.* --talk=org.a11y.Bus --talk=org.mpris.MediaPlayer2.* --broadcast=org.freedesktop.portal.*=@/org/freedesktop/portal/*`
+- **System bus**: `--talk=org.freedesktop.NetworkManager --talk=org.freedesktop.login1`
+
+**D-Bus policy details** (all sandboxed browsers use same policy):
+
+| Policy | Session Bus | System Bus |
+|--------|-------------|------------|
+| **Own namespace** | `org.mozilla.firefox.*` | N/A |
+| **Portal access** | `org.freedesktop.portal.*` | N/A |
+| **Portal signals** | `--broadcast=org.freedesktop.portal.*=@/org/freedesktop/portal/*` | N/A |
+| **Accessibility** | `org.a11y.Bus` | N/A |
+| **Media control** | `org.mpris.MediaPlayer2.*` | N/A |
+| **System services** | N/A | `NetworkManager`, `login1` |
+
+**Implementation notes**:
+- `mkSandboxedBrowser` function implements all D-Bus logic
+- `dbusFilter` option controls filtered vs direct mode
+- Both session and system buses are filtered when enabled
+- Deny-by-default policy with explicit allowlist
 
 **What the wrapper STILL exposes (outside D-Bus)**:
 - **GPU access** (`/dev/dri` bind) — known escape vector via DMA

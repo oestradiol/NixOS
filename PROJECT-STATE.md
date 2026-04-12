@@ -239,7 +239,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 | **VM isolation** | Disabled (`vmIsolation.enable = false`) | Enabled (`vmIsolation.enable = lib.mkForce true`) | PASS |
 | **Home persistence** | Full Btrfs subvolume | Selective tmpfs + allowlist | PASS |
 | **Machine-id** | Persistent (`persistMachineId = true`) | Random per boot (`persistMachineId = lib.mkForce false`) | PASS |
-| **MAC addresses** | Stable per network | Random per boot | PASS |
+| **MAC addresses** | Stable per network | Random per device appearance (typically at boot) | PASS |
 | **ptrace scope** | 1 (EAC compatible) | 2 (strictest) | PASS |
 | **init_on_free** | Disabled (performance) | Enabled (`initOnFree = lib.mkForce true`) | PASS |
 | **oops_panic** | Disabled (stability) | Enabled (`oopsPanic = lib.mkForce true`) | PASS |
@@ -260,7 +260,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 - Mullvad intended as always-on; lockdown networking.
 - Lower persistence footprint (tmpfs home, selective allowlist).
 - Signal Desktop sandboxed via Flatpak.
-- **Privacy**: Randomized MAC per boot, random machine-id, TCP timestamps disabled.
+- **Privacy**: Randomized MAC per device appearance (typically at boot), random machine-id, TCP timestamps disabled.
 
 ### Isolation truth
 - Boot specialisations separate behavior, not compromise.
@@ -269,6 +269,16 @@ All tunable via `myOS.security.kernelHardening.*`:
 - Flatpak + bubblewrap + systemd hardening reduce app blast radius.
 - All high-risk apps (Electron, proprietary) sandboxed with UID isolation.
 - Real containment still requires separate hardware, full VM, or Qubes-level isolation.
+
+### MONITOR: Ongoing tracking required
+- **Tor/Mullvad D-Bus namespace**: https://gitlab.torproject.org/tpo/applications/tor-browser/-/issues/44050
+  - Currently using `org.mozilla.firefox.*`; may change to `org.torproject` or `net.mullvad`
+  - Check on browser updates; update `browser.nix` if namespace changes
+- **KDE Plasma 6.8+ portal interfaces**: New portal interfaces may require D-Bus policy updates
+  - Verify file picker, notifications, screen sharing still work after Plasma updates
+- **NVIDIA legacy_580 driver**: Track https://github.com/NixOS/nixpkgs/issues/503740
+  - GTX 1060 (Pascal) should use `legacy_580`; currently on `production` as fallback
+  - Migrate when nixpkgs exposes `legacy_580` properly
 
 ## Audit summary
 
