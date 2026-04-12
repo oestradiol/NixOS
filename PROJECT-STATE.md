@@ -26,7 +26,7 @@
 - Flake, host entrypoint, daily default profile, paranoid specialisation.
 - Hardware-target mount model for the uploaded Ryzen 5 3600 + GTX 1060 system.
 - tmpfs root, `/nix`, `/persist`, `/var/log`, `/swap`, split home subvolumes.
-- zram (zstd 50%) + 8GB Btrfs swap file fallback on `@swap` subvolume.
+- zram (zstd 50%) + 8GB Btrfs swapfile on `@swap` subvolume (swapfile created by install script).
 - Separate Home Manager configs for `player` (daily) and `ghost` (paranoid).
 - Baseline hardening module with full sysctl hardening (20+ keys).
 - Core dump disable, root lock, PAM su wheel-only.
@@ -314,3 +314,5 @@ This repository is materially stronger than the original gaming-first unstable-o
 - Mullvad lockdown nftables may need local adjustment after first real connection test
 - NVIDIA in paranoid is a compatibility compromise
 - hardened allocator remains intentionally disabled until the rest is debugged
+- NVIDIA package: temporarily using `production` branch instead of ideal `legacy_580` due to nixpkgs issue #503740
+- Mullvad IP: updated stale DNS IP (193.138.219.228 → 193.138.218.74) per Mullvad's 2019 infrastructure change

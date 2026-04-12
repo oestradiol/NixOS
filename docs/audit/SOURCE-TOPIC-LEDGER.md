@@ -31,7 +31,7 @@ Status values:
 | Identifiers / machine-id / profile separation | Madaidan | Implemented+Manual | `PROJECT-STATE.md`, `docs/INSTALL-GUIDE.md` | `modules/security/impermanence.nix`, `modules/security/governance.nix` | daily: persistent (stability); paranoid: randomized (privacy); verify with `cat /etc/machine-id` before/after reboot |
 | File permissions / ownership hygiene | Madaidan / Trimstray | Documented | `PROJECT-STATE.md`, this ledger | various modules | Run post-install permission audit |
 | Core dumps | Madaidan | Implemented | this ledger, `docs/TEST-PLAN.md` | `modules/security/base.nix` | `systemd.coredump.extraConfig` disables storage; verify with `coredumpctl` after install |
-| Swap strategy | Madaidan / saylesss88 | Implemented | `PROJECT-STATE.md`, `docs/INSTALL-GUIDE.md` | `hosts/nixos/hardware-target.nix`, `modules/security/base.nix` | zram + 8GB Btrfs swapfile on `@swap` subvolume |
+| Swap strategy | Madaidan / saylesss88 | Implemented | `PROJECT-STATE.md`, `docs/INSTALL-GUIDE.md` | `hosts/nixos/hardware-target.nix`, `modules/security/base.nix`, `scripts/install-nvme-rebuild.sh` | zram + 8GB Btrfs swapfile on `@swap` subvolume; swapfile created by install script |
 | PAM hardening | Madaidan | Implemented+Manual | this ledger, `docs/TEST-PLAN.md` | `modules/security/base.nix`, `modules/vr.nix` | `su` restricted to wheel; verify PAM stack after install |
 | Microcode updates | Madaidan / Trimstray | Implemented | `PROJECT-STATE.md` | `hosts/nixos/hardware-target.nix` | Validate active microcode on rebuilt host |
 | IPv6 privacy extensions | Madaidan | Implemented | `PROJECT-STATE.md`, this ledger | `modules/security/base.nix` | sysctl `use_tempaddr=2` for all/default; verify with `ip -6 addr` after install |

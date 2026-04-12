@@ -60,7 +60,7 @@ in {
           # Mullvad API/bridge servers
           ip daddr 185.65.134.66 tcp dport { 443, 1401 } accept
           ip daddr 185.65.135.1 tcp dport { 443, 1401 } accept
-          ip daddr 193.138.219.228 tcp dport { 443, 1401 } accept
+          ip daddr 193.138.218.74 tcp dport { 443, 1401 } accept
         }
       }
     '';

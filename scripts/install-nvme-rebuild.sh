@@ -28,14 +28,23 @@ btrfs subvolume create "$MNT/@home-paranoid"
 umount "$MNT"
 
 mount -t tmpfs none "$MNT" -o mode=755,size=4G
-mkdir -p "$MNT"/{boot,nix,persist,var/log,home/player,persist/home/ghost}
+mkdir -p "$MNT"/{boot,nix,persist,var/log,home/player,persist/home/ghost,swap}
 mount -o subvol=@nix,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/nix"
 mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persist"
 mount -o subvol=@log,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/var/log"
 mount -o subvol=@home-daily,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/home/player"
 mount -o subvol=@home-paranoid,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persist/home/ghost"
+mount -o subvol=@swap,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/swap"
+
+# Create Btrfs swapfile (8GB) - required for the swapDevices config in base-desktop.nix
+# Using traditional fallocate + mkswap approach on Btrfs (COW disabled on @swap via chattr +C)
+fallocate -l 8G "$MNT/swap/swapfile"
+chmod 600 "$MNT/swap/swapfile"
+mkswap "$MNT/swap/swapfile"
+
 mount "${DISK}p1" "$MNT/boot"
 
 echo "Mounts ready at $MNT"
+echo "Swapfile created: /swap/swapfile (8GB)"
 echo "@home-paranoid -> /mnt/persist/home/ghost (runtime: /persist/home/ghost)"
 echo "Now copy this repo to $MNT/etc/nixos and run nixos-install --flake /mnt/etc/nixos#nixos"

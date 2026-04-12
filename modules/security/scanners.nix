@@ -127,14 +127,37 @@ in {
     };
 
     # --- AIDE INTEGRITY MONITORING ---
-    # Weekly integrity check of critical persisted directories
+    # Weekly integrity check of critical persisted directories only
     # AIDE must be initialized first: sudo aide --init (stored in /persist)
     # Database location persisted via impermanence.nix
-    # Scans both daily and paranoid persisted directories
+    #
+    # DESIGN: High-signal integrity model - only monitor paths where malware can persist
+    # across reboots AND that have stable contents. Volatile paths create noise.
+    #
+    # AIDE vs ClamAV: Different security models
+    # - ClamAV: "Is this file known malware?" (signature-based detection)
+    # - AIDE: "Did this file change unexpectedly?" (integrity/hash-based detection)
+    #
+    # They complement each other:
+    # - ClamAV catches known malware (even if it hasn't modified files yet)
+    # - AIDE catches unknown malware / rootkits that modify persisted files
+    # - Zero-day malware won't be in ClamAV DB, but AIDE will flag file changes
+    #
+    # If you prefer ClamAV-only: set myOS.security.aide.enable = false
+    #
+    # MONITORED (high-value persisted):
+    # - /persist, /persist/home/ghost: explicit persistence (impermanence.nix)
+    # - /home/player: Btrfs subvolume (daily profile, persisted)
+    # - /var/lib: system state that survives reboot
+    #
+    # EXCLUDED (volatile or inappropriate for integrity monitoring):
+    # - /home/ghost: tmpfs on paranoid (wiped every boot - naturally churns)
+    # - /var/log: log files naturally change; integrity != log monitoring
+    # - /tmp, /var/tmp: tmpfs (wiped on boot)
     environment.etc."aide.conf".text = lib.mkDefault (lib.concatStringsSep "\n" [
-      "# AIDE configuration for impermanence integrity monitoring"
-      "# Monitors all persisted directories (where malware can survive reboot)"
-      "# Scans both daily (/home/player) and paranoid (/home/ghost) profiles"
+      "# AIDE configuration - high-signal persisted-state integrity only"
+      "# Monitors paths where malware can survive reboot AND contents are stable"
+      "# Excludes volatile paths (tmpfs, logs) that create noise without security value"
       ""
       "# Database settings"
       "database=file:/var/lib/aide/aide.db.gz"
@@ -142,27 +165,22 @@ in {
       ""
       "# Rule definitions"
       "R=p+u+g+md5+sha256"
-      "L=p+u+g+sha256"
       ""
-      "# Impermanence directories (all persisted data)"
+      "# Persisted directories only (high-value integrity targets)"
       "/persist R"
       "/persist/home/ghost R"
       "/home/player R"
-      "/home/ghost R"
       "/var/lib R"
-      "/var/log L"
-      "/tmp L"
-      "/var/tmp L"
       ""
       "# Exclude noisy/volatile paths"
       "!/persist/var/lib/aide"
       "!/home/player/.local/share/Steam"
       "!/home/player/.steam"
       "!/var/lib/systemd"
-      "!/var/log/journal"
     ]);
 
-    systemd.services.aide-daily-check = {
+    # AIDE services only if aide.enable is true (allows ClamAV-only if desired)
+    systemd.services.aide-daily-check = lib.mkIf config.myOS.security.aide.enable {
       description = "Periodic AIDE integrity check";
       path = [ pkgs.aide pkgs.coreutils pkgs.gzip ];
       serviceConfig = {
@@ -178,7 +196,7 @@ in {
       script = ''${aideCheck} > /var/log/aide-daily-check.log 2>&1'';
     };
 
-    systemd.timers.aide-daily-check = {
+    systemd.timers.aide-daily-check = lib.mkIf config.myOS.security.aide.enable {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnBootSec = "45m";

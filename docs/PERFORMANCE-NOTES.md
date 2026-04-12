@@ -10,7 +10,7 @@
 - Steam, Gamescope (capSysNice), GameMode — identical config
 - WiVRn (CUDA, nvenc h265, Nice=-10, RTPRIO=99, memlock=infinity)
 - PipeWire (alsa, 32bit, pulse, jack, wireplumber) + rtkit
-- NVIDIA driver (legacy_580, modesetting, `LIBVA_DRIVER_NAME=nvidia`)
+- NVIDIA driver (production branch, modesetting, `LIBVA_DRIVER_NAME=nvidia`) — temporary fallback from ideal legacy_580 due to nixpkgs#503740
 - EarlyOOM (409600/307200 thresholds)
 - journald limits (250M runtime/system)
 - zram (zstd, 50%)
