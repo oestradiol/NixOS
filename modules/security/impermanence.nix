@@ -11,6 +11,8 @@ in {
 
         directories = [
           "/var/lib/nixos"
+          # OPERATIONAL RISK: /var/lib/systemd persists while paranoid rotates machine-id
+          # systemd state may have machine-id dependencies; this combination needs live testing
           "/var/lib/systemd"
           "/var/lib/aide"  # AIDE integrity database
           "/var/lib/sbctl"  # Secure Boot keys (Lanzaboote/sbctl)
@@ -57,8 +59,7 @@ in {
             ".local/share/Steam"
             ".steam"
             ".config/Signal"
-            ".config/keepassxc"
-            ".local/share/KeePassXC"  # KeePassXC database storage
+            # NOTE: KeePassXC is paranoid-only; daily uses Bitwarden (Flatpak)
             ".local/share/keyrings"
             ".local/share/applications"  # Custom desktop entries
             ".gnupg"
@@ -70,6 +71,11 @@ in {
             ".var/app/com.bitwarden.desktop"
             ".var/app/dev.vencord.Vesktop"
             ".var/app/md.obsidian.Obsidian"
+            # Windsurf (sandboxed app) - persists configs
+            ".config/Windsurf"
+            ".local/share/Windsurf"
+            # VRCX (sandboxed app) - persists configs
+            ".config/VRCX"
           ];
           files = [ ".zsh_history" ];
         };

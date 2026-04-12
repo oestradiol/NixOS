@@ -22,8 +22,8 @@ in {
       message = "Paranoid profile must enable Mullvad/VPN path.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.mullvad.lockdown;
-      message = "Paranoid profile must enable lockdown networking by default.";
+      assertion = !isParanoid || config.myOS.security.mullvad.nftablesFallback;
+      message = "Paranoid profile must enable nftablesFallback (Option B: emergency fail-closed) by default.";
     }
     {
       assertion = !isParanoid || config.myOS.security.impermanence.enable;

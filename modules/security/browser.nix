@@ -25,7 +25,10 @@ let
   # For malicious PDFs, suspicious executables, or untrusted web content: use VM isolation.
   #
   # For maximum isolation: enable myOS.security.vmIsolation and run browsers in a VM.
-  mkSandboxedBrowser = { name, package, binaryName ? name, extraBinds ? [] }: 
+  mkSandboxedBrowser = { name, package, binaryName ? name, extraBinds ? [], dbusOwnName ? null }: 
+    let
+      dbusOwnArg = if dbusOwnName != null then "--own=${dbusOwnName}" else "";
+    in
     pkgs.writeShellScriptBin "safe-${name}" ''
       set -eu
       
@@ -45,13 +48,13 @@ let
       ${if cfg.dbusFilter then ''
       DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
       # Start xdg-dbus-proxy for filtered D-Bus access
-      # Allows: own name, talk to portal, talk to a11y bus
+      # Allows: own name (browser-specific), talk to portal, talk to a11y bus
       # Blocks: unrestricted system/session bus access
       ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
         "$DBUS_SESSION_BUS_ADDRESS" \
         "$DBUS_PROXY_SOCK" \
         --filter \
-        --own=org.mozilla.firefox.* \
+        ${dbusOwnArg} \
         --talk=org.freedesktop.portal.* \
         --talk=org.a11y.Bus &
       DBUS_PID=$!
@@ -317,12 +320,18 @@ let
     name = "tor-browser";
     package = pkgs.tor-browser;
     binaryName = "tor-browser";
+    # Tor Browser uses its own D-Bus namespace, not Firefox's
+    # TODO: Verify actual Tor Browser D-Bus names at runtime
+    dbusOwnName = null;  # Disabled until verified: Tor Browser D-Bus policy needs live testing
   };
   
   safeMullvad = mkSandboxedBrowser {
     name = "mullvad-browser";
     package = pkgs.mullvad-browser;
     binaryName = "mullvad-browser";
+    # Mullvad Browser is Firefox-based but uses its own D-Bus namespace
+    # TODO: Verify actual Mullvad Browser D-Bus names at runtime
+    dbusOwnName = null;  # Disabled until verified: Mullvad Browser D-Bus policy needs live testing
   };
   # Desktop entries for sandboxed browsers
   mkBrowserDesktop = { name, exec, icon, comment, genericName ? null }:

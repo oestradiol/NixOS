@@ -54,6 +54,18 @@ Keep the recovery passphrase forever.
 
 ## 6. Mullvad
 
+> **WARNING**: Option B: Emergency fail-closed local fallback. This is NOT Mullvad's built-in lockdown-mode.
+>
+> This nftables policy (`mullvad.nftablesFallback`) is:
+> - A best-effort emergency fallback, not authoritative enforcement
+> - Static and cannot model Mullvad's stateful behavior (connecting/connected/lockdown)
+> - May break on VPN interface name drift
+> - Requires per-machine validation
+> - Intentionally narrower than Mullvad's actual app logic
+>
+> For real lockdown enforcement, use: `mullvad lockdown-mode set on`
+> This local policy provides defense-in-depth only and must be live-validated.
+
 Daily:
 - service installed and available
 - not required as a hard kill-switch path
@@ -65,17 +77,58 @@ Paranoid:
 - treat lockdown behavior as expected, not a bug
 - validate killswitch: `sudo nft list ruleset`
 
-**Killswitch architecture (interface-based):**
-The nftables rules use interface-based filtering (no hardcoded IPs).
-- Physical interface: DHCP, DNS to systemd-resolved, ICMP only (bootstrap)
+**Killswitch architecture (best-effort fallback only):**
+The nftables rules are a narrow fallback policy, not authoritative enforcement.
+- Bootstrap (non-VPN interfaces): minimal DHCP/NDP for tunnel establishment
 - VPN interfaces (`wg-mullvad`, `tun0`, `tun1`): unrestricted egress when tunnel up
+- Static rules cannot model Mullvad's stateful behavior (connecting/connected/lockdown)
 
 **Known tradeoffs:**
 - Brief DNS leak at boot before tunnel establishment (unavoidable - must resolve VPN endpoint)
-- Host is "ping dark" (no inbound ICMP replies)
-- If Mullvad uses different interface names, update `vpnIfaces` in `networking.nix`
+- Interface names are hand-maintained and must match actual tunnel names
+- ICMPv6 restricted to NDP/router-discovery only (no broad ICMPv6 allowance)
 
-**Verification:** `sudo nft list ruleset` should show interface-based rules, not hardcoded IPs.
+**Hard validation required:**
+```bash
+# 1. Check actual tunnel interface names
+ip link show | grep -E "(mullvad|tun|wg)"
+
+# 2. Compare against allowed list in networking.nix
+#    vpnIfaces = [ "wg-mullvad" "tun0" "tun1" ]
+#    FAIL the checklist if actual names differ from allowed list
+
+# 3. Verify nftables loaded correctly
+sudo nft list ruleset
+
+# 4. Check ICMPv6 is restricted to NDP only (not broad allow)
+sudo nft list ruleset | grep "icmpv6 type"
+# Should show: nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert
+
+# 5. Test behavior across VPN states ( paranoid lockdown-mode on required )
+# These tests validate the nftables fallback works with Mullvad's state machine
+mullvad status  # Record: disconnected, connecting, or connected
+# Test 1: Disconnected state - verify no clearnet traffic escapes (should fail closed)
+# Test 2: Connecting state - verify bootstrap traffic allowed (DHCP/NDP/DNS to resolve endpoint)
+# Test 3: Connected state - verify tunnel traffic flows, check IP at https://mullvad.net/check/
+# Test 4: Disconnect command - verify traffic stops immediately
+
+# 6. Verify interaction with Mullvad's early-boot Linux blocker
+# Check if Mullvad's systemd early-boot unit is active (separate from daemon)
+systemctl status mullvad-early-boot-blocking  # Or check mullvad-daemon logs for early-boot messages
+# This is distinct from the nftables fallback; Mullvad handles pre-daemon boot protection
+journalctl -u mullvad-daemon | grep -i "early-boot\|blocking\|lockdown"
+```
+
+**If interface names mismatch**: Edit `vpnIfaces` in `modules/security/networking.nix` and rebuild.
+
+**State testing checklist**:
+- [ ] Disconnected: No clearnet traffic (use `curl https://ip.me` - should fail)
+- [ ] Connecting: Bootstrap works (DNS resolves, tunnel establishes)
+- [ ] Connected: Traffic flows through tunnel (check https://mullvad.net/check/)
+- [ ] Boot state: No leaks before daemon starts (hard to test; rely on early-boot blocker)
+- [ ] Early-boot blocker: Verify Mullvad's unit handles pre-daemon protection
+
+**Note on early-boot**: The nftables fallback covers the gap before Mullvad daemon starts, but Mullvad's own Linux early-boot blocking unit is the primary pre-daemon protection. The nftables layer is defense-in-depth, not the main early-boot enforcement.
 
 **Recommendation:** Rely primarily on Mullvad's built-in lockdown-mode killswitch.
 The nftables rules are defense-in-depth only.
@@ -138,16 +191,20 @@ For apps not available as Flatpak, use the bubblewrap wrappers:
 
 **For maximum isolation of untrusted content**, use VM isolation (`vmIsolation.enable`) instead of bubblewrap.
 
-## 12. Setup KeePassXC with permanence
-KeePassXC is available in both profiles. The configuration is persisted via impermanence:
-- Daily: `~/.config/keepassxc` is persisted to `@persist`
-- Paranoid: `~/.config/keepassxc` is persisted to `@persist`
+## 12. Setup KeePassXC with permanence (paranoid profile only)
+KeePassXC is available in the paranoid profile only. Daily uses Bitwarden (Flatpak). The configuration is persisted via impermanence:
+- Paranoid only: `~/.config/keepassxc` is persisted to `@persist`
 
 **Post-stability steps:**
 1. Launch KeePassXC and create your database
-2. Store the database in `~/Data/` (daily) or `~/Documents/` (paranoid) - these are persisted
-3. Configure browser integration if needed (native messaging host already available)
+2. Store the database in `~/Documents/` - this is persisted
+3. Configure browser integration if needed (see caveats below)
 4. Test: reboot and verify the database file and config survive
+
+**Native messaging caveats**:
+- Native messaging for browser integration may break under D-Bus filtering
+- If using sandboxed browsers (`safe-firefox`), additional allowlists may be needed
+- For maximum reliability, use KeePassXC's auto-type feature instead of browser integration
 
 **Critical**: Back up your database to external media. Impermanence protects against malware but not disk failure.
 
@@ -208,7 +265,7 @@ Test that browsers don't leak identifying information.
 **DNS leak test:**
 1. Connect to Mullvad VPN
 2. Visit https://dnsleaktest.com
-3. Expected: Shows Cloudflare (DoH) or Mullvad DNS, not your ISP
+3. Expected: Shows Mullvad DNS only (DoH is disabled), not your ISP
 4. Verify system DNS: `resolvectl status` shows DNS servers from Mullvad
 
 **Tor Browser test:**
@@ -377,11 +434,16 @@ myOS.security.aide.enable = false;
 - ClamAV-only: Fewer false positives, but zero-day malware won't be detected until signatures exist
 
 ### Experimental: D-Bus filtering for sandboxed browsers
-**Status**: Implemented but disabled by default (breakage risk)
+**Status**: Implemented but disabled by default (breakage risk + browser-specific policies need verification)
 
 **The problem**: Bubblewrap docs warn that unfiltered D-Bus access can allow systemd exploitation. Currently, sandboxed browsers bind `/run` read-only, exposing full D-Bus sockets.
 
 **The solution**: `xdg-dbus-proxy` provides filtered D-Bus access with a deny-by-default policy.
+
+**Important limitation**: D-Bus policies are browser-specific (own-name patterns), but Tor Browser and Mullvad Browser policies are **not yet verified**:
+- `safe-firefox`: `--own=org.mozilla.firefox.*` (correct for Firefox)
+- `safe-tor-browser`: Own namespace disabled pending verification (see code TODO)
+- `safe-mullvad-browser`: Own namespace disabled pending verification (see code TODO)
 
 **Enable after post-stability testing**:
 ```nix
@@ -396,8 +458,15 @@ myOS.security.sandboxedBrowsers.dbusFilter = true;
 4. Check PipeWire/WebRTC audio/video still works
 5. If anything breaks, disable immediately: `dbusFilter = false`
 
-**What the filter allows on D-Bus**:
-- Own namespace: `org.mozilla.firefox.*`
+**To verify Tor/Mullvad Browser D-Bus names** (post-stability manual step):
+```bash
+# Run with D-Bus filtering disabled, monitor actual D-Bus traffic:
+dbus-monitor --session 2>&1 | grep -E "(tor|mullvad)"  # Look for own-name requests
+# Then update browser.nix with correct --own= patterns
+```
+
+**What the filter allows on D-Bus (Firefox only)**:
+- Own namespace: `org.mozilla.firefox.*` (only for safe-firefox; others disabled until verified)
 - Portal access: `org.freedesktop.portal.*` (file picker, notifications)
 - Accessibility: `org.a11y.Bus`
 - Everything else on D-Bus: **BLOCKED**
@@ -428,6 +497,8 @@ myOS.security.sandboxedBrowsers.dbusFilter = true;
 | **Cookie behavior** | Check lock icon on any site → Cookies | Should show dFPI/cross-site blocking active |
 | **ETP Strict active** | about:preferences#privacy → Enhanced Tracking Protection | Should show "Strict" selected |
 | **Safe-browsing local-only** | about:config `browser.safebrowsing.downloads.remote.enabled` | Should be `false` |
+| **Machine-id rotation + systemd state** | Paranoid: `cat /etc/machine-id` before/after reboot; check `journalctl --boot` for errors | Machine-id should change; no systemd service failures from state mismatch |
+| **VPN interface names match nftables** | Paranoid with lockdown: `ip link | grep -E "(mullvad|tun|wg)"` vs `vpnIfaces` in networking.nix | Actual tunnel names must match allowed list; FAIL checklist if mismatch |
 
 **Key decision for you**: If FPP protection feels insufficient on daily, manually enable RFP:
 ```javascript

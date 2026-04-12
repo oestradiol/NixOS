@@ -130,7 +130,10 @@ Then follow [`POST-STABILITY.md`](./POST-STABILITY.md) for:
 - Only allowlisted items are bind-mounted into tmpfs home
 - Malware/ransomware in home is wiped on reboot
 
-**Persisted dotfiles (both profiles)**: Steam, Signal, KeePassXC, keyrings, GPG, SSH, shell history
+**Persisted dotfiles (daily)**: Steam, Signal, Bitwarden (Flatpak), Vesktop, Spotify, Obsidian, Windsurf, VRCX, keyrings, GPG, SSH, shell history
+**Persisted dotfiles (paranoid)**: Signal, KeePassXC, keyrings, GPG, SSH, shell history
+- Firefox: Profiles persist via Btrfs subvolume (not impermanence allowlist)
+- Sandboxed browsers (safe-*): Ephemeral profiles for isolation
 
 ### Explicitly non-persistent
 Browser session junk, arbitrary root filesystem writes, most caches and temp files

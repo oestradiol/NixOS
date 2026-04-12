@@ -3,7 +3,7 @@ let
   vpnIfaces = [ "wg-mullvad" "tun0" "tun1" ];
 in {
   networking.networkmanager.enable = true;
-  networking.firewall.enable = !config.myOS.security.mullvad.lockdown;
+  networking.firewall.enable = !config.myOS.security.mullvad.nftablesFallback;
   networking.firewall.allowedUDPPorts = lib.optionals (config.myOS.profile == "daily") [ 7 ];
 
   networking.interfaces = lib.mkIf (config.myOS.profile == "daily") {
@@ -17,29 +17,26 @@ in {
   services.mullvad-vpn.enable = lib.mkDefault config.myOS.security.mullvad.enable;
   services.mullvad-vpn.package = pkgs.mullvad-vpn;
 
-  # Lockdown killswitch — interface-based only (no hardcoded IPs).
-  # After install, also run: mullvad lockdown-mode set on
-  # Then validate with: sudo nft list ruleset && mullvad status
+  # WARNING: This is a best-effort local fallback policy, not a reimplementation
+  # of Mullvad's firewall state machine. It must be live-validated per machine.
   #
-  # DESIGN: Interface-based killswitch removes manual IP maintenance.
-  # - Physical interface: only DHCP/DNS/systemd-resolved/ICMP (for tunnel bootstrap)
-  # - VPN interfaces (tun*, wg-mullvad): unrestricted egress when tunnel is up
+  # Purpose: Boot-gap fallback to reduce accidental leaks before/around daemon startup.
+  # Primary enforcement: Mullvad's built-in lockdown-mode killswitch.
+  #
+  # DESIGN: Minimal pre-tunnel bootstrap only; not assumed correct across changes.
+  # - Bootstrap (non-VPN interfaces only): minimal DHCP/NDP for tunnel establishment
+  # - VPN interfaces: unrestricted egress when tunnel is up
   # - Mullvad daemon handles its own bootstrap securely; we don't curate their IPs.
   #
-  # Killswitch exceptions documented (allowed on physical interface):
-  # - DHCP (v4: ports 67/547, v6: ports 547/546)
-  # - DNS to systemd-resolved (127.0.0.53:53)
-  # - Outbound ICMP only (path MTU discovery)
-
-  # Known leakage (documented tradeoff):
+  # Known limitations (documented tradeoff):
   # - Bootstrap DNS: Brief clearnet DNS queries at boot before VPN tunnel is established.
   #   Unavoidable: must resolve VPN endpoint hostname. Mullvad daemon handles this.
-  # - Host is "ping dark" (no inbound ICMP replies) but not invisible to other scans.
-
+  # - Interface names are hand-maintained and must match actual tunnel names.
+  # - Static rules cannot model Mullvad's stateful behavior (connecting/connected/lockdown).
   #
   # RECOMMENDATION: Rely primarily on Mullvad's built-in lockdown-mode killswitch.
-  # These nftables rules are defense-in-depth only.
-  networking.nftables = lib.mkIf config.myOS.security.mullvad.lockdown {
+  # These nftables rules are a narrow fallback, not authoritative enforcement.
+  networking.nftables = lib.mkIf config.myOS.security.mullvad.nftablesFallback {
     enable = true;
     ruleset = ''
       table inet filter {
@@ -47,8 +44,8 @@ in {
           type filter hook input priority filter; policy drop;
           iif lo accept
           ct state established,related accept
-          # No inbound ICMP - prevents ping reconnaissance (host "dark" to scans)
-          # Outbound ICMP still allowed in output chain for path MTU discovery
+          # Inbound ICMP blocked (no response to pings)
+          # Bootstrap traffic allowed (DHCP client responses)
           udp dport { 68, 546 } accept
         }
         chain forward {
@@ -58,15 +55,17 @@ in {
           type filter hook output priority filter; policy drop;
           oif lo accept
           ct state established,related accept
-          # DHCP v4 and v6 (bootstrap to get IP before tunnel)
-          udp dport { 67, 547 } accept
-          ip6 nexthdr udp udp dport { 547, 546 } accept
-          # DNS to systemd-resolved (for Mullvad bootstrap)
+          # Bootstrap traffic: DHCP and NDP only on non-VPN interfaces
+          oifname != { ${lib.concatStringsSep ", " (map (n: "\"${n}\"") vpnIfaces)} } udp dport { 67, 547 } accept
+          oifname != { ${lib.concatStringsSep ", " (map (n: "\"${n}\"") vpnIfaces)} } ip6 nexthdr udp udp dport { 547, 546 } accept
+          # DNS to systemd-resolved (local stub only, not a DNS-security guarantee)
           ip daddr 127.0.0.53 udp dport 53 accept
           ip daddr 127.0.0.53 tcp dport 53 accept
-          # Outbound ICMP only - path MTU discovery (inbound blocked for stealth)
-          ip protocol icmp accept
-          ip6 nexthdr icmpv6 accept
+          # IPv4 ICMP: PMTU-relevant types only
+          ip protocol icmp icmp type { destination-unreachable, time-exceeded, parameter-problem } accept
+          # IPv6 NDP: router/neighbor discovery only (Mullvad-allowed subset)
+          # Types: 133 (rs), 134 (ra), 135 (ns), 136 (na)
+          oifname != { ${lib.concatStringsSep ", " (map (n: "\"${n}\"") vpnIfaces)} } ip6 nexthdr icmpv6 icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } accept
           # VPN interfaces: unrestricted egress when tunnel is up
           oifname { ${lib.concatStringsSep ", " (map (n: "\"${n}\"") vpnIfaces)} } accept
         }

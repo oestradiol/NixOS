@@ -33,7 +33,7 @@
 | Module blacklist (dccp/sctp/etc) | **Zero** | |
 | `security.protectKernelImage` | **Zero** | |
 | Core dump disable | **Zero** | |
-| Mullvad (enable, no lockdown) | **Optional** | When active: ~5-15ms latency. Off by default on daily |
+| Mullvad (enable, no nftablesFallback) | **Optional** | When active: ~5-15ms latency. Off by default on daily |
 
 ### Moved to paranoid-only (would have had measurable gaming impact)
 | Knob | Why moved | Impact if kept |

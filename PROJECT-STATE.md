@@ -33,7 +33,7 @@
 - Dangerous kernel module blacklist (dccp, sctp, rds, tipc, firewire).
 - USB device authorization restricted on paranoid (`myOS.security.usbRestrict`).
 - `debugfs=off`, `randomize_kstack_offset=on` boot parameters.
-- Browser policy module with two modes: base Firefox with arkenfox-inspired hardening (geo disabled, DoH, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandboxedBrowsers.enable = true` (paranoid).
+- Browser policy module with two modes: base Firefox with arkenfox-inspired hardening (geo disabled, DoH disabled for VPN DNS, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandboxedBrowsers.enable = true` (paranoid).
 - Networking killswitch with DHCP/DNS exceptions for tunnel establishment.
 - Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
@@ -128,7 +128,7 @@ All key hardening knobs are tunable per-profile without code changes:
 - Die-with-parent: auto-cleanup when launcher exits
 
 ### Firefox hardening (arkenfox-grounded user.js)
-- 70+ hardened prefs covering: startup, geolocation, telemetry (Normandy/Shield), safe browsing, implicit outbound blocking, DNS/DoH, HTTPS-only mode, SSL/TLS hardening (safe negotiation, 0-RTT disabled, OCSP hard-fail), HPKP/CRLite, referer trimming, container tabs, WebRTC disabled, dFPI, RFP (resist fingerprinting), shutdown sanitizing
+- 70+ hardened prefs covering: startup, geolocation, telemetry (Normandy/Shield), safe browsing, implicit outbound blocking, DoH disabled (VPN DNS only), HTTPS-only mode, SSL/TLS hardening (safe negotiation, 0-RTT disabled, OCSP hard-fail), HPKP/CRLite, referer trimming, container tabs, WebRTC disabled, dFPI, RFP (resist fingerprinting), shutdown sanitizing
 - Auto-clears cookies/storage/cache/formdata on exit
 - WebRTC: disabled on paranoid (prevents IP leak), enabled on daily (gaming/video calls)
 - Container tabs enabled for site isolation
@@ -232,7 +232,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 | **Gamescope** | Enabled | Disabled (`programs.gamescope.enable = lib.mkForce false`) | PASS |
 | **Gamemode** | Enabled | Disabled (`programs.gamemode.enable = lib.mkForce false`) | PASS |
 | **Browser** | Base Firefox (`sandboxedBrowsers.enable = false`) | Sandboxed only (`sandboxedBrowsers.enable = lib.mkForce true`) | PASS |
-| **VPN** | Enabled, no lockdown (`mullvad.lockdown = false`) | Enabled, lockdown (`mullvad.lockdown = lib.mkForce true`) | PASS |
+| **VPN** | Enabled, no local fallback (`mullvad.nftablesFallback = false`) | Enabled, with local fallback (`mullvad.nftablesFallback = lib.mkForce true`) | PASS |
 | **SMT/Hyperthreading** | Enabled (`disableSMT = false`) | Disabled (`disableSMT = lib.mkForce true`) | PASS |
 | **USB restriction** | Disabled (`usbRestrict = false`) | Enabled (`usbRestrict = lib.mkForce true`) | PASS |
 | **Audit logging** | Disabled (`auditd = false`) | Enabled (`auditd = lib.mkForce true`) | PASS |

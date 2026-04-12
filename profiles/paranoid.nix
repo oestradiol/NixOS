@@ -25,7 +25,7 @@
 
     # VPN and networking (strict)
     mullvad.enable = lib.mkForce true;
-    mullvad.lockdown = lib.mkForce true;
+    mullvad.nftablesFallback = lib.mkForce true;  # Option B: Emergency fail-closed local fallback
 
     # Browser security (sandboxed only)
     sandboxedBrowsers.enable = lib.mkForce true;
