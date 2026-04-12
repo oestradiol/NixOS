@@ -1211,3 +1211,490 @@ nixos-rebuild switch
 - Use consistent naming conventions
 - Test mount configuration changes
 - Keep backup of fstab/mount units
+
+---
+
+## If EFI partition space exhaustion prevents boot artifact install
+
+**Symptom**: `nixos-rebuild switch` fails with "No space left on device" when writing to EFI system partition, boot entries not updating.
+
+**Causes**:
+- ESP too small (recommended minimum: 512MB)
+- Accumulated old boot entries not cleaned
+- Lanzaboote generating large EFI binaries
+
+**Diagnostics**:
+```bash
+# Check ESP size and usage (from live system or installer)
+df -h /boot  # or df -h /mnt/boot if mounted to /mnt
+ls -lh /boot/EFI/nixos/
+du -sh /boot/EFI/
+
+# Check for old generations taking space
+sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+```
+
+**Recovery**:
+
+### Scenario 1: ESP full due to old generations
+
+**Cause**: Multiple generations accumulated large EFI binaries.
+
+**Recovery**:
+```bash
+# 1. Remove old generations to free space
+sudo nix-collect-garbage -d
+
+# 2. If still full, manually remove old EFI binaries (from installer)
+sudo rm /boot/EFI/nixos/*.efi.old
+
+# 3. Rebuild
+nixos-rebuild switch
+```
+
+### Scenario 2: ESP too small
+
+**Cause**: ESP partition created too small (< 512MB).
+
+**Recovery**:
+```bash
+# 1. Boot NixOS installer USB
+# 2. Backup current ESP contents
+sudo cp -r /boot/EFI /tmp/efi-backup
+
+# 3. Recreate ESP with larger size (WARNING: destructive)
+# Requires repartitioning - use gparted or parted from installer
+# Example: resize to 512MB minimum
+sudo parted /dev/disk/by-partlabel/NIXBOOT resizepart 1 512MB
+sudo mkfs.vfat -F32 /dev/disk/by-partlabel/NIXBOOT
+
+# 4. Mount system as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
+mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
+
+# 5. Restore EFI contents if needed
+sudo cp -r /tmp/efi-backup/* /mnt/boot/EFI/
+
+# 6. Reinstall bootloader
+nixos-enter --root /mnt
+nixos-rebuild switch --install-bootloader --flake /etc/nixos#nixos
+exit
+
+# 7. Verify
+bootctl list
+```
+
+**Prevention**:
+- Create ESP with at least 512MB during install
+- Run `nix-collect-garbage -d` regularly
+- Monitor ESP usage with `df -h /boot`
+
+---
+
+## If sandboxed app wrapper fails (non-browser apps)
+
+**Symptom**: `safe-vrcx` or `safe-windsurf` fails to start, crashes on launch, or shows permission errors.
+
+**Causes**:
+- D-Bus filtering too restrictive (app needs specific bus names)
+- Runtime directory permissions
+- Missing required filesystem binds (config, data, cache)
+- Portal regression (xdg-desktop-portal not responding)
+- Seccomp/Landlock filters blocking required syscalls
+
+**Diagnostics**:
+```bash
+# Run wrapper with verbose output to see error
+bash -x $(which safe-vrcx)
+
+# Check if xdg-dbus-proxy is running
+ps aux | grep xdg-dbus-proxy
+
+# Check portal availability
+echo $XDG_CURRENT_DESKTOP
+systemctl --user status xdg-desktop-portal
+
+# Check runtime directory permissions
+ls -la $XDG_RUNTIME_DIR
+```
+
+**Recovery**:
+
+### Scenario 1: D-Bus filtering too restrictive
+
+**Cause**: App needs specific D-Bus names not in allowlist.
+
+**Recovery**:
+```bash
+# 1. Identify missing D-Bus names by running app with strace
+strace -e trace=sendmsg,recvmsg safe-vrcx 2>&1 | grep dbus
+
+# 2. Add missing names to sandboxed-apps.nix
+# Edit modules/security/sandboxed-apps.nix:
+# Add --talk=org.example.RequiredService to xdg-dbus-proxy args
+
+# 3. Rebuild
+nixos-rebuild switch
+```
+
+### Scenario 2: Portal regression
+
+**Cause**: xdg-desktop-portal not responding or wrong implementation.
+
+**Recovery**:
+```bash
+# 1. Check which portal implementation is active
+echo $XDG_CURRENT_DESKTOP
+systemctl --user status xdg-desktop-portal*
+
+# 2. Ensure KDE portal is running (for Plasma)
+systemctl --user enable --now xdg-desktop-portal-kde
+
+# 3. Test portal
+xdg-desktop-portal --test
+
+# 4. If broken, reinstall portal packages
+nixos-rebuild switch
+```
+
+### Scenario 3: Missing filesystem binds
+
+**Cause**: App needs config/data/cache directories not bound.
+
+**Recovery**:
+```bash
+# 1. Identify required paths by checking app documentation
+# or running with strace to see file access
+
+# 2. Add binds to sandboxed-apps.nix
+# Edit modules/security/sandboxed-apps.nix:
+# Add to extraBinds for the specific app:
+# extraBinds = [
+#   { from = "$HOME/.config/AppName"; to = "$HOME/.config/AppName"; }
+#   { from = "$HOME/.local/share/AppName"; to = "$HOME/.local/share/AppName"; }
+# ];
+
+# 3. Rebuild
+nixos-rebuild switch
+```
+
+**Prevention**:
+- Test new sandboxed apps immediately after adding
+- Document required D-Bus names and filesystem paths in POST-STABILITY.md
+- Use strace to diagnose permission issues
+- Keep wrapper changes minimal and justified
+
+---
+
+## If xdg-dbus-proxy / portal regressions occur (non-browser)
+
+**Symptom**: Flatpak apps, sandboxed apps, or portal-dependent apps fail to start or show "no portal available" errors.
+
+**Causes**:
+- xdg-desktop-portal crash or not running
+- Wrong portal implementation for desktop environment
+- Portal configuration regression after Plasma update
+- xdg-dbus-proxy version incompatibility
+
+**Diagnostics**:
+```bash
+# Check portal status
+systemctl --user status xdg-desktop-portal
+systemctl --user status xdg-desktop-portal-kde
+
+# Check which portals are available
+ls /usr/share/xdg-desktop-portal/portals/
+ls /usr/share/xdg-desktop-portal/portals/kde/
+
+# Check portal logs
+journalctl --user -xeu xdg-desktop-portal
+```
+
+**Recovery**:
+
+### Scenario 1: Portal not running
+
+**Cause**: Portal service failed to start or crashed.
+
+**Recovery**:
+```bash
+# 1. Restart portal service
+systemctl --user restart xdg-desktop-portal
+systemctl --user restart xdg-desktop-portal-kde
+
+# 2. If fails, check logs
+journalctl --user -xeu xdg-desktop-portal
+
+# 3. Rebuild to ensure portal packages are correct
+nixos-rebuild switch
+```
+
+### Scenario 2: Wrong portal implementation
+
+**Cause**: System using GTK portal on KDE or vice versa.
+
+**Recovery**:
+```bash
+# 1. Check current desktop
+echo $XDG_CURRENT_DESKTOP
+
+# 2. Ensure KDE portal is installed and running for Plasma
+# Check hosts/nixos/default.nix or profiles for xdg.portal settings
+# For KDE Plasma, should have:
+# xdg.portal = {
+#   enable = true;
+#   extraPortals = [ pkgs.xdg-desktop-portal-kde ];
+# };
+
+# 3. Rebuild
+nixos-rebuild switch
+```
+
+**Prevention**:
+- Test portal-dependent apps after Plasma updates
+- Monitor portal service status
+- Keep portal configuration explicit in NixOS config
+
+---
+
+## If first-boot "no password set" lockout occurs
+
+**Symptom**: After first boot, cannot log in as any user. Root password not set, user password not set.
+
+**Causes**:
+- User creation failed during install
+- Password not set in configuration
+- Impermanence wiped password database
+- PAM configuration error
+
+**Recovery**:
+
+### Scenario 1: Root password not set
+
+**Cause**: Root password not configured in initial setup.
+
+**Recovery**:
+```bash
+# 1. Boot NixOS installer USB
+# 2. Mount system as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
+mount --bind /dev /mnt/dev
+mount --bind /proc /mnt/proc
+mount --bind /sys /mnt/sys
+
+# 3. Enter target system
+nixos-enter --root /mnt
+
+# 4. Set root password
+passwd
+
+# 5. Exit and reboot
+exit
+reboot
+```
+
+### Scenario 2: User account creation failed
+
+**Cause**: User creation failed during install or impermanence wiped user.
+
+**Recovery**:
+```bash
+# 1. Boot NixOS installer USB
+# 2. Mount system as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
+mount --bind /dev /mnt/dev
+mount --bind /proc /mnt/proc
+mount --bind /sys /mnt/sys
+
+# 3. Enter target system
+nixos-enter --root /mnt
+
+# 4. Create user (example for daily profile)
+useradd -m -G wheel -s /bin/zsh player
+passwd player
+
+# 5. Exit and reboot
+exit
+reboot
+```
+
+**Prevention**:
+- Verify user creation during install
+- Test login immediately after first boot
+- Ensure password is set in configuration
+- Check impermanence persistence for user database
+
+---
+
+## If Secure Boot state migration fails after firmware reset
+
+**Symptom**: System fails to boot after firmware reset, Secure Boot keys invalid or missing, Lanzaboote entries corrupted.
+
+**Causes**:
+- Firmware reset cleared Secure Boot keys
+- sbctl layout changed after update
+- ESP corrupted during firmware update
+- Lanzaboote signatures invalid
+
+**Diagnostics**:
+```bash
+# Check Secure Boot status (from live system or installer)
+sbctl status
+
+# Check EFI entries
+bootctl list
+
+# Check ESP contents
+ls -la /boot/EFI/
+ls -la /boot/EFI/systemd/
+ls -la /boot/EFI/nixos/
+```
+
+**Recovery**:
+
+### Scenario 1: Secure Boot keys cleared
+
+**Cause**: Firmware reset cleared enrolled keys.
+
+**Recovery**:
+```bash
+# 1. Boot NixOS installer USB
+# 2. Mount system as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
+mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
+mount --bind /dev /mnt/dev
+mount --bind /proc /mnt/proc
+mount --bind /sys /mnt/sys
+
+# 3. Re-enroll Secure Boot keys
+nixos-enter --root /mnt
+sbctl enroll-keys
+exit
+
+# 4. Reinstall bootloader with signatures
+nixos-enter --root /mnt
+nixos-rebuild switch --install-bootloader --flake /etc/nixos#nixos
+exit
+
+# 5. Verify
+bootctl list
+```
+
+### Scenario 2: sbctl layout changed
+
+**Cause**: sbctl update changed ESP layout, entries corrupted.
+
+**Recovery**:
+```bash
+# 1. Boot NixOS installer USB
+# 2. Mount system as in INSTALL-GUIDE.md Phase 2-3
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot /mnt/persist
+mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
+mount --bind /dev /mnt/dev
+mount --bind /proc /mnt/proc
+mount --bind /sys /mnt/sys
+
+# 3. Sign and reinstall
+nixos-enter --root /mnt
+sbctl sign
+nixos-rebuild switch --install-bootloader --flake /etc/nixos#nixos
+exit
+
+# 4. Verify
+bootctl list
+sbctl verify
+```
+
+**Prevention**:
+- Keep Secure Boot recovery keys backed up
+- Test firmware updates in safe environment
+- Keep ESP backup before firmware updates
+- Document Secure Boot configuration
+
+---
+
+## If live rollback fails due to persistence schema changes
+
+**Symptom**: `nixos-rebuild switch --rollback` succeeds but system has missing files, configuration mismatches, or service failures due to changed persistence paths.
+
+**Causes**:
+- Impermanence configuration added/removed paths between generations
+- Subvolume layout changed
+- Bind mount configuration changed
+- State files moved between generations
+
+**Diagnostics**:
+```bash
+# Check current generation
+nixos-rebuild --list-generations
+
+# Check persistence configuration
+grep -r "impermanence" /etc/nixos/
+grep -r "fileSystems" /etc/nixos/hosts/nixos/default.nix
+
+# Check what persisted
+findmnt /persist
+ls -la /persist/
+```
+
+**Recovery**:
+
+### Scenario 1: Persistence path changed
+
+**Cause**: Impermanence configuration added/removed paths.
+
+**Recovery**:
+```bash
+# 1. Identify what changed
+git -C /etc/nixos diff HEAD~1 HEAD
+
+# 2. Check if old generation's persisted files exist
+ls -la /persist/home/player/
+ls -la /persist/etc/
+
+# 3. Option A: Restore old persistence configuration
+# Revert impermanence.nix to match old generation
+# Edit modules/security/impermanence.nix
+
+# 4. Option B: Migrate persisted files to new paths
+# Manually move files from old paths to new paths
+sudo mv /persist/old/path /persist/new/path
+
+# 5. Rebuild
+nixos-rebuild switch
+```
+
+### Scenario 2: Subvolume bind mount changed
+
+**Cause**: Bind mount configuration changed between generations.
+
+**Recovery**:
+```bash
+# 1. Check current bind mounts
+findmnt -J | jq '.mountpoints[] | select(.target | contains("persist"))'
+
+# 2. Compare with old generation config
+git -C /etc/nixos show HEAD~1:hosts/nixos/default.nix | grep -A 5 fileSystems
+
+# 3. Restore old bind mount configuration
+# Edit hosts/nixos/default.nix to match old generation
+
+# 4. Rebuild
+nixos-rebuild switch
+```
+
+**Prevention**:
+- Document persistence configuration changes
+- Test rollback after persistence changes
+- Keep backup of critical persisted data
+- Use git to track configuration changes

@@ -1258,4 +1258,64 @@ If authentication breaks:
 
 ---
 
+## 21. Hardened sandboxed apps breakage logging (daily profile)
+
+**Context**: VRCX and Windsurf now use maximum hardened containment with tight defaults (no network, no D-Bus, no full /run bind, read-only root, per-app persistence only). This follows the "tighten first, accept breakage, debug later" policy.
+
+**Current hardening state**:
+- D-Bus: xdg-dbus-proxy with default deny, minimum required names only (portals)
+- Runtime: Private per-app runtime, no full /run/user bind
+- Filesystem: Read-only root, per-app writable persistence (config/data/cache only)
+- Network: Exposed only if required (VRCX: true for VRChat API, Windsurf: true for AI features)
+- Privileges: no-new-privileges, unshare namespaces, cap-drop ALL
+- Seccomp: Strict filtering enabled
+- Persistence: Only app-specific config/data/cache preserved
+
+**Expected breakage**:
+- Apps may fail to start due to missing D-Bus names
+- Apps may fail due to missing filesystem paths
+- Apps may fail due to seccomp filtering
+- Apps may fail due to network restrictions
+
+**Breakage logging procedure**:
+```bash
+# 1. Run wrapper with verbose output to see error
+bash -x $(which safe-vrcx)
+bash -x $(which safe-windsurf)
+
+# 2. Check D-Bus proxy logs
+journalctl --user -xeu xdg-dbus-proxy
+
+# 3. Check app-specific logs
+journalctl --user -xeu safe-vrcx
+journalctl --user -xeu safe-windsurf
+
+# 4. Identify missing D-Bus names with strace
+strace -e trace=sendmsg,recvmsg safe-vrcx 2>&1 | grep dbus
+
+# 5. Identify missing filesystem paths with strace
+strace -e trace=openat,access safe-vrcx 2>&1 | grep -E "ENOENT|EACCES"
+```
+
+**Adding exceptions**:
+Only add exceptions after observing actual need:
+
+1. **D-Bus names**: If app needs specific D-Bus name, add to `dbusNames` in `modules/security/sandboxed-apps.nix`
+2. **Filesystem paths**: If app needs additional paths, add to `configDir`, `dataDir`, or `cacheDir`
+3. **Network**: If app needs network, set `network = true` (already set for both apps)
+4. **Seccomp**: If seccomp blocks required syscalls, document in POST-STABILITY.md and consider loosening
+
+**Document breakage**:
+For each breakage incident, log to this section:
+```markdown
+### [DATE] VRCX breakage: [symptom]
+**Cause**: [root cause from strace/logs]
+**Fix**: [exception added to sandboxed-apps.nix]
+**Verification**: [how to verify fix works]
+```
+
+**Decision**: Keep maximum hardening by default. Only add exceptions after observing breakage and documenting the fix. This is hardened daily containment, not VM isolation. For strong isolation, use VM isolation (sandbox.vms) or Flatpak.
+
+---
+
 **Summary**: 4 items fixed (LUKS header backup, EFI backup, bubblewrap acknowledgment, SSH rotation); 7 items require your explicit decision (added PAM risk documentation).

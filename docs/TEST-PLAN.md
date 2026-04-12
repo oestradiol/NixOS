@@ -240,6 +240,14 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] DNS resolution refreshes periodically: monitor endpoint IP changes over time (if Mullvad rotates endpoint IPs)
 - [ ] Tunnel re-establishes after endpoint IP change (if applicable)
 
+## New recovery scenario validation (post-stability)
+- [ ] EFI partition space exhaustion: check ESP size with `df -h /boot`, verify >= 512MB
+- [ ] Sandboxed app wrapper failures: test `safe-vrcx` and `safe-windsurf` launch, check for D-Bus/portal errors
+- [ ] xdg-dbus-proxy/portal regressions: verify portal service running with `systemctl --user status xdg-desktop-portal`
+- [ ] First-boot lockout: verify user creation and password setting during install, test login immediately after first boot
+- [ ] Secure Boot state migration: verify sbctl status after firmware reset, test key re-enrollment
+- [ ] Live rollback with persistence changes: test rollback after impermanence config changes, verify no missing files
+
 ## Recovery scenario validation (post-stability)
 **Note**: These tests require inducing failure states or simulating them. Perform only after system is stable and you have recovery media ready.
 

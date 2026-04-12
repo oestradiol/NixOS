@@ -48,7 +48,7 @@
 **Goal**: Minimize trackable hardware/software identifiers that can fingerprint the system across boots/sessions.
 
 **Implemented mitigations**:
-- **machine-id**: Paranoid uses Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) as a deliberate privacy exception to blend with Whonix users. This conflicts with systemd's unique-id guidance (machine-id should be locally unique). Daily uses systemd-generated stable unique ID for operational stability.
+- **machine-id**: Paranoid uses Whonix shared ID (`machineIdValue = "b08dfa6083e7567a1921a715000001fb"`) as a deliberate privacy exception to blend with Whonix users. **HIGH-RISK DOCTRINE**: This conflicts with systemd's unique-id guidance (machine-id should be locally unique) and can create operational issues in software that assumes per-host identity. This is a privacy tactic with operational risk, not baseline secure design. Daily uses systemd-generated stable unique ID for operational stability (follows systemd guidance).
 - **MAC addresses**: Randomized for all interfaces via `systemd.network.links` with `MACAddressPolicy = "random"`
 - **WiFi scanning**: Random MAC during network scans (`wifi.scanRandMacAddress = true`)
 - **IPv6**: Privacy extensions enabled (randomized temporary addresses)
