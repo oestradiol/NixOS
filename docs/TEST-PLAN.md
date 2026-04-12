@@ -37,7 +37,7 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Gamescope starts
 - [ ] Gamemode is active (`systemctl status gamemoded`)
 - [ ] VR services work (`systemctl status wivrn`)
-- [ ] Vesktop / Telegram / Matrix run if installed
+- [ ] Vesktop run if installed
 - [ ] Firefox Sync is disabled (`identity.fxaccounts.enabled = false` in about:config)
 - [ ] Bluetooth controllers pair and work (Xbox/8BitDo/etc.)
 - [ ] no obvious gaming regression versus current setup baseline
@@ -48,8 +48,6 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Steam absent/disabled
 - [ ] VR absent/disabled
 - [ ] Vesktop absent/disabled
-- [ ] Telegram absent/disabled
-- [ ] Matrix absent/disabled
 - [ ] `safe-firefox` launches
 - [ ] Tor Browser launches
 - [ ] Signal (Flatpak) launches

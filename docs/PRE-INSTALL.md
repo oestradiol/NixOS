@@ -112,6 +112,7 @@ Check: `/mnt`, `/mnt/boot`, `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, home sub
 | Partition labels not matching repo assumptions | Manual partitioning | Use `scripts/install-nvme-rebuild.sh` or match its layout exactly |
 | Missing subvolume mount before install | Forgot `mount -o subvol=@nix` | Run `findmnt -R /mnt` and verify all subvolumes |
 | Secure Boot enabled before signed boot path ready | Firmware settings | Keep Secure Boot disabled for first install |
+| UID/GID mismatch on paranoid home | `hardware-target.nix` hardcodes `uid=1001/gid=100` | Verify `ghost` user UID/GID match before install; edit if needed |
 | Missing recovery passphrase | Did not record it | Write LUKS passphrase down before enrollment |
 
 ---
@@ -137,17 +138,14 @@ For each security claim, verify the code matches the documentation.
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| nftables lockdown | `modules/security/networking.nix:30-65` | ✅ VERIFIED |
+| nftables lockdown | `modules/security/networking.nix:31-68` | ✅ VERIFIED |
 | VPN interface whitelist | `wg-mullvad`, `tun0`, `tun1` accepted | ✅ VERIFIED |
-| **Mullvad IP constraint** | Lines 54-61 constrain UDP 51820 and TCP 443/1401 to specific Mullvad IPs | ✅ VERIFIED |
+| Interface-based killswitch | No hardcoded IPs; physical interface allows only DHCP/DNS/ICMP | ✅ VERIFIED |
 | Firewall disabled in lockdown | `networking.firewall.enable = !config.myOS.security.mullvad.lockdown` | ✅ VERIFIED |
 
-**Mullvad infrastructure IPs (VERIFY CURRENT AT https://mullvad.net/en/servers BEFORE INSTALL):**
-```
-WireGuard relays: 185.65.134.0/24, 185.65.135.0/24, 193.138.219.0/24
-API/Bridge: 185.65.134.66, 185.65.135.1, 193.138.218.74
-```
-**CRITICAL**: If these IPs have rotated, the killswitch will block Mullvad connection. Verify current IPs and update `modules/security/networking.nix` before install.
+**Killswitch behavior**: Interface-based only (no hardcoded Mullvad IPs). Physical interface allows DHCP, DNS to systemd-resolved, and ICMP for bootstrap. All egress through VPN interfaces (`wg-mullvad`, `tun0`, `tun1`) when tunnel is up.
+
+**Known leakage**: Brief DNS queries at boot before tunnel establishment (unavoidable - must resolve VPN endpoint).
 
 ### Base security
 
@@ -163,7 +161,7 @@ API/Bridge: 185.65.134.66, 185.65.135.1, 193.138.218.74
 
 | Claim | Verification | Status |
 |-------|--------------|--------|
-| 28 assertions | `modules/security/governance.nix` lines 7-120 | ✅ VERIFIED |
+| 28 assertions | `modules/security/governance.nix` lines 7-118 | ✅ VERIFIED |
 | Paranoid requires sandboxed browsers | Lines 17-18 | ✅ VERIFIED |
 | Paranoid requires Mullvad lockdown | Lines 21-26 | ✅ VERIFIED |
 | Paranoid ghost not in wheel | Lines 61-62 | ✅ VERIFIED |

@@ -29,8 +29,6 @@
     # bitwarden-desktop → com.bitwarden.desktop
     # vesktop → dev.vencord.Vesktop
     # obsidian → md.obsidian.Obsidian
-    # telegram-desktop → org.telegram.desktop
-    # element-desktop → im.riot.Riot
     # Bubblewrap-wrapped apps (not available on Flathub)
     # vrcx and windsurf are pulled in as dependencies of the wrappers
   ];

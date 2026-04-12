@@ -9,8 +9,8 @@
 - Windows may be removed. The separate SATA disk is intentionally left unused.
 - LUKS2 + Btrfs + tmpfs root + explicit `/persist` model.
 - Secure Boot + TPM2 are staged after the first known-good encrypted boot.
-- Daily keeps Steam, Vesktop, VR, Telegram, Matrix, Signal, Bitwarden. Firefox Sync is disabled by policy (identity.fxaccounts.enabled = false) for compartmentalization.
-- Paranoid forbids Steam, Vesktop, Telegram, Matrix by default; Signal remains allowed.
+- Daily keeps Steam, Vesktop, VR, Signal, Bitwarden. Firefox Sync is disabled by policy (identity.fxaccounts.enabled = false) for compartmentalization.
+- Paranoid forbids Steam, Vesktop and VR by default; Signal remains allowed.
 - Paranoid browser path uses `safe-firefox` and separate Tor Browser/Mullvad Browser roles.
 - Controllers (Bluetooth/Xbox): enabled on daily (`myOS.gaming.controllers.enable = true`), disabled on paranoid.
 - Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
@@ -138,7 +138,7 @@ All key hardening knobs are tunable per-profile without code changes:
 - High-risk proprietary apps use Flatpak where available; otherwise bubblewrap
 - Flatpak provides namespace isolation, capability dropping, read-only filesystem by default
 - Flathub remote configured automatically via systemd service (flatpak-repo)
-- App data persistence scaffolded for: Signal, Spotify, Bitwarden, Vesktop, Obsidian, Telegram, Element
+- App data persistence scaffolded for: Signal, Spotify, Bitwarden, Vesktop, Obsidian
 - Packages installed manually after first boot (see POST-STABILITY.md)
 - App data persisted via impermanence: `~/.var/app/com.example.App`
 
@@ -231,7 +231,6 @@ All tunable via `myOS.security.kernelHardening.*`:
 | **Controllers** | Enabled (`controllers.enable = true`) | Disabled (`controllers.enable = lib.mkForce false`) | PASS |
 | **Gamescope** | Enabled | Disabled (`programs.gamescope.enable = lib.mkForce false`) | PASS |
 | **Gamemode** | Enabled | Disabled (`programs.gamemode.enable = lib.mkForce false`) | PASS |
-| **Vesktop/Telegram/Matrix** | Allowed (Flatpak scaffolding) | Disabled by governance assertions | PASS |
 | **Browser** | Base Firefox (`sandboxedBrowsers.enable = false`) | Sandboxed only (`sandboxedBrowsers.enable = lib.mkForce true`) | PASS |
 | **VPN** | Enabled, no lockdown (`mullvad.lockdown = false`) | Enabled, lockdown (`mullvad.lockdown = lib.mkForce true`) | PASS |
 | **SMT/Hyperthreading** | Enabled (`disableSMT = false`) | Disabled (`disableSMT = lib.mkForce true`) | PASS |
@@ -257,7 +256,7 @@ All tunable via `myOS.security.kernelHardening.*`:
 
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
-- Vesktop, Telegram, Matrix, Steam, VR disabled by policy.
+- Vesktop, Steam, VR disabled by policy.
 - Mullvad intended as always-on; lockdown networking.
 - Lower persistence footprint (tmpfs home, selective allowlist).
 - Signal Desktop sandboxed via Flatpak.
@@ -314,5 +313,5 @@ This repository is materially stronger than the original gaming-first unstable-o
 - Mullvad lockdown nftables may need local adjustment after first real connection test
 - NVIDIA in paranoid is a compatibility compromise
 - hardened allocator remains intentionally disabled until the rest is debugged
-- NVIDIA package: temporarily using `production` branch instead of ideal `legacy_580` due to nixpkgs issue #503740
-- Mullvad IP: updated stale DNS IP (193.138.219.228 → 193.138.218.74) per Mullvad's 2019 infrastructure change
+- NVIDIA package: temporarily using `production` branch instead of ideal `legacy_580` due to nixpkgs#503740
+- Mullvad killswitch: converted from hardcoded IPs to interface-based (no IP maintenance needed)

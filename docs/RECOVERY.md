@@ -65,31 +65,45 @@ nixos-rebuild switch
 3. check `sudo nft list ruleset` to identify blocking rule
 4. rebuild and retest paranoid after daily is healthy again
 
-## If Mullvad VPN fails to connect (stale IP ranges)
-**Symptom**: Mullvad cannot establish tunnel; "connecting" hangs indefinitely.  
-**Cause**: Hardcoded Mullvad IPs in nftables rules may have rotated.
+## If Mullvad VPN fails to connect
+**Symptom**: Mullvad cannot establish tunnel; "connecting" hangs indefinitely.
+
+**Common causes and fixes**:
 
 ```bash
-# 1. Check current Mullvad infrastructure IPs
-# Visit: https://mullvad.net/en/servers
-# Note the current WireGuard relay IPs and API server IPs for your region
+# 1. Check interface names match your VPN tunnel
+# The killswitch allows: wg-mullvad, tun0, tun1
+# If Mullvad uses different interface names, update vpnIfaces in networking.nix:
+#   vpnIfaces = [ "wg-mullvad" "tun0" "tun1" "your-interface" ];
 
-# 2. Edit modules/security/networking.nix
-# Update the hardcoded IP ranges in the nftables ruleset:
-#   - WireGuard relays: UDP 51820 to current relay ranges
-#   - API/Bridge: TCP 443/1401 to current API servers
+# 2. Verify systemd-resolved is working (required for bootstrap)
+systemctl status systemd-resolved
+resolvectl status
 
-# 3. Rebuild and test
-sudo nixos-rebuild switch --flake /etc/nixos#nixos
-mullvad status
+# 3. Check DHCP is functional (required before tunnel)
+ip addr show
+ip route show
 
-# 4. If still failing, temporarily disable nftables killswitch
+# 4. Check nftables rules are blocking/unblocking as expected
+sudo nft list ruleset
+
+# 5. If killswitch is blocking bootstrap, temporarily disable it
 # Set myOS.security.mullvad.lockdown = false in your profile, rebuild,
 # then rely on Mullvad's built-in lockdown-mode (mullvad lockdown-mode set on)
 ```
 
+**Killswitch exceptions documented** (allowed on physical interface):
+- DHCP (v4: ports 67/547, v6: ports 547/546)
+- DNS to systemd-resolved (127.0.0.53:53)
+- Outbound ICMP only (path MTU discovery)
+
+**Known leakage** (documented tradeoff):
+- Bootstrap DNS: Brief clearnet DNS queries at boot before VPN tunnel is established.
+  Unavoidable: must resolve VPN endpoint hostname. Mullvad daemon handles this securely.
+- Host is "ping dark" (no inbound ICMP replies) but not invisible to other scans.
+
 **Prevention**: The nftables rules are defense-in-depth only. Rely primarily on
-Mullvad's built-in lockdown-mode killswitch, which doesn't require IP maintenance.
+Mullvad's built-in lockdown-mode killswitch.
 
 ## If NVIDIA/Wayland breaks after update
 1. boot into previous generation: `nixos-rebuild --rollback`
