@@ -60,6 +60,13 @@ Paranoid:
 - treat lockdown behavior as expected, not a bug
 - validate killswitch: `sudo nft list ruleset`
 
+**Killswitch IP ranges (verify current at https://mullvad.net/en/servers):**
+The nftables rules constrain pre-tunnel traffic to Mullvad infrastructure only:
+- WireGuard relays: UDP 51820 to 185.65.134.0/24, 185.65.135.0/24, 193.138.219.0/24
+- API/Bridge: TCP 443/1401 to specific Mullvad servers (185.65.134.66, 185.65.135.1, 193.138.219.228)
+
+If Mullvad rotates IPs, update `modules/security/networking.nix` and rebuild.
+
 **If network issues occur**: See [`RECOVERY.md`](./RECOVERY.md) "If the paranoid profile blocks too much network" section.
 
 ## 7. Secrets / agenix
@@ -72,7 +79,11 @@ Examples:
 ## 8. Scanner initialization
 - Update ClamAV signatures: `sudo freshclam`
 - Initialize AIDE database: `sudo aideinit`
-- Verify timer is active: `systemctl list-timers | grep -E 'clamav|aide'`
+- Verify timers are active: `systemctl list-timers | grep -E 'clamav|aide'`
+- Test scans manually:
+  - `sudo systemctl start clamav-shallow-scan` (quick daily check)
+  - `sudo systemctl start clamav-deep-scan` (comprehensive weekly check)
+- Review logs: `/var/log/clamav-shallow-scan.log`, `/var/log/clamav-deep-scan.log`
 
 ## 9. Manual follow-ups
 - Validate Mullvad interface names match nftables rules (adjust `vpnIfaces` in networking.nix if needed)
@@ -99,7 +110,7 @@ For apps not available as Flatpak, use the bubblewrap wrappers:
 - `safe-vrcx` — VRCX with UID isolation (daily profile)
 - `safe-windsurf` — Windsurf with UID isolation (daily profile)
 
-These wrappers provide UID isolation (100000:100000 unmapped from host), network namespace isolation, and minimal filesystem access.
+These wrappers provide UID isolation (100000:100000 unmapped from host), process namespace isolation, and minimal filesystem access. Note: Network namespace is NOT isolated — these apps need host network access for VPN/Tor connectivity.
 
 ## 12. Setup KeePassXC with permanence
 KeePassXC is available in both profiles. The configuration is persisted via impermanence:
@@ -283,6 +294,15 @@ All negligible-impact hardening is kept enabled on daily by decision. If specifi
 ### NTS time sync replacement
 - Knob not yet implemented
 - May break KDE/Qt time APIs - test carefully
+
+### Memory-safe languages policy
+- **Status**: Documented as doctrine, not enforceable in repo
+- **Rationale**: Encouraging Rust/Go/etc. over C/C++ for new code is valuable but not a NixOS configuration option
+- **Implementation**: Would require:
+  - Package overlay preferring memory-safe implementations
+  - Development environment defaults (cargo, go tools)
+  - Documentation guidelines for any custom scripts
+- **Scope**: Best-practice note; cannot be enforced at system level
 
 ### Remote wipe / dead-man switch integration
 - **Status**: Deferred to post-stability
@@ -574,8 +594,8 @@ lsusb | grep -i -E "(yubi|fido|u2f)"
 ### [FIXED] Bubblewrap GPU Passthrough Acknowledgment
 **Risk**: `safe-firefox` uses `--dev-bind /dev/dri` which exposes GPU attack surface. GPU drivers have history of DMA attacks.  
 **Fix**: Documentation updated to acknowledge this limitation.  
-**Current claim**: "National-level" isolation is slightly overstated for GPU-bound apps.  
-**Actual isolation**: UID namespace + network namespace + FS isolation = strong, but GPU passthrough is a known escape vector (historical GPU driver bugs allow DMA attacks).  
+**Current claim**: "National-level" isolation is overstated for GPU-bound apps.  
+**Actual isolation**: UID namespace + process namespace + FS isolation = strong, but GPU passthrough is a known escape vector (historical GPU driver bugs allow DMA attacks). Network namespace is NOT isolated for browsers.  
 **Recommendation**: For maximum isolation of untrusted content, use VM isolation (`vmIsolation.enable`) instead of bubblewrap, or run `safe-firefox` on a system without GPU passthrough (software rendering).
 
 ### [FIXED] SSH Host Key Rotation Policy

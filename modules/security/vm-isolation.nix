@@ -76,15 +76,16 @@ in {
     
     # SPICE for seamless VM display integration
     services.spice-vdagentd.enable = true;
-    
-    # USB redirection for VMs (optional, for USB device passthrough)
-    virtualisation.spiceUSBRedirection.enable = true;
+
+    # USB redirection is DISABLED by default - enable only if you need USB passthrough
+    # This reduces attack surface; USB passthrough is a potential escape vector
+    virtualisation.spiceUSBRedirection.enable = lib.mkDefault false;
     
     # Firejail not used (rejected in favor of bubblewrap + VMs)
     # Flatpak remains for application packaging, not primary isolation
     
     # NOTE: This is the strongest practical isolation layer available.
-    # Even if a national-level actor compromises the VM, escape requires:
+    # Even if a sophisticated threat actor compromises the VM, escape requires:
     # - KVM hypervisor exploit (historically rare, quickly patched)
     # - CPU speculative execution side-channel (mitigated with L1TF/VMD patches)
     # - Malicious device passthrough (disabled by default here)

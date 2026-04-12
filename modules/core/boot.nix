@@ -12,7 +12,9 @@ in {
 
   boot.kernelPackages = lib.mkDefault pkgs.linuxPackages;
 
-  boot.kernelModules = [ "ntsync" ];
+  # ntsync is a gaming-related kernel module (Wine/Proton synchronization)
+  # Only loaded on daily profile, not paranoid
+  boot.kernelModules = lib.optionals gaming.sysctls [ "ntsync" ];
   boot.kernelParams = [
     "nvidia_drm.modeset=1"
     "randomize_kstack_offset=on"

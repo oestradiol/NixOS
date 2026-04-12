@@ -9,8 +9,8 @@
 - Windows may be removed. The separate SATA disk is intentionally left unused.
 - LUKS2 + Btrfs + tmpfs root + explicit `/persist` model.
 - Secure Boot + TPM2 are staged after the first known-good encrypted boot.
-- Daily keeps Steam, Vesktop, Firefox Sync, VR, Telegram, Matrix, Signal, Bitwarden.
-- Paranoid forbids Firefox Sync, Steam, Vesktop, Telegram, Matrix by default; Signal remains allowed.
+- Daily keeps Steam, Vesktop, VR, Telegram, Matrix, Signal, Bitwarden. Firefox Sync is disabled by policy (identity.fxaccounts.enabled = false) for compartmentalization.
+- Paranoid forbids Steam, Vesktop, Telegram, Matrix by default; Signal remains allowed.
 - Paranoid browser path uses `safe-firefox` and separate Tor Browser/Mullvad Browser roles.
 - Controllers (Bluetooth/Xbox): keep disabled, enable manually later.
 - Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
@@ -18,7 +18,7 @@
 - All negligible-impact hardening on daily: keep enabled, monitor post-install.
 - `init_on_free=1` and `page_alloc.shuffle=1`: paranoid-only (measurable impact).
 - `nosmt=force`: paranoid-only (30-40% CPU throughput loss).
-- Browser sandboxing: national-level with UID isolation (100000), bubblewrap namespaces, arkenfox-grounded user.js.
+- Browser sandboxing: UID isolation (100000), bubblewrap process namespaces. Firefox hardening is arkenfox-inspired with custom preferences; not clean arkenfox alignment.
 - VM isolation: implemented as knob, disabled by default, compatible with daily driver.
 - Application sandboxing: replace high-risk proprietary apps with Flatpak (sandboxed) or bubblewrap wrappers (UID isolation). Signal Desktop uses Flatpak on both profiles.
 
@@ -33,11 +33,12 @@
 - Dangerous kernel module blacklist (dccp, sctp, rds, tipc, firewire).
 - USB device authorization restricted on paranoid (`myOS.security.usbRestrict`).
 - `debugfs=off`, `randomize_kstack_offset=on` boot parameters.
-- Browser policy module with two modes: base Firefox with moderate arkenfox-style hardening (geo disabled, DoH, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandboxedBrowsers.enable = true` (paranoid).
+- Browser policy module with two modes: base Firefox with arkenfox-inspired hardening (geo disabled, DoH, HTTPS-only, dFPI cookies, strict ETP, OCSP hard-fail) when `sandboxedBrowsers.enable = false` (daily); sandboxed browser wrappers exclusively (safe-firefox with full hardened user.js, safe-tor-browser, safe-mullvad-browser) with UID isolation when `sandboxedBrowsers.enable = true` (paranoid).
 - Networking killswitch with DHCP/DNS exceptions for tunnel establishment.
 - Agenix scaffold, impermanence module, Secure Boot + TPM merged into one staging module.
 - Systemd service hardening for flatpak-repo, ClamAV, and AIDE services.
-- Daily-only scanner timers for ClamAV and AIDE checks.
+- ClamAV split scans: daily shallow scan (quick check) + weekly deep scan (comprehensive).
+- AIDE weekly integrity checks with persisted database.
 - 27 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
 - **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.

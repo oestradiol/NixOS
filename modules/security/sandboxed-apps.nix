@@ -1,6 +1,7 @@
 # Sandboxed Applications
 # Bubblewrap wrappers for high-risk proprietary apps not available as Flatpak
-# UID isolation + network namespace + minimal filesystem access
+# UID isolation (100000:100000) + process namespace + minimal filesystem access
+# Note: Network namespace is NOT isolated - apps need host network for their functionality
 { config, lib, pkgs, ... }:
 let
   cfg = config.myOS.security.sandboxedApps;

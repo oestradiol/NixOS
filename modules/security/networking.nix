@@ -22,6 +22,11 @@ in {
   # Then validate with: sudo nft list ruleset && mullvad status
   # If Mullvad's built-in always-require-VPN works correctly, these rules
   # serve as defense-in-depth. Adjust interface names after live testing.
+  #
+  # Mullvad infrastructure IPs (as of 2024) - constrain pre-tunnel traffic:
+  # - WireGuard relays: UDP 51820 to specific Mullvad server IPs
+  # - API/Bridge: TCP 443, 1401 to mullvad.net infrastructure
+  # These are narrowed to prevent general internet egress before VPN is up.
   networking.nftables = lib.mkIf config.myOS.security.mullvad.lockdown {
     enable = true;
     ruleset = ''
@@ -46,8 +51,14 @@ in {
           ip daddr 127.0.0.53 tcp dport 53 accept
           ip daddr 127.0.0.53 udp dport 53 accept
           oifname { ${lib.concatStringsSep ", " (map (n: "\"${n}\"") vpnIfaces)} } accept
-          udp dport 51820 accept
-          tcp dport { 443, 1401 } accept
+          # Mullvad WireGuard relays (IPv4 ranges)
+          ip daddr 185.65.134.0/24 udp dport 51820 accept
+          ip daddr 185.65.135.0/24 udp dport 51820 accept
+          ip daddr 193.138.219.0/24 udp dport 51820 accept
+          # Mullvad API/bridge servers
+          ip daddr 185.65.134.66 tcp dport { 443, 1401 } accept
+          ip daddr 185.65.135.1 tcp dport { 443, 1401 } accept
+          ip daddr 193.138.219.228 tcp dport { 443, 1401 } accept
         }
       }
     '';
