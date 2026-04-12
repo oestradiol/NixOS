@@ -38,7 +38,7 @@ id && whoami && echo "$XDG_SESSION_TYPE"
 - [ ] Gamemode is active (`systemctl status gamemoded`)
 - [ ] VR services work (`systemctl status wivrn`)
 - [ ] Vesktop / Telegram / Matrix run if installed
-- [ ] Firefox Sync can be used manually
+- [ ] Firefox Sync is disabled (`identity.fxaccounts.enabled = false` in about:config)
 - [ ] Bluetooth controllers pair and work (Xbox/8BitDo/etc.)
 - [ ] no obvious gaming regression versus current setup baseline
 
@@ -150,7 +150,7 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] After creating `.age` files in `/etc/nixos/secrets/`, `nixos-rebuild switch` decrypts them correctly
 
 ## Browser hardening verification
-- [ ] Daily Firefox: `about:config` shows `privacy.resistFingerprinting` = false (WebRTC compromise)
-- [ ] Daily Firefox: `about:config` shows `media.peerconnection.enabled` = false (WebRTC disabled)
+- [ ] Daily Firefox: `about:config` shows `privacy.resistFingerprinting` = false (FPP instead of RFP)
+- [ ] Daily Firefox: `about:config` shows `media.peerconnection.enabled` = true (WebRTC enabled for gaming/video)
 - [ ] Paranoid safe-firefox: check `~/.cache/safe-firefox/profile/user.js` exists with hardened prefs
 - [ ] Tor Browser: verify it uses Tor network (not system DNS)

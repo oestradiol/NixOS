@@ -130,6 +130,18 @@
       # ── Sandboxed applications ─────────────────────────────────────
       sandboxedApps.enable = lib.mkEnableOption "Bubblewrap sandboxed applications for high-risk proprietary apps";
 
+      # ── PAM profile-binding (high-risk, opt-in) ────────────────────
+      pamProfileBinding.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          EXPERIMENTAL: Enforce user/profile binding via PAM (daily=player, paranoid=ghost).
+          WARNING: This modifies PAM service files directly (.text override) which is a
+          high-risk implementation. May cause authentication lockouts if misconfigured.
+          Only enable after post-stability testing. See docs/POST-STABILITY.md Section 19.
+        '';
+      };
+
       # ── Machine ID persistence ────────────────────────────────────
       persistMachineId = lib.mkOption {
         type = lib.types.bool;

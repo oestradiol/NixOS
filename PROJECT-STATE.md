@@ -12,7 +12,7 @@
 - Daily keeps Steam, Vesktop, VR, Telegram, Matrix, Signal, Bitwarden. Firefox Sync is disabled by policy (identity.fxaccounts.enabled = false) for compartmentalization.
 - Paranoid forbids Steam, Vesktop, Telegram, Matrix by default; Signal remains allowed.
 - Paranoid browser path uses `safe-firefox` and separate Tor Browser/Mullvad Browser roles.
-- Controllers (Bluetooth/Xbox): keep disabled, enable manually later.
+- Controllers (Bluetooth/Xbox): enabled on daily (`myOS.gaming.controllers.enable = true`), disabled on paranoid.
 - Swap: zram + 8GB Btrfs swap file on `@swap` subvolume.
 - AppArmor on daily: keep enabled, monitor for breakage.
 - All negligible-impact hardening on daily: keep enabled, monitor post-install.
@@ -40,17 +40,64 @@
 - ClamAV split scans: daily impermanence scan + weekly deep scan (comprehensive).
 - AIDE weekly integrity checks with persisted database.
 
+## Privacy and anti-fingerprinting (profile-dependent)
+
+### Paranoid profile (maximal privacy hardening)
+**Goal**: Minimize trackable hardware/software identifiers that can fingerprint the system across boots/sessions.
+
+**Implemented mitigations**:
+- **machine-id**: Randomized per boot (`persistMachineId = false`) - systemd generates new ID each boot
+- **MAC addresses**: Randomized for all interfaces via `systemd.network.links` with `MACAddressPolicy = "random"`
+- **WiFi scanning**: Random MAC during network scans (`wifi.scanRandMacAddress = true`)
+- **IPv6**: Privacy extensions enabled (randomized temporary addresses)
+- **TCP timestamps**: Disabled (`tcp_timestamps = 0`) - prevents clock skew fingerprinting
+- **Home directory**: tmpfs (wiped on boot) with selective bind-mounts only for allowlisted items
+- **Root filesystem**: tmpfs (full system wipe on boot except persisted paths)
+
+**Residual fingerprinting vectors** (cannot fully mitigate without breakage):
+- **DMI/SMBIOS data** (`/sys/class/dmi/id/`): Hardware model, serial numbers - world-readable, required by kernel
+- **CPU model/features**: Exposed via `/proc/cpuinfo` - required for userspace operation
+- **TPM EK** (if enrolled): Hardware-bound persistent key - don't enroll TPM if you want to avoid this
+- **Disk serial numbers**: Available via `smartctl`, `hdparm` - requires root, but persistent
+- **USB device topology**: Persistent port/device relationships
+
+### Daily profile (operational stability prioritized)
+- **machine-id**: Persistent (`persistMachineId = true`) - required for D-Bus, Steam, systemd state
+- **MAC addresses**: Stable per network (`MACAddressPolicy = "stable"`) - prevents WiFi captive portal re-auth issues
+- **WiFi scanning**: Random MAC during scans only
+- **IPv6**: Privacy extensions enabled (standard privacy)
+- **TCP timestamps**: Enabled (needed for some gaming/networking optimizations)
+- **Home directory**: Fully persistent Btrfs subvolume
+
 ## Security monitoring exclusions (documented for awareness)
 
-**ClamAV/AIDE exclusions** (intentionally not scanned for performance/isolation):
-- `/persist/etc/ssh` — SSH keys (sensitive, low malware risk)
-- Steam directories (`~/.steam`, `~/.local/share/Steam`) — massive game files, trusted platform
-- `/var/lib/systemd` — runtime state (noisy)
-- `/var/log/journal` — volatile logs
-- **`/persist/home-ghost`** — Ghost profile isolation (NEVER accessible from daily)
+**ClamAV scan targets**: `/home/player`, `/home/ghost`, `/persist`, `/persist/home/ghost`, `/var/lib`, `/var/log`, `/tmp`, `/var/tmp`, `/boot/efi`
 
-**Implication**: Steam games are NOT virus-scanned. Only install games from trusted sources (Steam store, verified publishers). Avoid sideloading untrusted game binaries into Steam directories.
-- 27 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
+**ClamAV exclusions** (via `--exclude-dir` flags in daily/impermanence and deep scans):
+- `/persist/etc/ssh` — SSH keys (high-churn, sensitive)
+- `/home/player/.*\.steam` — Steam runtime files (regex pattern)
+- `/home/player/.local/share/Steam` — Steam data (daily scan excludes entire dir)
+- `/home/player/.local/share/Steam/steamapps` — Game files (deep scan only)
+- `/home/player/.var/app` — Flatpak application data (sandboxed, trusted platform)
+- `/var/log/journal` — Binary journal logs (noisy, not meaningful to scan)
+
+**AIDE exclusions** (via `!` directives in aide.conf):
+- `/persist/var/lib/aide` — AIDE's own database
+- `/home/player/.local/share/Steam` — Steam runtime files
+- `/home/player/.steam` — Steam configuration
+- `/var/lib/systemd` — Volatile service state
+- `/var/log/journal` — Volatile binary logs
+
+**Design note**: Both daily and paranoid persisted directories are scanned by ClamAV and monitored by AIDE. Profile separation isolates runtime environments, not scan coverage — malware in `/persist/home/ghost` would still be detected from the daily profile.
+
+**Trust note**: Steam games, Flatpak user data, and Nix store packages are intentionally NOT scanned:
+- **Steam store**: Games cryptographically signed, delivered via TLS; Steam runtime excluded from scans
+- **Flathub apps**: User app data (`~/.var/app`) excluded; system Flatpak content under `/var/lib/flatpak` is scanned as part of `/var/lib`
+- **NixOS cache**: Cryptographically hashed, bit-reproducible builds
+
+Users should not sideload untrusted binaries into these directories. The Nix store (`/nix/store`) is read-only, hash-verified, and excluded from scans by design.
+
+- 28 governance assertions (8 use list-membership checks; remainder are boolean/option existence assertions).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
 - **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
 - **Module structure minimized**: `core/` (4 files), `security/` (11 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (2 files).
@@ -83,21 +130,21 @@ All key hardening knobs are tunable per-profile without code changes:
 ### Firefox hardening (arkenfox-grounded user.js)
 - 70+ hardened prefs covering: startup, geolocation, telemetry (Normandy/Shield), safe browsing, implicit outbound blocking, DNS/DoH, HTTPS-only mode, SSL/TLS hardening (safe negotiation, 0-RTT disabled, OCSP hard-fail), HPKP/CRLite, referer trimming, container tabs, WebRTC disabled, dFPI, RFP (resist fingerprinting), shutdown sanitizing
 - Auto-clears cookies/storage/cache/formdata on exit
-- WebRTC disabled (prevents IP leak)
+- WebRTC: disabled on paranoid (prevents IP leak), enabled on daily (gaming/video calls)
 - Container tabs enabled for site isolation
 
 ## Application sandboxing architecture
 ### Flatpak (daily + paranoid profiles)
-- All high-risk proprietary apps replaced with Flatpak versions where available
+- High-risk proprietary apps use Flatpak where available; otherwise bubblewrap
 - Flatpak provides namespace isolation, capability dropping, read-only filesystem by default
-- Apps installed: Signal, Spotify, Bitwarden, Vesktop, Obsidian, Telegram, Element
 - Flathub remote configured automatically via systemd service (flatpak-repo)
+- App data persistence scaffolded for: Signal, Spotify, Bitwarden, Vesktop, Obsidian, Telegram, Element
 - Packages installed manually after first boot (see POST-STABILITY.md)
 - App data persisted via impermanence: `~/.var/app/com.example.App`
 
-### Bubblewrap wrappers (non-Flatpak apps)
+### Bubblewrap wrappers (non-Flatpak apps like VRCX, Windsurf)
 - UID isolation (100000:100000 unmapped from host)
-- Network namespace isolation
+- Process namespace isolation (IPC, PID, UTS) — **Network namespace is NOT isolated**
 - Minimal filesystem access (ro-bind system dirs)
 - GPU/Wayland/PipeWire socket passthrough (read-only)
 - Input device passthrough for keyboard/mouse
@@ -174,17 +221,47 @@ All tunable via `myOS.security.kernelHardening.*`:
 - Choosing `disko` for wave one; the install path remains manual/scripted.
 
 ## Trust model
+
+### Profile Policy Verification Matrix
+
+| Policy | Daily | Paranoid | Status |
+|--------|-------|----------|--------|
+| **Gaming/Steam** | Enabled (`steam.enable = true`) | Disabled (`steam.enable = lib.mkForce false`) | PASS |
+| **VR/WiVRn** | Enabled (`services.wivrn.enable = true`) | Disabled (`services.wivrn.enable = lib.mkForce false`) | PASS |
+| **Controllers** | Enabled (`controllers.enable = true`) | Disabled (`controllers.enable = lib.mkForce false`) | PASS |
+| **Gamescope** | Enabled | Disabled (`programs.gamescope.enable = lib.mkForce false`) | PASS |
+| **Gamemode** | Enabled | Disabled (`programs.gamemode.enable = lib.mkForce false`) | PASS |
+| **Vesktop/Telegram/Matrix** | Allowed (Flatpak scaffolding) | Disabled by governance assertions | PASS |
+| **Browser** | Base Firefox (`sandboxedBrowsers.enable = false`) | Sandboxed only (`sandboxedBrowsers.enable = lib.mkForce true`) | PASS |
+| **VPN** | Enabled, no lockdown (`mullvad.lockdown = false`) | Enabled, lockdown (`mullvad.lockdown = lib.mkForce true`) | PASS |
+| **SMT/Hyperthreading** | Enabled (`disableSMT = false`) | Disabled (`disableSMT = lib.mkForce true`) | PASS |
+| **USB restriction** | Disabled (`usbRestrict = false`) | Enabled (`usbRestrict = lib.mkForce true`) | PASS |
+| **Audit logging** | Disabled (`auditd = false`) | Enabled (`auditd = lib.mkForce true`) | PASS |
+| **VM isolation** | Disabled (`vmIsolation.enable = false`) | Enabled (`vmIsolation.enable = lib.mkForce true`) | PASS |
+| **Home persistence** | Full Btrfs subvolume | Selective tmpfs + allowlist | PASS |
+| **Machine-id** | Persistent (`persistMachineId = true`) | Random per boot (`persistMachineId = lib.mkForce false`) | PASS |
+| **MAC addresses** | Stable per network | Random per boot | PASS |
+| **ptrace scope** | 1 (EAC compatible) | 2 (strictest) | PASS |
+| **init_on_free** | Disabled (performance) | Enabled (`initOnFree = lib.mkForce true`) | PASS |
+| **oops_panic** | Disabled (stability) | Enabled (`oopsPanic = lib.mkForce true`) | PASS |
+| **Memory allocator** | Disabled | Deferred (test post-install) | PASS |
+| **AIDE/ClamAV** | Enabled | Enabled (both profiles) | PASS |
+| **Root lock** | Enabled (`lockRoot = true`) | Enabled (`lockRoot = lib.mkForce true`) | PASS |
+| **AppArmor** | Enabled (`apparmor = true`) | Enabled (`apparmor = lib.mkForce true`) | PASS |
+
 ### Daily
 - Broad desktop convenience: gaming, VR, sync, messenger sprawl allowed.
 - No hard VPN killswitch required.
 - All proprietary apps sandboxed via Flatpak or bubblewrap wrappers.
+- **Privacy**: MAC stable per network, machine-id persistent (operational stability).
 
 ### Paranoid
 - Separate user `ghost`, stricter browser policy, Signal only.
 - Vesktop, Telegram, Matrix, Steam, VR disabled by policy.
 - Mullvad intended as always-on; lockdown networking.
-- Lower persistence footprint.
+- Lower persistence footprint (tmpfs home, selective allowlist).
 - Signal Desktop sandboxed via Flatpak.
+- **Privacy**: Randomized MAC per boot, random machine-id, TCP timestamps disabled.
 
 ### Isolation truth
 - Boot specialisations separate behavior, not compromise.

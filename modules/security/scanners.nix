@@ -1,19 +1,26 @@
 { config, lib, pkgs, ... }:
 let
   daily = config.myOS.profile == "daily";
+  paranoid = config.myOS.profile == "paranoid";
 
   # Daily impermanence scan: all persisted data (impermanence directories)
   # Critical: runs daily to catch malware in persisted locations
+  # TRUST NOTE: Steam runtime, Flatpak user data (~/.var/app), and Nix store are excluded.
+  # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
   clamScanImpermanence = pkgs.writeShellScript "clamav-impermanence-scan" ''
     set -eu
     # Scan ALL impermanence directories daily
     # These are the only places malware can survive a reboot
     # Plus /tmp and /var/tmp (common malware drop zones)
-    targets="/home/player /persist /var/lib /var/log /tmp /var/tmp"
+    # EFI partition: bootkit target, must be scanned
+    # Scan both daily and paranoid persisted directories
+    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot/efi"
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
+      --exclude-dir='^/persist/home/ghost/etc/ssh$' \
       --exclude-dir='^/home/player/.*\.steam$' \
       --exclude-dir='^/home/player/\.local/share/Steam$' \
+      --exclude-dir='^/home/player/\.var/app$' \
       --exclude-dir='^/var/log/journal$' \
       --max-filesize=100M \
       --max-scansize=200M \
@@ -22,17 +29,20 @@ let
 
   # Weekly deep scan: comprehensive scan with higher limits
   # More thorough but resource-intensive, runs weekly when idle
+  # TRUST NOTE: Steam runtime, Flatpak user data (~/.var/app), and Nix store are excluded.
+  # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
   clamScanDeep = pkgs.writeShellScript "clamav-deep-scan" ''
     set -eu
     # Deep scan: comprehensive check of all persisted locations
     # Higher limits for thoroughness, runs weekly when system is idle
-    # NOTE: /persist/home-ghost is NOT scanned - ghost files isolated from daily
-    # Includes /tmp and /var/tmp (common malware drop zones)
-    targets="/home/player /persist /var/lib /var/log /tmp /var/tmp"
+    # Deep scan both daily and paranoid persisted directories
+    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot/efi"
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
+      --exclude-dir='^/persist/home/ghost/etc/ssh$' \
       --exclude-dir='^/home/player/.*\.steam$' \
       --exclude-dir='^/home/player/\.local/share/Steam/steamapps$' \
+      --exclude-dir='^/home/player/\.var/app$' \
       --exclude-dir='^/var/log/journal$' \
       $targets
   '';
@@ -47,7 +57,7 @@ let
     exec ${pkgs.aide}/bin/aide --check
   '';
 in {
-  config = lib.mkIf daily {
+  config = lib.mkIf (daily || paranoid) {
     # --- DAILY IMPERMANENCE SCAN ---
     # Daily scan of all impermanence directories - critical for security
     # These are the only places malware can survive a reboot
@@ -120,11 +130,11 @@ in {
     # Weekly integrity check of critical persisted directories
     # AIDE must be initialized first: sudo aide --init (stored in /persist)
     # Database location persisted via impermanence.nix
-    # NOTE: /persist/home-ghost is NOT monitored - ghost files isolated from daily
+    # Scans both daily and paranoid persisted directories
     environment.etc."aide.conf".text = lib.mkDefault (lib.concatStringsSep "\n" [
       "# AIDE configuration for impermanence integrity monitoring"
       "# Monitors all persisted directories (where malware can survive reboot)"
-      "# NOTE: /persist/home-ghost excluded - ghost profile files isolated from daily"
+      "# Scans both daily (/home/player) and paranoid (/home/ghost) profiles"
       ""
       "# Database settings"
       "database=file:/var/lib/aide/aide.db.gz"
@@ -136,7 +146,9 @@ in {
       ""
       "# Impermanence directories (all persisted data)"
       "/persist R"
+      "/persist/home/ghost R"
       "/home/player R"
+      "/home/ghost R"
       "/var/lib R"
       "/var/log L"
       "/tmp L"

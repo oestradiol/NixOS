@@ -5,7 +5,9 @@
     (lib.mkIf config.myOS.security.secureBoot.enable {
       boot.lanzaboote = {
         enable = true;
-        pkiBundle = "/var/lib/secureboot";
+        # NOTE: sbctl create-keys places keys in /var/lib/sbctl by default.
+        # This MUST match the path used in scripts/post-install-secureboot-tpm.sh
+        pkiBundle = "/var/lib/sbctl";
       };
     })
 

@@ -35,7 +35,7 @@ in {
       "kvm"
       "flatpak"
     ];
-    # No initial password - user must set via TTY on first boot (see above)
+    # No initial password - must be set before first boot via initialPassword, hashedPassword, or chroot
   };
 
   users.users."ghost" = {
@@ -51,7 +51,7 @@ in {
       "render"
       "flatpak"
     ];
-    # No initial password - user must set via TTY on first boot (see above)
+    # No initial password - must be set before first boot via initialPassword, hashedPassword, or chroot
   };
 
   security.sudo = lib.mkIf lockRoot {

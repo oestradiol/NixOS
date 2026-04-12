@@ -42,25 +42,30 @@ sudo ./scripts/install-nvme-rebuild.sh /dev/nvme1n1
 
 Run after first successful encrypted boot with working daily profile.
 
+**Prerequisite (MUST do first):**
+1. Edit `hosts/nixos/default.nix`: set `myOS.security.secureBoot.enable = true;`
+2. `sudo nixos-rebuild switch --flake /etc/nixos#nixos`
+3. Verify system still boots normally
+
+**Then run:**
 ```bash
 sudo ./scripts/post-install-secureboot-tpm.sh
 ```
 
-**What it does:**
+**What the script does:**
 1. Creates Secure Boot keys (`sbctl create-keys`)
-2. Rebuilds paranoid specialisation
-3. Enrolls keys with Microsoft CA (`sbctl enroll-keys --microsoft`)
-4. Provides commented TPM enrollment example
+2. Enrolls keys with Microsoft CA (`sbctl enroll-keys --microsoft`)
+3. Provides commented TPM enrollment example
+
+**Final steps (manual):**
+1. Reboot into firmware setup mode
+2. Enable Secure Boot in firmware
+3. Reboot and verify: `bootctl status`, `sbctl status`
 
 **Before running:**
 - Review `docs/POST-STABILITY.md` Section 4 (Secure Boot) and Section 5 (TPM)
 - Ensure daily profile boots successfully
 - Back up current working configuration
-
-**After running:**
-- Reboot into firmware setup mode
-- Verify Secure Boot enrollment
-- Uncomment and verify TPM enrollment line for your setup
 
 ### audit-tutorial.sh
 
