@@ -334,12 +334,7 @@
         default = false;
         description = ''
           Allow system sleep states: suspend, hibernate, hybrid-sleep.
-          Default is false (sleep disabled) because:
-          - 16GB RAM + 8GB swap is insufficient for hibernation
-          - NVIDIA proprietary drivers have known suspend/resume issues
-          - tmpfs root + LUKS + sleep = complexity and potential data loss
-          Both daily and paranoid profiles explicitly disable this.
-          Enable only after testing on your specific hardware.
+          Disabled by default due to tmpfs+LUKS complexity and 16GB RAM + 8GB swap being insufficient for hibernation.
         '';
       };
     };

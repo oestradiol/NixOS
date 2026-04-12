@@ -56,33 +56,68 @@ let
       dbusOwnArg = if dbusOwnName != null then "--own=${dbusOwnName}" else "";
     in
     pkgs.writeShellScriptBin "safe-${name}" ''
-      set -eu
-      
-      RUNTIME="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/safe-${name}"
+      set -euo pipefail
+
+      # Check required environment variables
+      if [[ -z "''${XDG_RUNTIME_DIR:-}" ]]; then
+        echo "Error: XDG_RUNTIME_DIR not set. Are you running in a graphical session?" >&2
+        echo "This sandbox requires a graphical desktop environment." >&2
+        exit 1
+      fi
+
+      RUNTIME="$XDG_RUNTIME_DIR/safe-${name}"
       PROFILE="$RUNTIME/profile"
       CACHE="$RUNTIME/cache"
       mkdir -p "$PROFILE" "$CACHE"
-      
+
       # Inject hardened user.js if requested (Firefox only)
       ${if injectUserJS then ''
       if [[ ! -f "$PROFILE/user.js" ]]; then
         cp ${hardenedUserJS} "$PROFILE/user.js"
       fi
       '' else "# No user.js injection for this browser\n      :"}
-      
-      # GPU and display sockets
-      DISPLAY_SOCK="''${WAYLAND_DISPLAY:-$DISPLAY}"
-      [[ -n "''${WAYLAND_DISPLAY:-}" ]] && WAYLAND_SOCK="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
-      [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]] && PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
-      [[ -d /dev/dri ]] && GPU_DEV="/dev/dri"
-      
+
+      # GPU and display sockets - check availability before use
+      DISPLAY_SOCK=""
+      WAYLAND_SOCK=""
+      PIPEWIRE_SOCK=""
+      GPU_DEV=""
+
+      if [[ -n "''${WAYLAND_DISPLAY:-}" ]]; then
+        WAYLAND_SOCK="$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+        if [[ ! -S "$WAYLAND_SOCK" ]]; then
+          echo "Warning: Wayland socket not found at $WAYLAND_SOCK" >&2
+          WAYLAND_SOCK=""
+        fi
+      elif [[ -n "''${DISPLAY:-}" ]]; then
+        DISPLAY_SOCK="$DISPLAY"
+      else
+        echo "Error: Neither WAYLAND_DISPLAY nor DISPLAY is set. Cannot run browser without display." >&2
+        echo "This sandbox requires a graphical desktop environment." >&2
+        exit 1
+      fi
+
+      if [[ -S "$XDG_RUNTIME_DIR/pipewire-0" ]]; then
+        PIPEWIRE_SOCK="$XDG_RUNTIME_DIR/pipewire-0"
+      fi
+
+      if [[ -d /dev/dri ]]; then
+        GPU_DEV="/dev/dri"
+      fi
+
       # D-Bus filtering setup (when enabled via sandbox.dbusFilter)
       DBUS_PROXY_SOCK=""
       DBUS_SYSTEM_PROXY_SOCK=""
       ${if dbusFilterEnabled then ''
+      if [[ -z "''${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+        echo "Error: DBUS_SESSION_BUS_ADDRESS not set. Cannot enable D-Bus filtering." >&2
+        echo "This sandbox requires a D-Bus session." >&2
+        exit 1
+      fi
+
       DBUS_PROXY_SOCK="$RUNTIME/dbus-proxy.sock"
       DBUS_SYSTEM_PROXY_SOCK="$RUNTIME/dbus-system-proxy.sock"
-      
+
       # Start xdg-dbus-proxy for filtered SESSION bus access
       # Allows: own name, talk to portal, a11y, MPRIS, receive portal signals
       # Blocks: unrestricted session bus access
@@ -96,7 +131,7 @@ let
         --talk=org.mpris.MediaPlayer2.* \
         --broadcast=org.freedesktop.portal.*=@/org/freedesktop/portal/* &
       DBUS_PID=$!
-      
+
       # Start xdg-dbus-proxy for filtered SYSTEM bus access
       # Allows: limited system services (NetworkManager for captive portal, systemd for logind)
       # Blocks: unrestricted system bus access (systemd exploitation risk)
@@ -107,8 +142,8 @@ let
         --talk=org.freedesktop.NetworkManager \
         --talk=org.freedesktop.login1 &
       DBUS_SYSTEM_PID=$!
-      
-      cleanup() { 
+
+      cleanup() {
         kill $DBUS_PID 2>/dev/null || true
         kill $DBUS_SYSTEM_PID 2>/dev/null || true
       }

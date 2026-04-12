@@ -183,6 +183,20 @@ For each security claim, verify the code matches the documentation.
 | Paranoid requires sandboxed browsers | Lines 17-18 | ✅ VERIFIED |
 | Paranoid requires wireguardMullvad | Lines 21-26 | ✅ VERIFIED |
 | Paranoid ghost not in wheel | Lines 61-62 | ✅ VERIFIED |
+
+### Nix trusted users (security-critical)
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
+| Hardcoded to `["root"]` in base-desktop.nix | `modules/core/base-desktop.nix:60` | ✅ VERIFIED |
+| Both profiles use minimal safe default | — | ✅ VERIFIED |
+
+**Security implications**: Nix `trusted-users` is hardcoded to `["root"]` in base-desktop.nix for both profiles. Upstream Nix warns that adding users to trusted-users is essentially equivalent to giving them root access for Nix operations (build as root, bypass sandbox restrictions, set configuration options, perform garbage collection as root). This repo uses the minimal safe default to reduce attack surface. If you need to add users for Steam/development workflows, modify `modules/core/base-desktop.nix` directly and understand the security implications.
+
+### Hardened memory
+
+| Claim | Verification | Status |
+|-------|--------------|--------|
 | Daily no hardened memory | Lines 105-106 | ✅ VERIFIED |
 
 ### Scanners

@@ -1123,6 +1123,58 @@ ssh-keyscan -H <hostname> >> ~/.ssh/known_hosts  # On remote machine
 ssh-keygen -lf /persist/etc/ssh/ssh_host_ed25519_key.pub
 ```
 
+### [TODO] Nix Trusted-Users Evaluation
+**Risk**: Current configuration uses `trusted-users = ["root"]` (minimal safe default). This may cause friction for development workflows that frequently need privileged Nix operations.
+
+**Current state**:
+- `trusted-users` is hardcoded to `["root"]` in `modules/core/base-desktop.nix` for both profiles
+- This is the minimal safe default recommended by upstream Nix security guidance
+- Reduces attack surface by avoiding root-equivalent Nix privileges for users
+
+**What works normally (no sudo needed)**:
+- `nix shell` for development environments
+- `nix build` for most packages
+- `nix run` for running packages
+- `nix search`, `nix info`, etc.
+- `sudo` and `su` for system operations (unaffected by Nix trusted-users)
+
+**What might need sudo occasionally**:
+- Building packages that require privileged operations (rare for typical dev)
+- Setting global Nix configuration via `nix.settings`
+- Some binary cache operations
+- Garbage collection as root
+
+**Evaluation criteria**:
+After using the system for your typical development workflow, evaluate:
+1. Do you frequently need `sudo` for Nix operations?
+2. Does the current setting cause significant friction?
+3. Are you comfortable with the security tradeoff of adding your user to `trusted-users`?
+
+**If you need to add your user**:
+```bash
+# Edit modules/core/base-desktop.nix:
+nix.settings = {
+  ...
+  trusted-users = [ "root" "player" ];  # Add your user
+  ...
+}
+
+# Rebuild
+nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
+**Security implications of adding your user**:
+- Your user gets root-equivalent Nix privileges
+- Can build as root (bypass sandbox restrictions)
+- Can set configuration options
+- Can perform garbage collection as root
+- This is a deliberate security tradeoff for workflow convenience
+
+**Decision**:
+- If minimal friction: Keep current `["root"]` setting (safer)
+- If significant friction: Add your user, document the decision, understand the tradeoff
+- Consider using `sudo nix ...` for specific operations instead of adding your user globally
+
 ### [TODO] Thunderbolt/DMA Attack Surface
 **Risk**: No IOMMU for external devices (Thunderbolt, PCI hotplug). DMA attacks bypass all OS-level hardening.  
 **Decision needed**: Disable Thunderbolt entirely in firmware? Enable IOMMU for external ports?

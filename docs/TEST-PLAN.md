@@ -15,6 +15,25 @@ For post-stability configuration, see [`POST-STABILITY.md`](./POST-STABILITY.md)
 - [ ] reboot drops non-persisted files
 - [ ] persistence verification: create file in `/tmp`, reboot, verify it's gone; create file in `~/Data`, reboot, verify it survives
 
+### /persist mount validation
+- [ ] `/persist` is mounted: `findmnt /persist` shows bind mount from Btrfs subvolume
+- [ ] Critical persisted paths are bind-mounted: `findmnt /etc/passwd /etc/shadow /var/lib/systemd`
+- [ ] Impermanence mount units are active: `systemctl list-units --type=mount | grep persist`
+- [ ] If `/persist` fails to mount, system should fail to boot or show errors in journal
+
+### EFI boot entry survival
+- [ ] Boot entries exist: `bootctl list` shows NixOS entries
+- [ ] After firmware reset/update, boot entries survive (test if possible)
+- [ ] EFI variables are accessible: `bootctl status` shows EFI system partition
+- [ ] If Secure Boot enabled: `sbctl status` shows enrolled keys and signed files
+
+### Btrfs health and integrity
+- [ ] Btrfs filesystem is healthy: `sudo btrfs filesystem df /` shows usage
+- [ ] No read-only remount: `sudo btrfs filesystem status /` does not show "readonly"
+- [ ] Checksum errors: `dmesg | grep -i btrfs | grep -i checksum` should be empty
+- [ ] Scrub scheduled or run manually: `sudo btrfs scrub start /` (can take time)
+- [ ] Subvolume list is correct: `sudo btrfs subvolume list /` shows expected subvolumes
+
 ## Machine ID persistence (both profiles)
 - [ ] `/etc/machine-id` is persisted (check: `findmnt /etc/machine-id` shows bind from `/persist`)
 - [ ] **Daily**: Machine-id is systemd-generated unique ID (check: `cat /etc/machine-id` - should NOT be `b08dfa6083e7567a1921a715000001fb`)
@@ -178,6 +197,12 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 ## IPv6 privacy
 - [ ] `ip -6 addr` shows temporary addresses on active interfaces
 
+## MAC address randomization (paranoid profile)
+- [ ] WiFi interface uses random MAC: `ip link show wlan0` shows MAC changes across boots or per-network
+- [ ] Ethernet interface uses random MAC (paranoid): `ip link show eth0` shows random MAC
+- [ ] WiFi scan uses random MAC: check NetworkManager logs or `nmcli device wifi list`
+- [ ] Verify MAC is not the hardware MAC: compare with `ethtool -P <interface>`
+
 ## Systemd service hardening
 - [ ] `systemctl show flatpak-repo | grep NoNewPrivileges` returns yes
 - [ ] `systemctl show clamav-impermanence-scan | grep NoNewPrivileges` returns yes
@@ -203,6 +228,12 @@ sudo systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
 - [ ] `agenix` command available
 - [ ] After creating `.age` files in `/etc/nixos/secrets/`, `nixos-rebuild switch` decrypts them correctly
 - [ ] WireGuard secrets decrypt to `/run/agenix/` (check: `ls -la /run/agenix/wg-private-key`)
+
+## Nix trusted users (security-critical)
+- [ ] Verify trusted-users is `["root"]`: `nix show-config | grep trusted-users`
+- [ ] Both profiles should use minimal safe default: `["root"]` only
+- [ ] Understand security implications: trusted-users can build as root, set config, perform GC as root
+- [ ] If you need to add users for Steam/development, modify `modules/core/base-desktop.nix` directly
 
 ## WireGuard dynamic endpoint refresh (hostname endpoints only)
 - [ ] If using hostname endpoint: verify `dynamicEndpointRefreshSeconds` is set (check: `sudo wg show wg-mullvad` or inspect WireGuard config)

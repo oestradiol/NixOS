@@ -107,7 +107,8 @@ Users should not sideload untrusted binaries into these directories. The Nix sto
 - **Build-time checks**: `flake.nix` includes `checks.x86_64-linux` with nixos-config and paranoid-config evaluation tests; run via `nix flake check`.
 - **Audit script**: `scripts/audit-tutorial.sh` runs static checks; failures now propagate (removed `|| true` masking).
 - **Explicit unfree package allowlist** (nvidia-x11, nvidia-settings, steam, gamescope) - no blanket allowUnfree.
-- **All hardening knobs configurable via `myOS.security.*` options** — profiles set presets, users can override per-knob.
+- **All hardening knobs configurable via `myOS.security.*` options` — profiles set presets, users can override per-knob.
+- **Nix trusted users**: Hardcoded to `["root"]` in base-desktop.nix for both profiles. Upstream Nix warns that adding users to trusted-users is essentially equivalent to giving them root access for Nix operations (build as root, bypass sandbox, set config, GC as root). This repo uses the minimal safe default to reduce attack surface. If you need to add users for Steam/development workflows, modify `modules/core/base-desktop.nix` and understand the security implications.
 - **Module structure minimized**: `core/` (4 files), `security/` (11 files), `desktop/` (5 files), `home/` (3 files), `gpu/` (2 files).
 - **Docs minimized**: 8 surviving docs (down from 28), single front-door README.
 - All hardening topics tracked in `docs/audit/SOURCE-TOPIC-LEDGER.md`.

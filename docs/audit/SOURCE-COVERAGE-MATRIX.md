@@ -3,6 +3,29 @@
 ## Reading rule
 This file records the main external pages reviewed, the visible chapter inventory that was checked, the implementation effect on this repo, and what still remains.
 
+## Source documentation requirement (to be completed)
+For a security repo, each important claim should trace to:
+- Official docs or upstream manuals (primary)
+- Opinionated guides (secondary)
+- With exact URLs and date checked
+
+**Current state**: This file is a reading log with source names but not full URL/date pinning. Future updates should add:
+- Full URL for each source
+- Date checked (YYYY-MM-DD format)
+- Specific section/claim referenced
+
+**Template for new entries**:
+```
+### X. Source Name
+Source:
+- Full URL: https://example.com/path
+- Date checked: YYYY-MM-DD
+- Specific sections: [list relevant sections]
+
+Main points captured:
+- [key points]
+```
+
 Status values:
 - `implemented`
 - `scaffolded`

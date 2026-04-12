@@ -57,7 +57,7 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
-    trusted-users = [ "root" "player" ];
+    trusted-users = [ "root" ];
     warn-dirty = false;
     # Prevent "download buffer is full" warnings during large builds (e.g., kernel)
     download-buffer-size = 524288000; # 500MB

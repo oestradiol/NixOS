@@ -627,3 +627,492 @@ nixos-rebuild switch --flake /etc/nixos#nixos
 - Persist SSH host keys to prevent identity loss
 - Document your age identity public key in a secure location (password manager, encrypted USB)
 - Test WireGuard tunnel establishment immediately after first paranoid boot
+
+---
+
+## If Nix trusted users configuration causes issues
+
+**Symptom**: Nix operations fail, permission errors, or unexpected privilege escalation.
+
+**Common causes**:
+- User incorrectly added to `trusted-users` in `modules/core/base-desktop.nix`
+- Manual configuration error added unintended user to trusted-users
+
+**The connection**: Nix `trusted-users` is hardcoded to `["root"]` in `modules/core/base-desktop.nix` for both profiles. Upstream Nix warns that adding users to trusted-users is essentially equivalent to giving them root access for Nix operations (build as root, bypass sandbox restrictions, set configuration options, perform garbage collection as root). This repo uses the minimal safe default to reduce attack surface.
+
+**Quick diagnostic**:
+```bash
+# 1. Check current Nix trusted users configuration
+nix show-config | grep trusted-users
+
+# 2. Check base-desktop.nix configuration
+grep -A 5 "trusted-users" /etc/nixos/modules/core/base-desktop.nix
+```
+
+**Recovery**:
+
+### Scenario 1: Accidentally added user to trusted-users
+
+**Cause**: Manual modification of `modules/core/base-desktop.nix` added unintended user.
+
+**Recovery**:
+```bash
+# 1. Restore safe default
+# Edit modules/core/base-desktop.nix:
+nix.settings = {
+  ...
+  trusted-users = [ "root" ];  # Restore minimal safe default
+  ...
+}
+
+# 2. Rebuild
+nixos-rebuild switch --flake /etc/nixos#nixos
+```
+
+### Scenario 2: Need to add user for Steam/development workflow
+
+**Cause**: Steam or development workflow requires user in trusted-users.
+
+**Recovery**:
+```bash
+# 1. Modify base-desktop.nix to add your user
+# Edit modules/core/base-desktop.nix:
+nix.settings = {
+  ...
+  trusted-users = [ "root" "player" ];  # Add your user
+  ...
+}
+
+# 2. Rebuild
+nixos-rebuild switch --flake /etc/nixos#nixos
+
+# 3. Understand the security implications:
+# - This gives player root-equivalent Nix privileges
+# - They can build as root, bypass sandbox restrictions, set config, perform GC as root
+# - This is a deliberate security tradeoff for workflow convenience
+```
+
+**Prevention**:
+- Keep `trusted-users = [ "root" ]` as the default minimal safe setting
+- Only modify if you understand the security implications
+- Document any deviations from the default
+- Use sudo for Nix operations when possible instead of adding users to trusted-users
+
+---
+
+## If /persist fails to mount
+
+**Symptom**: System boots but critical persisted files are missing, or boot fails with mount errors for /persist.
+
+**Causes**:
+- Btrfs subvolume @persist missing or corrupted
+- LUKS device not unlocking
+- Mount option mismatch (compression, nodatacow)
+- Impermanence mount unit misconfiguration
+
+**Diagnostics**:
+```bash
+# Check if /persist is mounted
+findmnt /persist
+
+# Check Btrfs subvolumes
+sudo btrfs subvolume list /
+
+# Check if LUKS device is open
+lsblk -f
+sudo cryptsetup status cryptroot
+
+# Check systemd mount units
+systemctl status local-fs.target
+systemctl status -.mount
+journalctl -xe | grep -i persist
+```
+
+**Recovery**:
+
+### Scenario 1: Subvolume missing
+
+**Cause**: @persist subvolume was deleted or never created.
+
+**Recovery**:
+```bash
+# 1. Boot NixOS installer USB
+sudo cryptsetup open /dev/disk/by-partlabel/NIXCRYPT cryptroot
+
+# Mount root
+mount -o subvol=@,compress=zstd,noatime /dev/mapper/cryptroot /mnt
+
+# 2. Create missing @persist subvolume
+sudo btrfs subvolume create /mnt/@persist
+
+# 3. Reboot
+umount /mnt
+cryptsetup close cryptroot
+reboot
+```
+
+### Scenario 2: LUKS not unlocking
+
+**Cause**: Wrong passphrase or TPM enrollment issue.
+
+**Recovery**: See "If TPM unlock breaks" section above for TPM recovery. For passphrase issues, use recovery passphrase.
+
+### Scenario 3: Mount option mismatch
+
+**Cause**: Subvolume was created with different options than config expects.
+
+**Recovery**:
+```bash
+# Check current mount options
+findmnt -o OPTIONS /persist
+
+# If compression is wrong, remount with correct options
+# Edit hosts/nixos/default.nix to match actual subvolume state
+# Or recreate subvolume with correct options
+```
+
+**Prevention**:
+- Verify subvolume creation after install: `sudo btrfs subvolume list /`
+- Keep LUKS passphrase in secure location
+- Test TPM unlock immediately after enrollment
+- Keep backup of subvolume layout
+
+---
+
+## If /nix mount or store is corrupted
+
+**Symptom**: `nixos-rebuild` fails, package installation errors, store corruption messages.
+
+**Causes**:
+- Btrfs @nix subvolume corruption
+- Nix store database corruption
+- Disk failure
+- Power loss during write
+
+**Diagnostics**:
+```bash
+# Check Btrfs health
+sudo btrfs filesystem status /
+sudo btrfs scrub start /
+
+# Check Nix store
+nix-store --verify --check-contents --repair
+nix-collect-garbage -d
+
+# Check for read-only remount
+mount | grep /nix
+```
+
+**Recovery**:
+
+### Scenario 1: Btrfs corruption on @nix
+
+**Cause**: Btrfs checksum errors or metadata corruption.
+
+**Recovery**:
+```bash
+# 1. Run scrub to detect and repair
+sudo btrfs scrub start -B -R /
+
+# 2. If scrub reports errors, check dmesg
+dmesg | grep -i btrfs
+
+# 3. If uncorrectable errors, may need to recreate @nix subvolume
+# WARNING: This requires rebuilding all packages
+# Boot installer, mount system, backup config, recreate subvolume, rebuild
+```
+
+### Scenario 2: Nix store database corruption
+
+**Cause**: Nix store database files corrupted.
+
+**Recovery**:
+```bash
+# 1. Attempt repair
+nix-store --verify --check-contents --repair
+
+# 2. If that fails, clear and rebuild
+nix-collect-garbage -d
+nixos-rebuild switch --option substituters ""  # Rebuild from source
+```
+
+### Scenario 3: Read-only remount
+
+**Cause**: Btrfs remounted read-only due to errors.
+
+**Recovery**:
+```bash
+# 1. Check why it remounted read-only
+dmesg | grep -i btrfs
+
+# 2. Remount read-write temporarily
+sudo mount -o remount,rw /
+
+# 3. Run scrub to fix underlying issue
+sudo btrfs scrub start /
+```
+
+**Prevention**:
+- Run periodic Btrfs scrubs
+- Monitor dmesg for Btrfs errors
+- Use UPS to prevent power loss
+- Keep backups of critical Nix store paths
+
+---
+
+## If EFI boot entry is lost
+
+**Symptom**: System boots directly to firmware/BIOS, no boot menu, or wrong OS boots.
+
+**Causes**:
+- Firmware reset cleared boot entries
+- Firmware update removed boot entries
+- Bootloader installation corrupted
+- EFI system partition corrupted
+
+**Diagnostics**:
+```bash
+# Check boot entries (from running system or installer USB)
+bootctl list
+
+# Check EFI system partition
+lsblk -f
+sudo fatlabel /dev/disk/by-partlabel/NIXBOOT
+
+# Check Secure Boot status
+sbctl status
+```
+
+**Recovery**:
+
+### Scenario 1: Boot entries lost after firmware reset
+
+**Cause**: Firmware reset/clear NVRAM removed NixOS boot entries.
+
+**Recovery**:
+```bash
+# 1. Boot NixOS installer USB
+# 2. Mount system as in INSTALL-GUIDE.md
+# 3. Reinstall bootloader
+nixos-enter
+nixos-rebuild switch --install-bootloader
+
+# 4. Verify entries
+bootctl list
+```
+
+### Scenario 2: EFI system partition corrupted
+
+**Cause**: ESP filesystem corruption or deletion.
+
+**Recovery**:
+```bash
+# 1. Boot installer USB
+# 2. Recreate ESP
+mkfs.vfat -F32 /dev/disk/by-partlabel/NIXBOOT
+
+# 3. Mount and reinstall bootloader
+mount /dev/disk/by-partlabel/NIXBOOT /mnt/boot
+nixos-enter
+nixos-rebuild switch --install-bootloader
+```
+
+### Scenario 3: Secure Boot keys lost
+
+**Cause**: Secure Boot keys cleared from firmware.
+
+**Recovery**: See "If disabling Secure Boot still doesn't boot (Lanzaboote nuclear recovery)" section above.
+
+**Prevention**:
+- Keep backup of EFI ESP before firmware updates
+- Document boot entry configuration
+- Keep Secure Boot recovery keys backed up
+- Test firmware updates in safe environment first
+
+---
+
+## If NetworkManager state corruption
+
+**Symptom**: Network connections fail, cannot connect to VPN, WiFi issues.
+
+**Causes**:
+- NetworkManager configuration corruption
+- Connection profiles corrupted
+- State file corruption
+
+**Diagnostics**:
+```bash
+# Check NetworkManager status
+systemctl status NetworkManager
+
+# Check connections
+nmcli connection show
+
+# Check logs
+journalctl -xeu NetworkManager
+```
+
+**Recovery**:
+
+### Scenario 1: Connection profiles corrupted
+
+**Cause**: NetworkManager connection files corrupted.
+
+**Recovery**:
+```bash
+# 1. Backup current connections
+sudo cp -r /etc/NetworkManager/system-connections /tmp/
+
+# 2. Remove problematic connections
+sudo rm /etc/NetworkManager/system-connections/bad-connection.nmconnection
+
+# 3. Restart NetworkManager
+sudo systemctl restart NetworkManager
+
+# 4. Recreate connections via nmcli or GUI
+```
+
+### Scenario 2: State file corruption
+
+**Cause**: NetworkManager state file corrupted.
+
+**Recovery**:
+```bash
+# 1. Stop NetworkManager
+sudo systemctl stop NetworkManager
+
+# 2. Remove state file
+sudo rm /var/lib/NetworkManager/NetworkManager.state
+
+# 3. Restart NetworkManager
+sudo systemctl start NetworkManager
+```
+
+**Prevention**:
+- Keep backup of NetworkManager connections
+- Document critical connection configurations
+- Monitor NetworkManager logs for errors
+
+---
+
+## If rollback across generations has persistence issues
+
+**Symptom**: Rolling back to previous generation causes persistence issues, missing files, or configuration mismatches.
+
+**Causes**:
+- Schema drift between generations
+- Persistence paths changed
+- Impermanence configuration changed
+- Subvolume layout changed
+
+**Diagnostics**:
+```bash
+# Check current generation
+nixos-rebuild --list-generations
+
+# Check persistence configuration
+grep -r "impermanence" /etc/nixos/
+
+# Compare generations
+nixos-rebuild switch --rollback
+# Check if issues occur
+```
+
+**Recovery**:
+
+### Scenario 1: Persistence path changed
+
+**Cause**: Impermanence configuration added/removed paths between generations.
+
+**Recovery**:
+```bash
+# 1. Identify what changed
+git diff /etc/nixos/ between generations
+
+# 2. Update current generation config to match persistence expectations
+# 3. Rebuild
+nixos-rebuild switch
+```
+
+### Scenario 2: Subvolume layout changed
+
+**Cause**: Btrfs subvolume structure changed between generations.
+
+**Recovery**:
+```bash
+# 1. Check current subvolume layout
+sudo btrfs subvolume list /
+
+# 2. Compare with expected layout from config
+# 3. Create missing subvolumes or update config to match actual layout
+```
+
+**Prevention**:
+- Document persistence configuration changes
+- Test persistence changes before committing
+- Keep backup of critical persisted data
+- Use git to track configuration changes
+
+---
+
+## General subvolume mismatch or mount-option drift
+
+**Symptom**: Mount errors, wrong filesystem mounted, options not applied.
+
+**Causes**:
+- Subvolume names changed
+- Mount options changed in config
+- fstab entries mismatched
+- Impermanence mount unit misconfiguration
+
+**Diagnostics**:
+```bash
+# Check all mounts
+findmnt -R
+
+# Check Btrfs subvolumes
+sudo btrfs subvolume list /
+
+# Check systemd mount units
+systemctl list-units --type=mount
+
+# Check expected vs actual
+grep -r "subvol=" /etc/nixos/
+```
+
+**Recovery**:
+
+### Scenario 1: Subvolume name mismatch
+
+**Cause**: Config expects subvolume name that doesn't exist.
+
+**Recovery**:
+```bash
+# 1. Check what subvolumes exist
+sudo btrfs subvolume list /
+
+# 2. Either create missing subvolume or update config to match actual
+# Create:
+sudo btrfs subvolume create /mnt/@missing-subvolume
+
+# Or update config to use existing subvolume
+```
+
+### Scenario 2: Mount option drift
+
+**Cause**: Mount options in config don't match actual subvolume state.
+
+**Recovery**:
+```bash
+# 1. Check current mount options
+findmnt -o OPTIONS
+
+# 2. Update config to match actual subvolume requirements
+# Or remount subvolume with correct options
+```
+
+**Prevention**:
+- Document subvolume layout
+- Use consistent naming conventions
+- Test mount configuration changes
+- Keep backup of fstab/mount units

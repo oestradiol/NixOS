@@ -2,10 +2,10 @@
 
 **Purpose**: Verify every configuration option and security feature is covered in TEST-PLAN.md, deferred to POST-STABILITY.md, or explicitly rejected.
 
-**Scope**: This is a documentation coverage audit, not runtime verification. Features marked as "covered in test plan" have verification steps defined in TEST-PLAN.md but have not necessarily been executed on hardware.
+**Scope**: This is a documentation coverage audit, not runtime verification. Features marked as "covered in test plan" have verification steps defined in TEST-PLAN.md but have not necessarily been executed on hardware. The repo is statically covered but not yet fully verified through live testing.
 
 **Date**: 2026-04-12
-**Status**: Complete
+**Status**: Statically covered (not runtime verified)
 
 ## Legend
 - ✅ TEST-PLAN.md - Covered in TEST-PLAN.md for runtime verification
@@ -176,8 +176,8 @@ All explicitly deferred items are documented in POST-STABILITY.md:
 4. ~~Add earlyoom check~~ ✅ DONE
 5. ~~Add POST-STABILITY system services section (polkit, udisks2, fwupd, fstrim)~~ ✅ DONE
 
-### Audit Status: **COMPLETE**
-All features now have coverage in TEST-PLAN.md, POST-STABILITY.md, or are explicitly rejected.
+### Audit Status: **Statically covered**
+All features now have coverage in TEST-PLAN.md, POST-STABILITY.md, or are explicitly rejected. This is a documentation audit, not runtime verification.
 
 ---
 
@@ -246,7 +246,7 @@ All features now have coverage in TEST-PLAN.md, POST-STABILITY.md, or are explic
 
 **Next Steps**: (All Completed)
 1. ~~Update TEST-PLAN.md to cover the 3 kernel control gaps and swappiness~~ ✅ DONE
-2. ~~Add kernel lockdown to POST-STABILITY.md Section 17 (optional end-state)~~ ✅ DONE  
+2. ~~Add kernel lockdown to POST-STABILITY.md Section 17 (optional end-state)~~ ✅ DONE
 3. ~~Document userns rejection in SOURCE-TOPIC-LEDGER.md~~ ✅ DONE
 
-**Audit Status**: ✅ **COMPLETE** - All features covered in TEST-PLAN.md or POST-STABILITY.md
+**Audit Status**: ✅ **Statically covered** - All features covered in TEST-PLAN.md or POST-STABILITY.md. This is a documentation audit, not runtime verification.
