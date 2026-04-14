@@ -13,7 +13,6 @@
   home.packages = with pkgs; [
     eza
     bat
-    firefox
     mullvad-vpn
     kdePackages.kate
     # Flatpak packages (installed via system.services.flatpak, not home.packages)

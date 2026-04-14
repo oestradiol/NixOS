@@ -30,10 +30,12 @@ in {
     backlogLimit = 8192;
     failureMode = "printk";
     rateLimit = 0;
-    rules = [
+    rules = lib.optionals sec.auditRules.enable [
       # Privileged execution and kernel/module changes
-      "-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k execpriv"
-      "-a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -k execpriv"
+      "-a always,exit -F arch=b64 -S execve -C uid!=euid -F euid=0 -k setuid"
+      "-a always,exit -F arch=b32 -S execve -C uid!=euid -F euid=0 -k setuid"
+      "-a always,exit -F arch=b64 -S execve -C gid!=egid -F egid=0 -k setgid"
+      "-a always,exit -F arch=b32 -S execve -C gid!=egid -F egid=0 -k setgid"
       "-a always,exit -F arch=b64 -S init_module,finit_module,delete_module -F auid>=1000 -F auid!=unset -k kernel_modules"
       "-a always,exit -F arch=b32 -S init_module,finit_module,delete_module -F auid>=1000 -F auid!=unset -k kernel_modules"
 

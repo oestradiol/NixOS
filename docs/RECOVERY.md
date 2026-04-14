@@ -56,8 +56,8 @@ If `audit-rules-nixos.service` fails, `auditctl -l` shows no repo rules, or `aa-
 - if AppArmor is active but the audit-rule loader fails on the target nixpkgs revision, keep the rule set documented and move the exact breakage into `docs/POST-STABILITY.md` with logs
 - if a custom future AppArmor policy causes breakage, revert that policy first before weakening the framework baseline
 
-## 7. Paranoid WireGuard does not connect
-Check these first:
+## 7. Staged self-owned WireGuard does not connect
+Use this only if you explicitly enabled the staged self-owned WireGuard path. Check these first:
 - private key path exists
 - server public key is correct
 - address is correct

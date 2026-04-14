@@ -4,7 +4,7 @@ Only installation steps.
 
 ## 1. Prepare the disk
 - boot the NixOS installer
-- run `scripts/install-nvme-rebuild.sh` or perform the equivalent manual layout
+- run `scripts/rebuild-install.sh` or perform the equivalent manual layout
 - confirm `/mnt`, `/mnt/persist`, and `/mnt/boot` are mounted as expected
 
 ## 2. Place the repo

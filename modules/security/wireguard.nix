@@ -64,6 +64,26 @@ let
   # This is dynamic: all interfaces EXCEPT the WG interface
   bootstrapExceptionExpression = "oifname != \"${wgInterface}\"";
 
+  # Keep all downstream string rendering null-safe so malformed endpoints fail
+  # with the explicit assertions above instead of with null attribute errors.
+  endpointInputRule =
+    if endpointParsed == null then
+      "# invalid endpoint; see assertions above"
+    else if endpointParsed.isIPv4 then ''
+      ip saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
+    '' else ''
+      ip6 saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
+    '';
+
+  endpointOutputRule =
+    if endpointParsed == null then
+      "# invalid endpoint; see assertions above"
+    else if endpointParsed.isIPv4 then ''
+      ${bootstrapExceptionExpression} ip daddr ${endpointParsed.host} udp dport ${toString endpointParsed.port} accept
+    '' else ''
+      ${bootstrapExceptionExpression} ip6 daddr ${endpointParsed.host} udp dport ${toString endpointParsed.port} accept
+    '';
+
 in {
   config = lib.mkIf cfg.enable {
     # Assert that we have the minimum required configuration
@@ -77,23 +97,23 @@ in {
         message = "myOS.security.wireguardMullvad.endpoint must be set (Mullvad server endpoint)";
       }
       {
-        # This module is for paranoid profile only - requires pinned IP endpoint
-        # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
-        # WireGuard kernel side cannot safely satisfy the paranoid policy with hostname endpoints here.
-        # This module uses pinned IP for a cleaner killswitch.
-        assertion = endpointParsed.isIP;
-        message = "WireGuard module requires pinned IP endpoint (e.g., 146.70.xx.yy:51820), not hostname. " +
-          "Hostname endpoints require DNS exception which creates a standing leak path. " +
-          "Resolve your Mullvad relay hostname once and pin the literal IP. " +
-          "Example: dig +short se-got-wg-001.relays.mullvad.net " +
-          "Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint";
-      }
-      {
         # Validate endpoint format at evaluation time
         assertion = endpointParsed != null;
         message = "myOS.security.wireguardMullvad.endpoint format invalid. Must be literal IPv4:port " +
           "(e.g., 1.2.3.4:51820) or bracketed IPv6:port (e.g., [2606:4700::1111]:51820). " +
           "Hostnames are intentionally rejected by paranoid policy. IPv6 must be bracketed. Port must be 1-65535.";
+      }
+      {
+        # This module is for paranoid profile only - requires pinned IP endpoint
+        # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
+        # WireGuard kernel side cannot safely satisfy the paranoid policy with hostname endpoints here.
+        # This module uses pinned IP for a cleaner killswitch.
+        assertion = endpointParsed != null && endpointParsed.isIP;
+        message = "WireGuard module requires pinned IP endpoint (e.g., 146.70.xx.yy:51820), not hostname. " +
+          "Hostname endpoints require DNS exception which creates a standing leak path. " +
+          "Resolve your Mullvad relay hostname once and pin the literal IP. " +
+          "Example: dig +short se-got-wg-001.relays.mullvad.net " +
+          "Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint";
       }
       {
         assertion = cfg.address != "";
@@ -169,11 +189,7 @@ in {
             ct state invalid drop
 
             # WireGuard: accept incoming handshake packets only from the configured endpoint
-            ${if endpointParsed.isIPv4 then ''
-              ip saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
-            '' else ''
-              ip6 saddr ${endpointParsed.host} udp sport ${toString endpointParsed.port} accept
-            ''}
+            ${endpointInputRule}
 
             # DHCP client responses: required for IP acquisition
             udp dport { 68, 546 } accept
@@ -232,11 +248,7 @@ in {
 
             # WireGuard handshake: only to the configured pinned endpoint on non-WG interfaces
             # This is the only non-WG egress exception beyond local bootstrap traffic.
-            ${if endpointParsed.isIPv4 then ''
-              ${bootstrapExceptionExpression} ip daddr ${endpointParsed.host} udp dport ${toString endpointParsed.port} accept
-            '' else ''
-              ${bootstrapExceptionExpression} ip6 daddr ${endpointParsed.host} udp dport ${toString endpointParsed.port} accept
-            ''}
+            ${endpointOutputRule}
 
             # ALL other traffic: ONLY through WireGuard interface
             # This is the killswitch: if tunnel is down, no traffic leaves
@@ -278,7 +290,7 @@ in {
     };
 
     # Ensure WireGuard interface comes up before networking is considered "online"
-    systemd.services."wg-quick-${wgInterface}" = {
+    systemd.services."wireguard-${wgInterface}" = {
       # Ensure this is considered part of network target
       wantedBy = [ "multi-user.target" ];
       # Ensure proper ordering with other services

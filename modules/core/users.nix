@@ -34,7 +34,6 @@ in {
       "gamemode"
       "libvirtd"
       "kvm"
-      "flatpak"
     ];
     # No initial password - must be set before first boot via initialPassword, hashedPassword, or chroot
   };
@@ -52,7 +51,6 @@ in {
       "audio"
       "input"
       "render"
-      "flatpak"
     ];
     # No initial password - must be set before first boot via initialPassword, hashedPassword, or chroot
   };

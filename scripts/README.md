@@ -8,11 +8,11 @@ All scripts use `set -euo pipefail`. Review them before running.
 
 | Script | Purpose | When to Run | Risk |
 |---|---|---|---|
-| `install-nvme-rebuild.sh` | Create the target GPT + LUKS2 + Btrfs + tmpfs-root mount layout under `/mnt` | Before first install, from the installer | **Destructive** |
+| `rebuild-install.sh` | Create the target GPT + LUKS2 + Btrfs + tmpfs-root mount layout under `/mnt` | Before first install, from the installer | **Destructive** |
 | `post-install-secureboot-tpm.sh` | Stage Secure Boot key creation/enrollment and print the remaining TPM step | Only after the first stable encrypted daily boot | Medium |
 | `audit-tutorial.sh` | Read-only static repo checks plus a runtime checklist handoff | Any time | Low |
 
-## `install-nvme-rebuild.sh`
+## `rebuild-install.sh`
 
 What it is responsible for:
 - wipe the selected target disk

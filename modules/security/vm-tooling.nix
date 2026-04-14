@@ -8,7 +8,10 @@ let
   inherit (lib) mkIf mkDefault optionalString escapeShellArg concatStringsSep;
   vmsEnabled = config.myOS.security.sandbox.vms;
   vmCfg = config.myOS.security.vm;
-  kvmModule = if config.hardware.cpu.intel.updateMicrocode or false then "kvm-intel" else "kvm-amd";
+  kvmModule =
+    if config.hardware.cpu.amd.updateMicrocode or false then "kvm-amd"
+    else if config.hardware.cpu.intel.updateMicrocode or false then "kvm-intel"
+    else "kvm-amd";
   repoNat = vmCfg.natNetworkName;
   repoIsolated = vmCfg.isolatedNetworkName;
   storageRoot = vmCfg.storageRoot;
@@ -366,6 +369,8 @@ let
   };
 in {
   config = mkIf vmsEnabled {
+    warnings = lib.optional (!(config.hardware.cpu.amd.updateMicrocode or false || config.hardware.cpu.intel.updateMicrocode or false))
+      "VM tooling could not infer CPU vendor from hardware.cpu.*.updateMicrocode; defaulting to kvm-amd. Set the hardware target explicitly before enabling VMs on non-AMD hosts.";
     virtualisation.libvirtd.enable = true;
     virtualisation.libvirtd.qemu.package = pkgs.qemu_kvm;
     virtualisation.libvirtd.qemu.swtpm.enable = true;

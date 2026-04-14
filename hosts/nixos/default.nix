@@ -9,9 +9,9 @@ in {
     ../../modules/core/boot.nix
     ../../modules/core/users.nix
     ../../modules/desktop/base.nix
-    ../../modules/security/base.nix
     ../../modules/gpu/nvidia.nix
     ../../modules/gpu/amd.nix
+    ../../modules/security/base.nix
     ../../profiles/paranoid.nix
   ];
 

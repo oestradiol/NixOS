@@ -7,23 +7,23 @@ let
   # SECURITY NOTES:
   # - Uses 'requisite' not 'required' for immediate fail (no password prompt for wrong user)
   # - Default deny: if profile detection fails, only root allowed
-  # - For sudo: checks both calling user AND target user (via PAM_RUSER for target)
+  # - For sudo/su, PAM_USER is the target account and PAM_RUSER is the requesting user.
   profileCheckScript = pkgs.writeShellScript "user-profile-binding" ''
     set -eu
 
-    CALLING_USER="$PAM_USER"
-    # PAM_RUSER is the target user for su/sudo, defaults to calling user if not set
-    TARGET_USER="''${PAM_RUSER:-$CALLING_USER}"
+    TARGET_USER="$PAM_USER"
+    # PAM_RUSER is the requesting user for su/sudo; direct logins usually leave it unset.
+    CALLING_USER="''${PAM_RUSER:-$TARGET_USER}"
     PROFILE="${if daily then "daily" else if paranoid then "paranoid" else "unknown"}"
 
     # Safety: if PAM_USER is unset, deny (should never happen)
-    if [ -z "$CALLING_USER" ]; then
-      echo "Access denied: PAM_USER not set" >&2
+    if [ -z "$TARGET_USER" ]; then
+      echo "Access denied: target PAM_USER not set" >&2
       exit 1
     fi
 
-    # Always allow root (emergency access if script breaks)
-    if [ "$CALLING_USER" = "root" ]; then
+    # Always allow root target/caller (emergency access if the binding logic breaks)
+    if [ "$CALLING_USER" = "root" ] || [ "$TARGET_USER" = "root" ]; then
       exit 0
     fi
 
@@ -65,28 +65,41 @@ let
   # Only enable if explicitly opted in (high-risk PAM implementation)
   pamEnabled = config.myOS.security.pamProfileBinding.enable;
 in {
-  config = lib.mkIf (pamEnabled) {
-    # PAM rules using 'requisite' for immediate fail-fast (no password prompt for wrong user)
-    # Order 100 = before password authentication modules
+  config = lib.mkIf pamEnabled {
+    assertions = [
+      {
+        assertion = false;
+        message = ''
+          myOS.security.pamProfileBinding.enable is intentionally blocked.
+          This experimental module currently uses security.pam.services.<name>.text,
+          which replaces the full PAM service file instead of safely extending the
+          generated PAM stack. Leave it disabled until it is reworked onto a safe,
+          stack-aware PAM integration path.
+        '';
+      }
+    ];
+    
+    # # PAM rules using 'requisite' for immediate fail-fast (no password prompt for wrong user)
+    # # Order 100 = before password authentication modules
 
-    # SDDM (GUI login)
-    security.pam.services.sddm.text = lib.mkDefault (lib.mkOrder 100 ''
-      auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
-    '');
+    # # SDDM (GUI login)
+    # security.pam.services.sddm.text = lib.mkDefault (lib.mkOrder 100 ''
+    #   auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
+    # '');
 
-    # login (TTY)
-    security.pam.services.login.text = lib.mkDefault (lib.mkOrder 100 ''
-      auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
-    '');
+    # # login (TTY)
+    # security.pam.services.login.text = lib.mkDefault (lib.mkOrder 100 ''
+    #   auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
+    # '');
 
-    # su (switch user)
-    security.pam.services.su.text = lib.mkDefault (lib.mkOrder 100 ''
-      auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
-    '');
+    # # su (switch user)
+    # security.pam.services.su.text = lib.mkDefault (lib.mkOrder 100 ''
+    #   auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
+    # '');
 
-    # sudo (privilege escalation - checks target user too)
-    security.pam.services.sudo.text = lib.mkDefault (lib.mkOrder 100 ''
-      auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
-    '');
+    # # sudo (privilege escalation - checks target user too)
+    # security.pam.services.sudo.text = lib.mkDefault (lib.mkOrder 100 ''
+    #   auth requisite ${pkgs.pam}/lib/security/pam_exec.so stdout ${profileCheckScript}
+    # '');
   };
 }

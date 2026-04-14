@@ -68,12 +68,13 @@ Separate users:
 
 ### Network architecture
 - daily uses Mullvad app mode
-- paranoid uses self-owned `networking.wireguard` with nftables killswitch
-- paranoid requires a pinned literal endpoint `IP:port`
-- paranoid allows no standing non-tunnel DNS exception
-- exact non-WireGuard egress exception is limited to that endpoint `IP:port`
-- endpoint rotation is therefore an explicit operator maintenance task
-- `networking.wireguard` is kept for now because it already matches the repo’s deterministic nftables and option surface; a `systemd.network` migration is deferred unless live validation exposes routing or MTU problems
+- daily uses Mullvad app mode
+- paranoid currently also stays on Mullvad app mode by default while the self-owned `networking.wireguard` path remains staged off pending validation with real secrets/endpoints
+- when the staged self-owned WireGuard path is enabled later, it requires a pinned literal endpoint `IP:port`
+- that staged path is designed to allow no standing non-tunnel DNS exception
+- its exact non-WireGuard egress exception is limited to the pinned endpoint `IP:port`
+- endpoint rotation is therefore an explicit operator maintenance task when that path is enabled
+- `networking.wireguard` is kept in-repo for that staged path because it already matches the repo’s deterministic nftables and option surface; a `systemd.network` migration is deferred unless live validation exposes routing or MTU problems
 
 ### VM architecture
 
@@ -199,7 +200,7 @@ These constraints define the current meaning of “maximally hardened within par
 `paranoid` currently enables:
 - tighter kernel and system hardening
 - browser wrappers
-- self-owned WireGuard with pinned endpoint policy
+- Mullvad app mode by default; self-owned pinned-endpoint WireGuard path staged but present in-repo
 - VM tooling layer
 - stricter governance assertions
 
@@ -211,8 +212,8 @@ Implemented now:
 - shared bubblewrap core
 - filtered D-Bus wrapper path
 - exact persistence binds for wrapped apps
-- paranoid pinned-endpoint WireGuard policy
-- Linux audit subsystem + auditd + repo-maintained paranoid audit rules
+- staged paranoid pinned-endpoint WireGuard policy module present in-repo but off by default
+- Linux audit subsystem + auditd; repo-maintained custom audit rules staged off by default
 - AppArmor framework baseline + D-Bus mediation baseline
 - stricter firewall policy for paranoid
 - service hardening for selected system services
@@ -247,7 +248,7 @@ Current unsupported claims:
 - daily remains usability-first within a hardened baseline
 - paranoid remains security-first within explicit operational constraints
 - machine-id stays host-local and unique on both profiles
-- paranoid WireGuard endpoint must be a pinned literal `IP:port`
+- if the staged paranoid WireGuard path is enabled, its endpoint must be a pinned literal `IP:port`
 - wrapper logic stays centralized in the shared sandbox core
 - Firefox hardening is maintained in-repo as a vendored arkenfox baseline with explicit local overrides
 - `networking.wireguard` stays for now instead of a `systemd.network` migration because it already matches the current repo firewall design and secret wiring; migration remains conditional on live issues, not assumed necessary, and is tracked in `docs/POST-STABILITY.md` for evaluation if routing, MTU, DNS, or interface-ordering issues appear

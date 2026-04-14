@@ -46,8 +46,8 @@ Exactly everything required to prove the daily profile works first and the paran
 - [ ] browser wrappers work without broad `/var` exposure
 - [ ] portal/file chooser path is understood and tested where relevant
 - [ ] `auditctl -s` shows auditing enabled and backlog limit applied
-- [ ] `auditctl -l` shows the repo rule set loaded
-- [ ] `systemctl status audit-rules-nixos.service` succeeds
+- [ ] if `myOS.security.auditRules.enable = true`, `auditctl -l` shows the repo rule set loaded
+- [ ] if `myOS.security.auditRules.enable = true`, `systemctl status audit-rules-nixos.service` succeeds
 - [ ] reboot happened after AppArmor was first enabled
 - [ ] `aa-status` shows AppArmor active after reboot
 - [ ] if any repo policy is later added, verify its complain/enforce state explicitly
@@ -62,9 +62,9 @@ For at least one browser wrapper and one daily app wrapper, inspect the running 
 - [ ] network is exposed only for wrappers that request it
 - [ ] GPU is exposed only for wrappers that request it
 
-## 7. WireGuard paranoid verification
+## 7. Staged self-owned WireGuard verification (only when you explicitly enable it)
 - [ ] endpoint configured as literal `IP:port`
-- [ ] no hostname endpoint remains in paranoid config
+- [ ] no hostname endpoint remains in that config
 - [ ] nftables output exception is pinned to the exact endpoint IP and port
 - [ ] no standing non-WG DNS exception exists
 - [ ] DNS works through the tunnel

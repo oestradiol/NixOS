@@ -7,7 +7,7 @@
 
     boot.kernel.sysctl = {
       # Fix Ubisoft Connect and similar services
-      "net.ipv4.tcp_mtu_probing" = true;
+      "net.ipv4.tcp_mtu_probing" = 1;
       # Gaming scheduler tuning (from steamos-customizations-jupiter)
       "kernel.sched_cfs_bandwidth_slice_u" = 3000;
       "kernel.sched_latency_ns" = 3000000;

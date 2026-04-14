@@ -43,9 +43,16 @@ sgdisk -n 1:1MiB:+512MiB -t 1:EF00 -c 1:NIXBOOT "$DISK"
 sgdisk -n 2:0:0      -t 2:8309 -c 2:NIXCRYPT "$DISK"
 partprobe "$DISK"
 
-mkfs.fat -F 32 -n NIXBOOT "${DISK}p1"
-cryptsetup luksFormat --type luks2 "${DISK}p2"
-cryptsetup open "${DISK}p2" cryptroot
+PARTSEP=""
+case "$DISK" in
+  *[0-9]) PARTSEP="p" ;;
+esac
+BOOT_PART="${DISK}${PARTSEP}1"
+CRYPT_PART="${DISK}${PARTSEP}2"
+
+mkfs.fat -F 32 -n NIXBOOT "$BOOT_PART"
+cryptsetup luksFormat --type luks2 "$CRYPT_PART"
+cryptsetup open "$CRYPT_PART" cryptroot
 mkfs.btrfs -L nixos /dev/mapper/cryptroot
 
 mount /dev/mapper/cryptroot "$MNT"
@@ -75,7 +82,7 @@ swapon "$MNT/swap/swapfile" && swapoff "$MNT/swap/swapfile" && echo "Swapfile te
     exit 1
 }
 
-mount "${DISK}p1" "$MNT/boot"
+mount "$BOOT_PART" "$MNT/boot"
 
 echo "Mounts ready at $MNT"
 echo "Swapfile created: /swap/swapfile (8GB)"

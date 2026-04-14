@@ -30,10 +30,6 @@ in {
       message = "Paranoid profile must not enable Steam.";
     }
     {
-      assertion = !config.myOS.security.impermanence.enable || config.fileSystems ? "${persistRoot}";
-      message = "Impermanence requires the configured persist root to be mounted.";
-    }
-    {
       assertion = !(config.myOS.security.secureBoot.enable && config.boot.loader.grub.enable);
       message = "Secure Boot path must not coexist with GRUB.";
     }
@@ -70,8 +66,8 @@ in {
       message = "Paranoid profile must enable the Linux audit subsystem, not just auditd.";
     }
     {
-      assertion = !isParanoid || config.security.audit.rules != [ ];
-      message = "Paranoid profile must define an audit rule set.";
+      assertion = !isParanoid || !config.myOS.security.auditRules.enable || config.security.audit.rules != [ ];
+      message = "When paranoid profile enables repo audit rules, the resulting audit rule set must be non-empty.";
     }
     {
       assertion = !isParanoid || config.myOS.security.sandbox.vms;

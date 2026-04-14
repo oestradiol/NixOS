@@ -30,7 +30,7 @@ Canonical audit surface: completed checks, source-backed claim ledger, validatio
 | VM tooling layer + workflow classes | implemented | static review | `modules/security/vm-tooling.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | repo-managed NAT + isolated networks and `repo-vm-class` encode the four classes; guest templates still need live validation |
 | wrapper seccomp | deferred | static review | `PROJECT-STATE.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | do not overclaim |
 | wrapper Landlock | deferred | static review | `PROJECT-STATE.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | do not overclaim |
-| install script | implemented | static review | `scripts/install-nvme-rebuild.sh`, `scripts/README.md`, `docs/INSTALL-GUIDE.md` | destructive layout prep only |
+| install script | implemented | static review | `scripts/rebuild-install.sh`, `scripts/README.md`, `docs/INSTALL-GUIDE.md` | destructive layout prep only |
 | secure-boot staging script | implemented | static review | `scripts/post-install-secureboot-tpm.sh`, `scripts/README.md`, `docs/POST-STABILITY.md` | staging helper, not full automation |
 | audit script | implemented | static review | `scripts/audit-tutorial.sh`, `scripts/README.md`, `AUDITS.md` | read-only handoff script |
 

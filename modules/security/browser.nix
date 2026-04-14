@@ -139,7 +139,6 @@ let
     name = "firefox";
     package = pkgs.firefox;
     binaryName = "firefox";
-    dbusOwnName = "org.mozilla.firefox.*";
     userJs = paranoidFirefoxUserJS;
     extraArgs = [ "--no-remote" ];
   };
@@ -147,7 +146,7 @@ let
   safeTor = mkBrowser {
     name = "tor-browser";
     package = pkgs.tor-browser;
-    binaryName = "firefox";
+    binaryName = "tor-browser";
     extraArgs = [ "--no-remote" ];
   };
 
@@ -155,7 +154,6 @@ let
     name = "mullvad-browser";
     package = pkgs.mullvad-browser;
     binaryName = "mullvad-browser";
-    dbusOwnName = "org.mozilla.firefox.*";
     extraArgs = [ "--no-remote" ];
   };
 
@@ -166,7 +164,7 @@ let
       inherit icon comment genericName;
       desktopName = "${name} (Sandboxed)";
       categories = [ "Network" "WebBrowser" ];
-      mimeTypes = [ "text/html" "application/xhtml+xml" "application/vnd.mozilla.xul+xml" "http" "https" ];
+      mimeTypes = [ "text/html" "application/xhtml+xml" "application/vnd.mozilla.xul+xml" "x-scheme-handler/http" "x-scheme-handler/https" ];
       startupWMClass = name;
       terminal = false;
       type = "Application";

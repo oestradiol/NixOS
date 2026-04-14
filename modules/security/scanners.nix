@@ -9,12 +9,17 @@ let
   # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
   clamScanImpermanence = pkgs.writeShellScript "clamav-impermanence-scan" ''
     set -eu
-    # Scan ALL impermanence directories daily
-    # These are the only places malware can survive a reboot
-    # Plus /tmp and /var/tmp (common malware drop zones)
-    # EFI partition: bootkit target, must be scanned
-    # Scan both daily and paranoid persisted directories
-    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot"
+    # Scan persisted and volatile high-risk paths that actually exist on this profile.
+    targets=()
+    for p in /home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot; do
+      if [ -e "$p" ]; then
+        targets+=("$p")
+      fi
+    done
+    if [ "''${#targets[@]}" -eq 0 ]; then
+      echo "No scan targets found; skipping."
+      exit 0
+    fi
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
       --exclude-dir='^/persist/home/ghost/etc/ssh$' \
@@ -24,7 +29,7 @@ let
       --exclude-dir='^/var/log/journal$' \
       --max-filesize=100M \
       --max-scansize=200M \
-      $targets
+      "''${targets[@]}"
   '';
 
   # Weekly deep scan: comprehensive scan with higher limits
@@ -33,10 +38,17 @@ let
   # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
   clamScanDeep = pkgs.writeShellScript "clamav-deep-scan" ''
     set -eu
-    # Deep scan: comprehensive check of all persisted locations
-    # Higher limits for thoroughness, runs weekly when system is idle
-    # Deep scan both daily and paranoid persisted directories
-    targets="/home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot"
+    # Deep scan: comprehensive check of high-value paths that actually exist.
+    targets=()
+    for p in /home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot; do
+      if [ -e "$p" ]; then
+        targets+=("$p")
+      fi
+    done
+    if [ "''${#targets[@]}" -eq 0 ]; then
+      echo "No scan targets found; skipping."
+      exit 0
+    fi
     exec ${pkgs.clamav}/bin/clamscan -r --infected \
       --exclude-dir='^/persist/etc/ssh$' \
       --exclude-dir='^/persist/home/ghost/etc/ssh$' \
@@ -44,7 +56,7 @@ let
       --exclude-dir='^/home/player/\.local/share/Steam/steamapps$' \
       --exclude-dir='^/home/player/\.var/app$' \
       --exclude-dir='^/var/log/journal$' \
-      $targets
+      "''${targets[@]}"
   '';
 
   aideCheck = pkgs.writeShellScript "aide-daily-check" ''
@@ -176,15 +188,19 @@ in {
       ""
       "# Persisted directories only (high-value integrity targets)"
       "/persist R"
-      "/persist/home/ghost R"
-      "/home/player R"
       "/var/lib R"
       ""
       "# Exclude noisy/volatile paths"
       "!/persist/var/lib/aide"
+      "!/var/lib/systemd"
+    ]
+    ++ lib.optionals paranoid [
+      "/persist/home/ghost R"
+    ]
+    ++ lib.optionals daily [
+      "/home/player R"
       "!/home/player/.local/share/Steam"
       "!/home/player/.steam"
-      "!/var/lib/systemd"
     ]);
 
     # AIDE services only if aide.enable is true (allows ClamAV-only if desired)

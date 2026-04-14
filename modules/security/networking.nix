@@ -4,8 +4,8 @@ let
   vpnIfaces = [ "wg-mullvad" "tun0" "tun1" ];
 
   # Determine which VPN mode is active
-  # wireguardMullvad.enable = true → self-owned WireGuard (paranoid)
-  # wireguardMullvad.enable = false → Mullvad app mode (daily, default)
+  # wireguardMullvad.enable = true → staged self-owned WireGuard path
+  # wireguardMullvad.enable = false → Mullvad app mode (current default on both profiles)
   useSelfOwnedWireGuard = config.myOS.security.wireguardMullvad.enable;
 in {
   networking.networkmanager.enable = true;
