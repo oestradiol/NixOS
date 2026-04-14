@@ -15,14 +15,7 @@ in {
     }
     {
       assertion = !isParanoid || config.myOS.security.sandbox.browsers;
-      message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox). Set myOS.security.sandbox.browsers = true.";
-    }
-    {
-      # Paranoid must use self-owned WireGuard (not Mullvad app)
-      # wireguardMullvad.enable = true → self-owned mode (paranoid requirement)
-      # wireguardMullvad.enable = false → Mullvad app mode (daily default)
-      assertion = !isParanoid || config.myOS.security.wireguardMullvad.enable;
-      message = "Paranoid profile must use self-owned WireGuard (myOS.security.wireguardMullvad.enable = true).";
+      message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox).";
     }
     {
       assertion = !isParanoid || config.myOS.security.impermanence.enable;
@@ -81,13 +74,8 @@ in {
       message = "Paranoid profile must define an audit rule set.";
     }
     {
-      # Check both new and legacy option paths
       assertion = !isParanoid || config.myOS.security.sandbox.vms;
-      message = "Paranoid profile must enable VM tooling layer. Set myOS.security.sandbox.vms = true.";
-    }
-    {
-      assertion = !isParanoid || !config.myOS.gaming.sysctls;
-      message = "Paranoid profile must disable gaming sysctls.";
+      message = "Paranoid profile must enable VM tooling layer.";
     }
     {
       assertion = !isParanoid || config.myOS.security.kernelHardening.initOnFree;
@@ -106,8 +94,8 @@ in {
       message = "Paranoid profile must restrict SysRq key (kernel.sysrq).";
     }
     {
-      assertion = !isParanoid || config.myOS.security.kernelHardening.ioUringDisabled;
-      message = "Paranoid profile must disable io_uring (kernel.io_uring_disabled=1).";
+      assertion = !isParanoid || (config.myOS.security.kernelHardening.ioUring == 2);
+      message = "Paranoid profile must disable io_uring (kernel.io_uring_disabled=2).";
     }
     {
       assertion = !isParanoid || !config.programs.gamescope.enable;
@@ -135,7 +123,19 @@ in {
     }
     {
       assertion = !isParanoid || config.myOS.security.machineIdValue == null;
-      message = "Paranoid profile must keep a unique host machine-id. Leave myOS.security.machineIdValue = null.";
+      message = "Paranoid profile must keep a unique host machine-id.";
+    }
+    {
+      assertion = !isParanoid || !config.myOS.security.sandbox.x11;
+      message = "Paranoid profile must keep X11 disabled inside bubblewrap sandboxes.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.sandbox.wayland;
+      message = "Paranoid profile must keep Wayland enabled inside bubblewrap sandboxes.";
+    }
+    {
+      assertion = !isDaily || config.myOS.security.sandbox.x11;
+      message = "Daily profile must make the X11 compatibility relaxation explicit.";
     }
   ];
 }

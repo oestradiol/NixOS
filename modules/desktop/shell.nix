@@ -26,10 +26,6 @@
       neofetch = "hyfetch";
     };
 
-    sessionVariables = {
-      DEFAULT_USER = "player";
-    };
-
     initContent = ''
       # starship prompt
       eval "$(starship init zsh)"

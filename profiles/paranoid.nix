@@ -1,115 +1,65 @@
 { config, lib, pkgs, ... }:
 {
-  # mkForce required: specialisations merge with the base config via
-  # extendModules. Without mkForce, options that differ from daily.nix
-  # trigger "conflicting definition values" (mergeEqualOption).
-  myOS.profile = lib.mkForce "paranoid";
+  # HARDENED WORKSTATION BASELINE
+  # This is the default system profile. It is not "maximal isolation at any cost";
+  # it is a hardened desktop baseline with explicit, documented residual exposure.
+  myOS.profile = "paranoid";
+  myOS.gpu = "nvidia";
 
-  # Gaming explicitly disabled for security workstation profile
   myOS.gaming = {
-    controllers.enable = lib.mkForce false;   # Bluetooth/USB controllers disabled
-    sysctls = lib.mkForce false;              # SteamOS scheduler tuning disabled
+    controllers.enable = false;
   };
 
   myOS.security = {
-    # Core infrastructure
-    impermanence.enable = lib.mkForce true;
-    agenix.enable = lib.mkForce true;
+    impermanence.enable = true;
+    agenix.enable = true;
+    persistMachineId = true;
+    machineIdValue = null;
+    allowSleep = false;
 
-    # Machine ID: unique persisted host ID, same policy as daily.
-    # Bare-metal host identity should remain locally unique.
-    # Bubblewrap hardening is not anonymity-equivalent VM isolation.
-    persistMachineId = lib.mkForce true;
-    machineIdValue = lib.mkForce null;
+    # Staged until validated with real secrets/endpoints on target hardware.
+    wireguardMullvad.enable = false;
 
-    # Sleep states disabled (16GB RAM + 8GB swap insufficient; NVIDIA issues)
-    allowSleep = lib.mkForce false;
+    # Sandboxed browser baseline with explicit desktop compromises.
+    sandbox.browsers = true;
+    sandbox.apps = false;
+    sandbox.vms = true;
+    sandbox.dbusFilter = true;
+    sandbox.x11 = false;
+    sandbox.wayland = true;
+    sandbox.pipewire = true;
+    sandbox.gpu = true;
+    sandbox.portals = true;
 
-    # VPN: self-owned WireGuard stack (not Mullvad app)
-    # Provider: Mullvad servers | Control plane: NixOS (deterministic, auditable)
-    # Paranoid profile REQUIRES pinned IP endpoint (no hostname, no DNS exception)
-    # See: docs/PRE-INSTALL.md for the initial pinned-endpoint preparation step
-    # Reference: https://mynixos.com/nixpkgs/option/networking.wireguard.interfaces.%3Cname%3E.peers.*.endpoint
-    wireguardMullvad.enable = lib.mkForce true;
-    # WireGuard secrets: provide via agenix in host secrets file
-    # wireguardMullvad.privateKeyFile = config.age.secrets.wg-private-key.path;
-    # wireguardMullvad.presharedKeyFile = config.age.secrets.wg-preshared-key.path;  # optional
-    # wireguardMullvad.endpoint = "146.70.xx.yy:51820";  # MUST be literal IP, not hostname
-    # wireguardMullvad.address = "10.64.x.x/32";
-    # wireguardMullvad.serverPublicKey = "<mullvad-server-pubkey>";
-    # wireguardMullvad.dns = "10.64.0.1";  # Mullvad DNS through tunnel
-    #
-    # To get pinned IP: resolve Mullvad relay hostname once from trusted environment
-    # Example: dig +short se-got-wg-001.relays.mullvad.net
-    # If Mullvad changes the IP behind the relay, tunnel will stop handshaking until updated
-    # See docs/RECOVERY.md and docs/POST-STABILITY.md for maintenance procedure
+    disableSMT = true;
+    usbRestrict = true;
+    swappiness = 180;
+    apparmor = true;
+    auditd = true;
+    lockRoot = true;
+    ptraceScope = 2;
 
-    # Browser security (sandboxed only, with D-Bus filtering)
-    sandbox.browsers = lib.mkForce true;
-    sandbox.dbusFilter = lib.mkForce true;  # Filtered D-Bus for stronger isolation
-
-    # CPU/System hardening
-    disableSMT = lib.mkForce true;
-    usbRestrict = lib.mkForce true;
-    # Memory: swappiness 180 for maximum zram benefit (workstation, not gaming)
-    # With zram, higher swappiness = more aggressive compression = effectively more RAM.
-    # Paranoid uses 180 (Pop!_OS default) since there's no gaming pressure requiring
-    # lower values. This maximizes the benefit of zram compression.
-    # Reference: https://wiki.archlinux.org/title/Zram
-    swappiness = lib.mkForce 180;
-
-    # MAC and auditing
-    apparmor = lib.mkForce true;    # AppArmor framework + D-Bus mediation baseline
-    auditd = lib.mkForce true;      # Linux audit subsystem + auditd + repo rule set
-    lockRoot = lib.mkForce true;     # Root account locked
-
-    # Debug and privilege restrictions
-    ptraceScope = lib.mkForce 2;  # Strictest: attached-only
-
-    # VM tooling enabled (libvirtd, QEMU, KVM) — capability available, not automatic enforcement
-    # To actually isolate browsers/apps in VMs: manually create VMs and run workloads there
-    sandbox.vms = lib.mkForce true;
-    sandbox.apps = lib.mkForce false;
-
-    # Kernel hardening - ALL paranoid-tier options enabled
     kernelHardening = {
-      # Base hardening (already default true, but explicit for paranoid)
-      initOnAlloc = lib.mkForce true;
-      slabNomerge = lib.mkForce true;
-      moduleBlacklist = lib.mkForce true;
-      pti = lib.mkForce true;
-      vsyscallNone = lib.mkForce true;
-
-      # Paranoid-tier performance-costly hardening
-      initOnFree = lib.mkForce true;
-      pageAllocShuffle = lib.mkForce true;
-      oopsPanic = lib.mkForce true;
-      moduleSigEnforce = lib.mkForce true;
-      disableIcmpEcho = lib.mkForce true;
-
-      # Stronger kernel controls (Madaidan-aligned): ENABLED on paranoid
-      # One-way toggles for attack surface reduction
-      kexecLoadDisabled = lib.mkForce true;   # Prevent runtime kernel replacement
-      sysrqRestrict = lib.mkForce true;       # Disable magic SysRq key
-      modulesDisabled = lib.mkForce false;    # DEFERRED: staged to POST-STABILITY
-      # modules_disabled=1 breaks late module loading; enable only after all
-      # required modules (NVIDIA, wireguard, etc.) are confirmed loaded at boot
-      ioUringDisabled = lib.mkForce true;     # Reduce io_uring attack surface
+      initOnAlloc = true;
+      initOnFree = true;
+      slabNomerge = true;
+      pageAllocShuffle = true;
+      moduleBlacklist = true;
+      pti = true;
+      vsyscallNone = true;
+      oopsPanic = false;
+      moduleSigEnforce = false;
+      disableIcmpEcho = true;
+      kexecLoadDisabled = true;
+      sysrqRestrict = true;
+      modulesDisabled = false;
+      ioUring = 2;
     };
 
-    # Staged enablement (explicitly disabled until post-install)
-    secureBoot.enable = lib.mkForce false;   # Stage 2: enable after first boot
-    tpm.enable = lib.mkForce false;           # Stage 2: enable after LUKS working
-
-    # Hardened allocator - deferred until post-install stability testing
-    # Per PROJECT-STATE: enable only after verifying no stability issues
-    hardenedMemory.enable = lib.mkForce false;  # Graphene allocator - test post-install
+    hardenedMemory.enable = false;
+    # Shared bootloader/initrd stage controls remain staged until first successful
+    # encrypted boot and recovery validation.
+    secureBoot.enable = false;
+    tpm.enable = false;
   };
-
-  programs.steam.enable = lib.mkForce false;
-  programs.gamescope.enable = lib.mkForce false;
-  programs.gamemode.enable = lib.mkForce false;
-  services.wivrn.enable = lib.mkForce false;
-
-  # Keep KDE + NVIDIA at first for reliability on this hardware.
 }

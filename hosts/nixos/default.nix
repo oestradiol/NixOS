@@ -3,45 +3,21 @@ let
   system = "x86_64-linux";
 in {
   imports = [
+    ./fs-layout.nix
     ./hardware-target.nix
-    ./install-layout.nix
-    # Core
     ../../modules/core/options.nix
-    ../../modules/core/base-desktop.nix
     ../../modules/core/boot.nix
     ../../modules/core/users.nix
-    # Security
+    ../../modules/desktop/base.nix
     ../../modules/security/base.nix
-    ../../modules/security/governance.nix
-    ../../modules/security/networking.nix
-    ../../modules/security/wireguard.nix  # Self-owned WireGuard for paranoid (replaces Mullvad app)
-    ../../modules/security/browser.nix
-    ../../modules/security/impermanence.nix
-    ../../modules/security/secrets.nix
-    ../../modules/security/secure-boot.nix
-    ../../modules/security/flatpak.nix
-    ../../modules/security/scanners.nix
-    ../../modules/security/vm-tooling.nix  # Disabled by default, knob: myOS.security.sandbox.vms
-    ../../modules/security/sandboxed-apps.nix
-    ../../modules/security/privacy.nix
-    ../../modules/security/user-profile-binding.nix
-    # Desktop
     ../../modules/gpu/nvidia.nix
     ../../modules/gpu/amd.nix
-    ../../modules/desktop/theme.nix
-    # Profile
-    ../../profiles/daily.nix
+    ../../profiles/paranoid.nix
   ];
 
   networking.hostName = "nixos";
   time.timeZone = "America/Sao_Paulo";
   system.stateVersion = "26.05";
-
-  # System-wide staged controls — these affect the bootloader and initrd,
-  # which are shared across all specialisations. Flip to true only after
-  # the first successful encrypted boot. See docs/POST-STABILITY.md.
-  myOS.security.secureBoot.enable = false;
-  myOS.security.tpm.enable = false;
 
   environment.systemPackages = with pkgs; [
     comma
@@ -58,12 +34,11 @@ in {
     inputs.agenix.packages.${system}.default
     bubblewrap
     flatpak
-    mullvad-vpn
   ];
 
   specialisation = {
-    paranoid.configuration = {
-      imports = [ ../../profiles/paranoid.nix ];
+    daily.configuration = {
+      imports = [ ../../profiles/daily.nix ];
     };
   };
 }

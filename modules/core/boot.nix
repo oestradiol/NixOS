@@ -1,25 +1,22 @@
 { config, lib, pkgs, ... }:
 let
-  kh = config.myOS.security.kernelHardening;
   sec = config.myOS.security;
-  gaming = config.myOS.gaming;
+  kh = sec.kernelHardening;
 in {
   boot.loader = {
-    systemd-boot.enable = lib.mkDefault (!sec.secureBoot.enable);
+    systemd-boot.enable = lib.mkDefault true;
     efi.canTouchEfiVariables = true;
     timeout = 2;
   };
 
   boot.kernelPackages = lib.mkDefault pkgs.linuxPackages;
 
-  # ntsync is a gaming-related kernel module (Wine/Proton synchronization)
-  # Only loaded on daily profile, not paranoid
-  boot.kernelModules = lib.optionals gaming.sysctls [ "ntsync" ];
   boot.kernelParams = [
-    "nvidia_drm.modeset=1"
-    "randomize_kstack_offset=on"
-    "debugfs=off"
-  ] ++ lib.optionals kh.slabNomerge       [ "slab_nomerge" ]
+      "randomize_kstack_offset=on"
+      "debugfs=off"
+      "slub_debug=FZP"
+      "page_poison=1"
+    ] ++ lib.optionals kh.slabNomerge       [ "slab_nomerge" ]
     ++ lib.optionals kh.initOnAlloc        [ "init_on_alloc=1" ]
     ++ lib.optionals kh.initOnFree         [ "init_on_free=1" ]
     ++ lib.optionals kh.pageAllocShuffle   [ "page_alloc.shuffle=1" ]
@@ -29,7 +26,9 @@ in {
     ++ lib.optionals kh.pti                [ "pti=on" ]
     ++ lib.optionals kh.vsyscallNone       [ "vsyscall=none" ]
     ++ lib.optionals kh.oopsPanic          [ "oops=panic" ]
-    ++ lib.optionals kh.moduleSigEnforce   [ "module.sig_enforce=1" ];
+    ++ lib.optionals kh.moduleSigEnforce   [ "module.sig_enforce=1" ]
+    # NVIDIA-specific parameters
+    ++ lib.optionals (config.myOS.gpu == "nvidia") [ "nvidia_drm.modeset=1" ];
 
   boot.kernel.sysctl = {
     "vm.swappiness" = sec.swappiness;
@@ -43,18 +42,9 @@ in {
     # watermark_boost_factor=0: Disable boost (not needed with zram)
     "vm.watermark_boost_factor" = 0;
 
-    "net.ipv4.tcp_mtu_probing" = true;
+    # Faster TCP port reuse for apps killed and restarted quickly
     "net.ipv4.tcp_fin_timeout" = 5;
     # Madaidan-recommended: ignore ICMP echo (ping) requests
     "net.ipv4.icmp_echo_ignore_all" = lib.mkIf kh.disableIcmpEcho true;
-  } // lib.optionalAttrs gaming.sysctls {
-    "kernel.sched_cfs_bandwidth_slice_u" = 3000;
-    "kernel.sched_latency_ns" = 3000000;
-    "kernel.sched_min_granularity_ns" = 300000;
-    "kernel.sched_wakeup_granularity_ns" = 500000;
-    "kernel.sched_migration_cost_ns" = 50000;
-    "kernel.sched_nr_migrate" = 128;
-    "kernel.split_lock_mitigate" = 0;
-    "kernel.sched_rt_runtime_us" = -1;
   };
 }

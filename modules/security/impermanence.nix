@@ -116,11 +116,16 @@ in {
       systemd.tmpfiles.rules = [
         "f /etc/machine-id 0444 root root - ${machineIdValue}"
       ];
-      
+
       # Ensure the file is writable during early boot so tmpfiles can set it
-      boot.initrd.systemd.tmpfiles.rules = [
-        "f /etc/machine-id 0444 root root - ${machineIdValue}"
-      ];
+      boot.initrd.systemd.tmpfiles.settings = {
+        "10-machine-id"."/etc/machine-id"."f" = {
+          mode = "0444";
+          user = "root";
+          group = "root";
+          argument = machineIdValue;
+        };
+      };
     })
     
     {

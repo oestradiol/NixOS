@@ -8,14 +8,6 @@
     enable = true;
     createDirectories = true;
     setSessionVariables = false;
-    desktop = "/home/ghost/Desktop";
-    documents = "/home/ghost/Documents";
-    download = "/home/ghost/Downloads";
-    music = "/home/ghost/Music";
-    pictures = "/home/ghost/Pictures";
-    videos = "/home/ghost/Videos";
-    publicShare = "/home/ghost/Public";
-    templates = "/home/ghost/Templates";
   };
 
   home.packages = with pkgs; [

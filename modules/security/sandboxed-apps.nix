@@ -18,15 +18,16 @@ let
     sessionBusTalk ? [ ],
   }:
     core.mkSandboxWrapper {
-      inherit name package binaryName persist network gpu;
+      inherit name package binaryName persist network;
+      gpu = if sandbox.gpu then gpu else false;
       enableDbusProxy = sandbox.dbusFilter;
-      wayland = true;
-      x11 = true;
-      pipewire = true;
-      sessionBusTalk = sessionBusTalk ++ lib.optionals sandbox.dbusFilter [
+      wayland = sandbox.wayland;
+      x11 = sandbox.x11;
+      pipewire = sandbox.pipewire;
+      sessionBusTalk = sessionBusTalk ++ lib.optionals (sandbox.dbusFilter && sandbox.portals) [
         "org.freedesktop.portal.*"
       ];
-      sessionBusBroadcast = lib.optionals sandbox.dbusFilter [
+      sessionBusBroadcast = lib.optionals (sandbox.dbusFilter && sandbox.portals) [
         "org.freedesktop.portal.*=@/org/freedesktop/portal/*"
       ];
     };

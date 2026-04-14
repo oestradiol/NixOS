@@ -1,0 +1,118 @@
+# Nix import tree
+
+Generated directly from the Nix source tree. Existing docs were ignored for discovery. Links use repository-relative GitHub anchors.
+
+## Inclusion methods
+
+- **module list entry**: file path inside `modules = [ ... ]` or `imports = [ ... ]`
+- **direct import**: `import ./path.nix` expression
+- **flake input module**: module provided by a flake input, not a local file
+- **external import**: path built from `modulesPath` or another non-local source
+
+## Recursive tree
+
+- `flake.nix`
+  - flake input module at [line 69](../flake.nix#L69): `input:home-manager.nixosModules.home-manager`
+  - flake input module at [line 70](../flake.nix#L70): `input:stylix.nixosModules.stylix`
+  - flake input module at [line 71](../flake.nix#L71): `input:impermanence.nixosModules.impermanence`
+  - flake input module at [line 72](../flake.nix#L72): `input:lanzaboote.nixosModules.lanzaboote`
+  - flake input module at [line 73](../flake.nix#L73): `input:agenix.nixosModules.default`
+  - direct import at [line 89](../flake.nix#L89): `modules/home/ghost.nix`
+    - `modules/home/ghost.nix`
+      - list entry at [line 2](../modules/home/ghost.nix#L2): `modules/home/common.nix`
+        - `modules/home/common.nix`
+          - list entry at [line 5](../modules/home/common.nix#L5): `modules/desktop/shell.nix`
+            - `modules/desktop/shell.nix`
+              - leaf
+  - direct import at [line 90](../flake.nix#L90): `modules/home/player.nix`
+    - `modules/home/player.nix`
+      - list entry at [line 2](../modules/home/player.nix#L2): `modules/home/common.nix`
+        - `modules/home/common.nix`
+          - list entry at [line 5](../modules/home/common.nix#L5): `modules/desktop/shell.nix`
+            - `modules/desktop/shell.nix`
+              - leaf
+  - flake input module at [line 68](../flake.nix#L68): `hosts/nixos/default.nix`
+    - `hosts/nixos/default.nix`
+      - list entry at [line 6](../hosts/nixos/default.nix#L6): `hosts/nixos/fs-layout.nix`
+        - `hosts/nixos/fs-layout.nix`
+          - leaf
+      - list entry at [line 7](../hosts/nixos/default.nix#L7): `hosts/nixos/hardware-target.nix`
+        - `hosts/nixos/hardware-target.nix`
+          - external import at [line 7](../hosts/nixos/hardware-target.nix#L7): `nixpkgs installer scan module via modulesPath`
+      - list entry at [line 8](../hosts/nixos/default.nix#L8): `modules/core/options.nix`
+        - `modules/core/options.nix`
+          - leaf
+      - list entry at [line 9](../hosts/nixos/default.nix#L9): `modules/core/boot.nix`
+        - `modules/core/boot.nix`
+          - leaf
+      - list entry at [line 10](../hosts/nixos/default.nix#L10): `modules/core/users.nix`
+        - `modules/core/users.nix`
+          - leaf
+      - list entry at [line 11](../hosts/nixos/default.nix#L11): `modules/desktop/base.nix`
+        - `modules/desktop/base.nix`
+          - list entry at [line 4](../modules/desktop/base.nix#L4): `modules/desktop/theme.nix`
+            - `modules/desktop/theme.nix`
+              - leaf
+      - list entry at [line 12](../hosts/nixos/default.nix#L12): `modules/security/base.nix`
+        - `modules/security/base.nix`
+          - leaf
+      - list entry at [line 13](../hosts/nixos/default.nix#L13): `modules/security/governance.nix`
+        - `modules/security/governance.nix`
+          - leaf
+      - list entry at [line 14](../hosts/nixos/default.nix#L14): `modules/security/networking.nix`
+        - `modules/security/networking.nix`
+          - leaf
+      - list entry at [line 15](../hosts/nixos/default.nix#L15): `modules/security/wireguard.nix`
+        - `modules/security/wireguard.nix`
+          - leaf
+      - list entry at [line 16](../hosts/nixos/default.nix#L16): `modules/security/browser.nix`
+        - `modules/security/browser.nix`
+          - direct import at [line 5](../modules/security/browser.nix#L5): `modules/security/sandbox-core.nix`
+            - `modules/security/sandbox-core.nix`
+              - leaf
+      - list entry at [line 17](../hosts/nixos/default.nix#L17): `modules/security/impermanence.nix`
+        - `modules/security/impermanence.nix`
+          - leaf
+      - list entry at [line 18](../hosts/nixos/default.nix#L18): `modules/security/secrets.nix`
+        - `modules/security/secrets.nix`
+          - leaf
+      - list entry at [line 19](../hosts/nixos/default.nix#L19): `modules/security/secure-boot.nix`
+        - `modules/security/secure-boot.nix`
+          - leaf
+      - list entry at [line 20](../hosts/nixos/default.nix#L20): `modules/security/flatpak.nix`
+        - `modules/security/flatpak.nix`
+          - leaf
+      - list entry at [line 21](../hosts/nixos/default.nix#L21): `modules/security/scanners.nix`
+        - `modules/security/scanners.nix`
+          - leaf
+      - list entry at [line 22](../hosts/nixos/default.nix#L22): `modules/security/vm-tooling.nix`
+        - `modules/security/vm-tooling.nix`
+          - leaf
+      - list entry at [line 23](../hosts/nixos/default.nix#L23): `modules/security/sandboxed-apps.nix`
+        - `modules/security/sandboxed-apps.nix`
+          - direct import at [line 9](../modules/security/sandboxed-apps.nix#L9): `modules/security/sandbox-core.nix`
+      - list entry at [line 24](../hosts/nixos/default.nix#L24): `modules/security/privacy.nix`
+        - `modules/security/privacy.nix`
+          - leaf
+      - list entry at [line 25](../hosts/nixos/default.nix#L25): `modules/security/user-profile-binding.nix`
+        - `modules/security/user-profile-binding.nix`
+          - leaf
+      - list entry at [line 26](../hosts/nixos/default.nix#L26): `modules/gpu/nvidia.nix`
+        - `modules/gpu/nvidia.nix`
+          - leaf
+      - list entry at [line 27](../hosts/nixos/default.nix#L27): `modules/gpu/amd.nix`
+        - `modules/gpu/amd.nix`
+          - leaf
+      - list entry at [line 28](../hosts/nixos/default.nix#L28): `profiles/paranoid.nix`
+        - `profiles/paranoid.nix`
+          - leaf
+      - list entry at [line 54](../hosts/nixos/default.nix#L54): `profiles/daily.nix`
+        - `profiles/daily.nix`
+          - list entry at [line 66](../profiles/daily.nix#L66): `modules/desktop/gaming.nix`
+            - `modules/desktop/gaming.nix`
+              - list entry at [line 2](../modules/desktop/gaming.nix#L2): `modules/desktop/vr.nix`
+                - `modules/desktop/vr.nix`
+                  - leaf
+              - list entry at [line 2](../modules/desktop/gaming.nix#L2): `modules/desktop/controllers.nix`
+                - `modules/desktop/controllers.nix`
+                  - leaf

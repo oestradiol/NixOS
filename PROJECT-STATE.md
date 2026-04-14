@@ -4,9 +4,9 @@
 Canonical current state: architecture, policy, constraints, implemented support scope, explicit decisions, explicit rejections, and deferred work.
 
 ## Repository role
-Single NixOS host with two boot specialisations:
-- `daily`: maximally hardened within daily usability constraints
-- `paranoid`: maximally hardened within paranoid constraints, with expected breakage
+Single NixOS host with one hardened default plus one explicit relaxation specialization:
+- `paranoid`: default hardened workstation baseline with explicit documented residual surfaces
+- `daily`: boot specialization that weakens selected controls for gaming/social compatibility
 
 Separate users:
 - `player` for daily
@@ -37,7 +37,8 @@ Separate users:
 
 ### Repository shape
 - `hosts/nixos/` wires host-specific layout and hardware references
-- `profiles/daily.nix` and `profiles/paranoid.nix` define profile overrides
+- `profiles/paranoid.nix` defines the default hardened workstation baseline
+- `profiles/daily.nix` defines explicit relaxations as the daily specialization
 - `modules/core/` defines base system wiring and option surface
 - `modules/security/` defines hardening, privacy, sandboxing, networking, persistence, governance, secrets, VM tooling, and browser policy
 - `docs/` defines install/test/recovery/performance procedures

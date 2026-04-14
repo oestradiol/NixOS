@@ -1,14 +1,19 @@
 { config, pkgs, lib, ... }:
 {
+  imports = [
+    ../desktop/theme.nix
+  ];
+
   # ── Desktop environment ────────────────────────────────────────
   console.keyMap = "br-abnt2";
   services.xserver.xkb.layout = "br";
   services.xserver.enable = true;
   services.displayManager.sddm.enable = true;
-  services.displayManager.defaultSession = "plasma";
   services.desktopManager.plasma6.enable = true;
+  services.displayManager.defaultSession = "plasma";
 
   security.polkit.enable = true;
+  services.dbus.implementation = "broker";
   services.udisks2.enable = true;
   services.printing.enable = false;
   services.openssh.enable = false;
@@ -95,12 +100,6 @@
     algorithm = "zstd";
     memoryPercent = 50;
   };
-
-  # Swap file on Btrfs @swap subvolume — fallback behind zram for VR/gaming memory spikes
-  swapDevices = [{
-    device = "/swap/swapfile";
-    size = 8192;
-  }];
 
   # SSD TRIM: periodic fstrim (safer than real-time discard for LUKS)
   services.fstrim.enable = true;

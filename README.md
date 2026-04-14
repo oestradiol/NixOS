@@ -1,8 +1,8 @@
 # NixOS hardening repo
 
 Two-profile NixOS host:
-- `daily`: hardened within normal desktop usability constraints
-- `paranoid`: hardened much more aggressively within explicit same-kernel and desktop-usability limits
+- `paranoid`: default hardened workstation baseline with explicit documented residual surfaces
+- `daily`: boot specialization that intentionally relaxes selected controls for gaming/social compatibility
 
 ## Read order
 1. `PROJECT-STATE.md`
@@ -14,6 +14,10 @@ Two-profile NixOS host:
 7. `docs/POST-STABILITY.md`
 8. `docs/RECOVERY.md`
 9. `docs/PERFORMANCE-NOTES.md`
+
+## Code-derived maps
+- security boundary map → `docs/SECURITY-SURFACES.md`
+- Nix import tree → `docs/NIX-IMPORT-TREE.md`
 
 ## Repo map
 - state / decisions / constraints → `PROJECT-STATE.md`

@@ -71,6 +71,28 @@ If you ever want to revisit that idea, keep it as a documented experiment here f
 - add a small profile-validation workflow: check loaded profiles, denial logs, complain/enforce state, and any D-Bus mediation regressions after each policy addition
 - do not import third-party AppArmor policy bundles blindly; NixOS path layout and current upstream packaging still need careful validation
 
+### Audit rules + AppArmor compatibility issue
+**Current status**: `myOS.security.auditRules.enable` is defaulted off due to a nixpkgs incompatibility.
+
+**Issue**: On some recent nixpkgs revisions, enabling NixOS audit rules together with AppArmor causes `audit-rules-nixos.service` to fail.
+
+**Symptoms**:
+- `audit-rules-nixos.service` enters failed state when AppArmor is enabled
+- Custom audit rules may not load despite `auditd` running successfully
+- Affects nixpkgs unstable/26.05 revisions
+
+**Current workaround**:
+- Keep `myOS.security.auditRules.enable = false` (default)
+- `auditd` may still run normally without custom rules
+
+**Re-enable condition**:
+Do not re-enable `auditRules.enable` just because the upstream issue is closed. Re-enable only when all three are true:
+1. The nixpkgs issue is fixed for your channel/revision
+2. Your pinned revision includes that fix
+3. `audit-rules-nixos.service` succeeds on your real machine with AppArmor enabled
+
+**Upstream reference**: https://github.com/NixOS/nixpkgs/issues/483085
+
 ## Paranoid browser live trials
 - Tor Browser and Mullvad Browser can be fragile under aggressive local containment
 - push containment tighter only after each target GPU/session/portal combination is proven functional

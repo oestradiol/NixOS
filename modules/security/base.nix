@@ -2,11 +2,27 @@
 let
   sec = config.myOS.security;
 in {
+  imports = [
+    ./governance.nix
+    ./networking.nix
+    ./wireguard.nix
+    ./browser.nix
+    ./impermanence.nix
+    ./secrets.nix
+    ./secure-boot.nix
+    ./flatpak.nix
+    ./scanners.nix
+    ./vm-tooling.nix
+    ./sandboxed-apps.nix
+    ./privacy.nix
+    ./user-profile-binding.nix
+  ];
+
   boot.tmp.cleanOnBoot = true;
   security.protectKernelImage = true;
 
   security.apparmor.enable = sec.apparmor;
-  services.dbus.apparmor = if sec.apparmor then "enabled" else "disabled";
+  services.dbus.apparmor = if sec.apparmor then "required" else "disabled";
 
   security.auditd.enable = sec.auditd;
   security.audit = lib.mkIf sec.auditd {
@@ -86,7 +102,7 @@ in {
     "kernel.kexec_load_disabled" = lib.mkIf sec.kernelHardening.kexecLoadDisabled 1;
     "kernel.sysrq" = lib.mkIf sec.kernelHardening.sysrqRestrict 4;  # 4 = only sync/reboot
     "kernel.modules_disabled" = lib.mkIf sec.kernelHardening.modulesDisabled 1;
-    "kernel.io_uring_disabled" = lib.mkIf sec.kernelHardening.ioUringDisabled 1;
+    "kernel.io_uring_disabled" = sec.kernelHardening.ioUring;
     "fs.protected_symlinks" = 1;
     "fs.protected_hardlinks" = 1;
     "fs.protected_fifos" = 2;
@@ -106,7 +122,6 @@ in {
     "net.ipv4.tcp_rfc1337" = 1;
     # IPv6 privacy extensions
     "net.ipv6.conf.all.use_tempaddr" = 2;
-    "net.ipv6.conf.default.use_tempaddr" = 2;
   };
 
   # Blacklist rarely-used and dangerous kernel modules
@@ -128,4 +143,9 @@ in {
   # Hardened memory allocator (off by default, staged)
   environment.memoryAllocator.provider =
     lib.mkIf sec.hardenedMemory.enable "graphene-hardened-light";
+
+  # Warn about audit rules + AppArmor compatibility issue
+  warnings = lib.mkIf (sec.apparmor && sec.auditd && !sec.auditRules.enable) [
+    "AppArmor + custom NixOS audit rules are staged off by default due to a current nixpkgs issue. See docs/POST-STABILITY.md for details and re-enable conditions."
+  ];
 }

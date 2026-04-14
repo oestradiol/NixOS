@@ -51,7 +51,6 @@ let
       qemu_kvm
       virt-viewer
       virt-manager
-      virt-install
       OVMF
     ];
     text = ''
@@ -280,7 +279,7 @@ let
           fi
 
           rm -f "$DISK_PATH"
-          qemu-img create -f qcow2 -F qcow2 -b "$BASE_IMAGE" "$DISK_PATH" "$''{DISK_GB}G" >/dev/null
+          qemu-img create -f qcow2 -F qcow2 -b "$BASE_IMAGE" "$DISK_PATH" "''${DISK_GB}G" >/dev/null
 
           GRAPHICS_ARGS=(--graphics "spice,listen=none")
           SOUND_ARGS=()
@@ -392,7 +391,7 @@ in {
       qemu_kvm
       OVMF
       libvirt
-      virt-install
+      virt-manager
       vmClassHelper
     ];
 

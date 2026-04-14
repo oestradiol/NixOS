@@ -22,6 +22,7 @@ in {
     description = "Daily desktop";
     home = "/home/player";
     shell = pkgs.zsh;
+    group = "users";  # Use standard users group (GID typically 100)
     extraGroups = [
       "wheel"
       "networkmanager"
@@ -44,7 +45,7 @@ in {
     description = "Hardened workspace";
     home = "/home/ghost";
     shell = pkgs.zsh;
-    group = "users";  # Use standard users group (GID typically 100)
+    group = "users";
     extraGroups = [
       "networkmanager"
       "video"

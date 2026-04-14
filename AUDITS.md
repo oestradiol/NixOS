@@ -25,7 +25,7 @@ Canonical audit surface: completed checks, source-backed claim ledger, validatio
 | AppArmor baseline | implemented+manual | static review | `modules/security/base.nix`, `profiles/daily.nix`, `profiles/paranoid.nix`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | framework + D-Bus mediation baseline; custom repo profiles deferred |
 | ClamAV + AIDE monitoring path | implemented | static review | `modules/security/scanners.nix`, `docs/TEST-PLAN.md`, `docs/RECOVERY.md` | live timer/service validation still required |
 | Flatpak remote + portal baseline | implemented | static review | `modules/security/flatpak.nix`, `docs/TEST-PLAN.md` | remote bootstrap and portal path are in current-stage validation |
-| fwupd baseline | implemented | static review | `modules/core/base-desktop.nix`, `docs/TEST-PLAN.md` | current-stage runtime check required |
+| fwupd baseline | implemented | static review | `modules/desktop/base.nix`, `docs/TEST-PLAN.md` | current-stage runtime check required |
 | privacy network-identity settings | implemented | static review | `modules/security/privacy.nix`, `docs/TEST-PLAN.md` | verify MAC and TCP timestamp mode per profile |
 | VM tooling layer + workflow classes | implemented | static review | `modules/security/vm-tooling.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | repo-managed NAT + isolated networks and `repo-vm-class` encode the four classes; guest templates still need live validation |
 | wrapper seccomp | deferred | static review | `PROJECT-STATE.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | do not overclaim |

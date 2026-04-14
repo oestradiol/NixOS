@@ -3,6 +3,7 @@
   # ── Secure Boot (Lanzaboote) ──────────────────────────────────
   config = lib.mkMerge [
     (lib.mkIf config.myOS.security.secureBoot.enable {
+      boot.loader.systemd-boot.enable = lib.mkForce false;
       boot.lanzaboote = {
         enable = true;
         # NOTE: sbctl create-keys places keys in /var/lib/sbctl by default.

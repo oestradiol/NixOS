@@ -32,8 +32,6 @@ in {
       # We can't easily restrict without breaking apps, but we document it as a residual vector
       # 6. Disable TCP timestamps (can be used for clock fingerprinting)
       boot.kernel.sysctl = {
-        "net.ipv6.conf.all.use_tempaddr" = 2;  # Prefer temporary addresses
-        "net.ipv6.conf.default.use_tempaddr" = 2;
         "net.ipv4.tcp_timestamps" = 0;  # Disable TCP timestamps
       };
 
@@ -53,8 +51,6 @@ in {
       # IPv6 privacy extensions enabled (standard privacy)
       # TCP timestamps enabled (needed for some gaming/networking)
       boot.kernel.sysctl = {
-        "net.ipv6.conf.all.use_tempaddr" = 2;
-        "net.ipv6.conf.default.use_tempaddr" = 2;
         "net.ipv4.tcp_timestamps" = 1;
       };
     })

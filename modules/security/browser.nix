@@ -110,18 +110,19 @@ let
     core.mkSandboxWrapper {
       inherit name package binaryName;
       network = true;
-      gpu = true;
+      gpu = cfg.gpu;
       enableDbusProxy = cfg.dbusFilter;
-      wayland = true;
-      x11 = true;
-      pipewire = true;
-      sessionBusTalk = lib.optionals cfg.dbusFilter [
-        "org.freedesktop.portal.*"
-        "org.a11y.Bus"
-        "org.mpris.MediaPlayer2.*"
-      ];
+      wayland = cfg.wayland;
+      x11 = cfg.x11;
+      pipewire = cfg.pipewire;
+      sessionBusTalk = lib.optionals cfg.dbusFilter (
+        lib.optionals cfg.portals [ "org.freedesktop.portal.*" ] ++ [
+          "org.a11y.Bus"
+          "org.mpris.MediaPlayer2.*"
+        ]
+      );
       sessionBusOwn = lib.optionals (cfg.dbusFilter && dbusOwnName != null) [ dbusOwnName ];
-      sessionBusBroadcast = lib.optionals cfg.dbusFilter [
+      sessionBusBroadcast = lib.optionals (cfg.dbusFilter && cfg.portals) [
         "org.freedesktop.portal.*=@/org/freedesktop/portal/*"
       ];
       extraSetup = ''

@@ -54,7 +54,6 @@ Do not wipe yet if:
 - you have not confirmed the account/UID assumptions
 
 ## 10. Hardware-config reconciliation plan
-- `hosts/nixos/hardware-current-reference.nix` is the old-machine reference snapshot
 - `hosts/nixos/hardware-install-generated.nix` should be created from the installer after the new layout is mounted
 - `hosts/nixos/hardware-target.nix` remains the maintained target file
 - merge fresh hardware detection deltas into `hardware-target.nix`; do not overwrite repo-owned layout, impermanence, or profile policy wholesale

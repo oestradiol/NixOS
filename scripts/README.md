@@ -19,7 +19,7 @@ What it is responsible for:
 - create the repo's expected partition labels (`NIXBOOT`, `NIXCRYPT`)
 - create the expected Btrfs subvolumes
 - mount the expected install layout under `/mnt`
-- create and test the Btrfs-native swapfile expected by `modules/core/base-desktop.nix`
+- create and test the Btrfs-native swapfile expected by `modules/desktop/base.nix`
 - remind you about the `ghost` UID/GID dependency used by `hosts/nixos/hardware-target.nix`
 - print the hardware-config refresh and reconciliation step required before `nixos-install`
 
