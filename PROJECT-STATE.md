@@ -11,7 +11,7 @@ This repo is not trying to be a high-assurance appliance.
 It is a hardened desktop/workstation with explicit same-kernel, desktop-integration, and usability limits.
 
 ## 2. Current stable-baseline definition
-The repo reaches its first stable machine-usable state when all three are complete on target hardware:
+The repo reaches its first stable machine-usable state when all three are complete on target hardware and `docs/TEST-PLAN.md` has been used as the runtime-proof checklist:
 1. `docs/PRE-INSTALL.md`
 2. `docs/INSTALL-GUIDE.md`
 3. `docs/TEST-PLAN.md`

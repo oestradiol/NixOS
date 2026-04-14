@@ -1,6 +1,7 @@
 # TEST PLAN
 
 Exactly what must be tested to call the repo stable on the target machine.
+These checks are the runtime proof layer for this specific hardware, not just a static repo review.
 
 ## 1. Stage order
 - [ ] daily is operable first
@@ -10,12 +11,23 @@ Exactly what must be tested to call the repo stable on the target machine.
 
 ## 2. Build and boot
 - [ ] `nix flake check` passes
-- [ ] default system builds
-- [ ] daily specialization builds
+- [ ] default system builds on the target machine
+- [ ] daily specialization builds on the target machine
+- [ ] the expected host hardware target file still matches the actual machine
+- [ ] encrypted boot works on the target machine
 - [ ] daily boots
 - [ ] paranoid boots
+- [ ] at least one rollback generation is available after first successful activation
 
-## 3. Persistence and identity
+## 3. Login, desktop, and session baseline
+- [ ] SDDM appears reliably after boot
+- [ ] `player` can log into the daily profile successfully
+- [ ] `ghost` can log into the paranoid profile successfully
+- [ ] Plasma starts cleanly on both profiles
+- [ ] logout and re-login work on both profiles
+- [ ] no login loop or session-crash loop appears after reboot
+
+## 4. Persistence, mounts, and identity
 - [ ] `/persist` is mounted
 - [ ] `/etc/machine-id` persists across reboot
 - [ ] daily machine-id is unique and stable across reboot
@@ -24,24 +36,45 @@ Exactly what must be tested to call the repo stable on the target machine.
 - [ ] `/home/ghost` is tmpfs on paranoid and allowlisted persistence appears under `/persist/home/ghost`
 - [ ] daily does not mount `/home/ghost` or `/persist/home/ghost`
 - [ ] paranoid does not mount `/home/player`
+- [ ] the opposite profile home paths are absent from `/proc/mounts`
 - [ ] `systemctl status profile-mount-invariants` succeeds on both profiles
 
-## 4. Daily profile baseline
-- [ ] Steam works
-- [ ] VR path works
-- [ ] controllers work
+## 5. Daily profile baseline
 - [ ] Firefox launches normally
 - [ ] `about:policies` reflects the repo-managed daily Firefox policy set
 - [ ] Mullvad app mode connects and stays usable for ordinary browsing
 - [ ] `services.resolved` is active and normal DNS resolution works
 - [ ] Flathub remote exists and Flatpak portals work
-- [ ] `fwupdmgr get-devices` works
+- [ ] Signal Flatpak installs and launches if Signal is in the baseline app set
+- [ ] Bitwarden Flatpak installs and launches if Bitwarden is in the baseline app set
+- [ ] any other baseline-critical Flatpak app is listed explicitly and tested explicitly
 - [ ] `safe-vrcx` launches
 - [ ] `safe-windsurf` launches
 - [ ] VRCX file chooser works if needed
 - [ ] Windsurf file chooser works if needed
+- [ ] Steam works
+- [ ] controllers work
+- [ ] VR path works if VR is part of the first stable baseline for this machine
+- [ ] `fwupdmgr get-devices` works
 
-## 5. Paranoid minimum state
+## 6. Audio, input, and desktop integration
+- [ ] speaker output works
+- [ ] microphone input works
+- [ ] `systemctl --user status pipewire wireplumber` is healthy in both profiles where audio is expected
+- [ ] fcitx5 starts correctly where expected
+- [ ] Japanese input works in at least one app where expected
+- [ ] notifications work for the baseline apps that rely on them
+- [ ] portal-based open/save flows work for the baseline apps that rely on them
+
+## 7. GPU and hardware-specific proof
+- [ ] the expected GPU driver is loaded on the target machine
+- [ ] hardware acceleration works in Firefox on the target machine
+- [ ] the intended Wayland path is stable enough for normal use on the target machine
+- [ ] gamescope works on the target machine if daily gaming is baseline-critical
+- [ ] Steam 32-bit graphics path works if Steam is baseline-critical
+- [ ] the current firmware / UEFI behavior matches the install assumptions
+
+## 8. Paranoid minimum state
 - [ ] `safe-firefox` launches
 - [ ] `safe-firefox` uses the vendored arkenfox baseline plus repo overrides
 - [ ] paranoid Firefox state persists in `.mozilla/safe-firefox`
@@ -50,12 +83,13 @@ Exactly what must be tested to call the repo stable on the target machine.
 - [ ] browser wrappers work without broad `/run/user/$UID` exposure
 - [ ] browser wrappers work without broad `/var` exposure
 - [ ] browser wrappers work with the current minimal `/etc` allowlist
-- [ ] portal/file chooser behavior is tested where relevant
+- [ ] notifications and portal/file chooser behavior are tested where relevant
+- [ ] Signal Flatpak launches on paranoid if Signal remains part of the paranoid baseline
 - [ ] `auditctl -s` shows the Linux audit subsystem active on paranoid
 - [ ] `aa-status` shows AppArmor active after reboot
 - [ ] no unexpected AppArmor denial loop blocks login or wrapped-browser launch
 
-## 6. Bubblewrap verification
+## 9. Bubblewrap verification
 For at least one browser wrapper and one daily app wrapper, confirm:
 - [ ] no broad home bind
 - [ ] no broad `/var` bind
@@ -64,8 +98,9 @@ For at least one browser wrapper and one daily app wrapper, confirm:
 - [ ] D-Bus is filtered when enabled
 - [ ] network is exposed only for wrappers that request it
 - [ ] GPU is exposed only for wrappers that request it
+- [ ] the wrapper uses the intended `etcMode` and allowlist for its role
 
-## 7. Staged self-owned WireGuard verification
+## 10. Staged self-owned WireGuard verification
 Only do this if you explicitly enable the staged self-owned WireGuard path later.
 - [ ] endpoint is configured as literal `IP:port`
 - [ ] no hostname endpoint remains in that config
@@ -75,37 +110,51 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] non-WG egress is blocked when the tunnel is down
 - [ ] the endpoint-update procedure in `docs/RECOVERY.md` is understandable
 
-## 8. Monitoring and integrity verification
+## 11. Monitoring and integrity verification
 - [ ] `freshclam` succeeds and signatures update normally
 - [ ] `systemctl list-timers` shows both ClamAV timers
 - [ ] ClamAV target set covers durable state and boot surfaces rather than tmpfs-only churn
+- [ ] daily ClamAV target generation excludes ghost home paths entirely
+- [ ] paranoid ClamAV target generation excludes player home paths entirely
 - [ ] `systemctl start clamav-impermanence-scan` completes
 - [ ] `systemctl start clamav-deep-scan` completes
 - [ ] ClamAV detections would be logged as alerts rather than looking like a generic service failure
 - [ ] if `myOS.security.aide.enable = true`, AIDE is initialized and `systemctl start aide-daily-check` completes
-- [ ] AIDE configuration includes `/boot` and `/nix/var/nix/profiles` in addition to persisted state
+- [ ] AIDE configuration is restricted to stable, high-signal trust surfaces rather than noisy home/app trees
+- [ ] AIDE configuration includes `/boot` and `/nix/var/nix/profiles` in addition to selected persisted identity/trust state
 - [ ] privacy settings match the active profile: MAC randomization mode, IPv6 temporary addresses, and TCP timestamps
 
-## 9. VM tooling and workflow verification
+## 12. Recovery and operator-proof baseline
+- [ ] `nixos-rebuild` works from the daily profile
+- [ ] rollback to a prior generation works
+- [ ] a broken paranoid change does not remove the ability to reach a working daily state
+- [ ] the recovery steps in `docs/RECOVERY.md` are understandable enough to follow on the real machine
+
+## 13. VM tooling and workflow verification
 - [ ] libvirt starts on paranoid
 - [ ] virt-manager launches
 - [ ] `repo-vm-class help` works
 - [ ] the four VM classes are documented and understood
 - [ ] `repo-vm-class policy <class>` matches `PROJECT-STATE.md`
+- [ ] repo NAT network exists and comes up
+- [ ] repo isolated network exists and comes up
 - [ ] `repo-vm-class create trusted-work-vm ...` yields a persistent NAT-backed VM
 - [ ] `repo-vm-class create risky-browser-vm ...` yields a transient NAT-backed VM with no share or clipboard by default
+- [ ] destroying a transient VM removes its transient overlay image
 - [ ] `repo-vm-class create malware-research-vm ...` defaults to no network and rejects NAT
 - [ ] `repo-vm-class create throwaway-untrusted-file-vm ...` defaults to no network and only permits explicit import sharing
 - [ ] guest templates and guest-hardening practice are still tracked as post-stability work, not overclaimed as finished
 
-## 10. Staged Secure Boot and TPM verification
+## 14. Secrets and staged secure boot / TPM verification
+- [ ] agenix does not block the baseline build if no required secrets are missing
+- [ ] any secrets that are baseline-required are present and decrypt correctly on target
 Only after the baseline system is already stable:
 - [ ] baseline encrypted boot is stable before enabling either feature
 - [ ] Secure Boot enrollment works
 - [ ] TPM enrollment works
 - [ ] fallback recovery path is understood
 
-## 11. Explicit deferred validation
+## 15. Explicit deferred validation
 These are not required to call the first stable baseline complete:
 - [ ] repo custom audit rules re-enabled and validated
 - [ ] custom AppArmor profile library

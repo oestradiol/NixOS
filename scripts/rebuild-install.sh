@@ -1,12 +1,54 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DISK="${1:-/dev/nvme0n1}"
 MNT="/mnt"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+DISK="${1:-}"
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Missing required command: $1" >&2
+    exit 1
+  }
+}
+
+prompt_default() {
+  local prompt="$1" default="$2" value
+  read -r -p "$prompt [$default]: " value
+  printf '%s' "${value:-$default}"
+}
+
+
+confirm_yes() {
+  local prompt="$1" answer
+  read -r -p "$prompt [y/N]: " answer
+  [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]]
+}
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run as root." >&2
   exit 1
+fi
+
+for cmd in lsblk findmnt sgdisk partprobe mkfs.fat cryptsetup mkfs.btrfs mount umount btrfs swapon swapoff nixos-generate-config nixos-install nixos-enter sed awk grep; do
+  need_cmd "$cmd"
+done
+
+if [[ ! -f "$REPO_ROOT/flake.nix" || ! -d "$REPO_ROOT/hosts/nixos" ]]; then
+  echo "Could not locate repo root from script path: $REPO_ROOT" >&2
+  echo "Run this script from inside your repo checkout." >&2
+  exit 1
+fi
+
+echo "Guided installer for this repo"
+echo "Repo root: $REPO_ROOT"
+echo
+
+if [[ -z "$DISK" ]]; then
+  echo "Available disks:"
+  lsblk -dpno NAME,SIZE,MODEL,TYPE | awk '$4=="disk" {print}'
+  DISK="$(prompt_default 'Target disk to wipe and install to' '/dev/nvme0n1')"
 fi
 
 if [[ ! -b "$DISK" ]]; then
@@ -25,16 +67,20 @@ mounted_parts=$(lsblk -nrpo NAME "$DISK" | tail -n +2 | while read -r part; do
 done)
 if [[ -n "${mounted_parts:-}" ]]; then
   echo "Refusing to continue: one or more partitions on $DISK are mounted:" >&2
-  printf '%s
-' "$mounted_parts" >&2
+  printf '%s\n' "$mounted_parts" >&2
   lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS "$DISK"
   exit 1
 fi
 
+echo
 echo "About to DESTROY all data on: $DISK"
 lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS "$DISK"
 read -r -p "Type WIPE to continue: " CONFIRM
 [[ "$CONFIRM" == "WIPE" ]] || { echo "Aborted."; exit 1; }
+
+umount -R "$MNT" >/dev/null 2>&1 || true
+swapoff -a >/dev/null 2>&1 || true
+cryptsetup close cryptroot >/dev/null 2>&1 || true
 
 sgdisk --zap-all "$DISK"
 partprobe "$DISK"
@@ -51,6 +97,8 @@ BOOT_PART="${DISK}${PARTSEP}1"
 CRYPT_PART="${DISK}${PARTSEP}2"
 
 mkfs.fat -F 32 -n NIXBOOT "$BOOT_PART"
+echo
+echo "You will now be prompted by cryptsetup for the LUKS passphrase."
 cryptsetup luksFormat --type luks2 "$CRYPT_PART"
 cryptsetup open "$CRYPT_PART" cryptroot
 mkfs.btrfs -L nixos /dev/mapper/cryptroot
@@ -66,7 +114,7 @@ btrfs subvolume create "$MNT/@home-paranoid"
 umount "$MNT"
 
 mount -t tmpfs none "$MNT" -o mode=755,size=4G
-mkdir -p "$MNT"/{boot,nix,persist,var/log,home/player,persist/home/ghost,swap}
+mkdir -p "$MNT"/{boot,nix,persist,var/log,home/player,persist/home/ghost,swap,etc}
 mount -o subvol=@nix,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/nix"
 mount -o subvol=@persist,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/persist"
 mount -o subvol=@log,compress=zstd,noatime /dev/mapper/cryptroot "$MNT/var/log"
@@ -78,24 +126,62 @@ btrfs filesystem mkswapfile --size 8g --uuid clear "$MNT/swap/swapfile"
 
 echo "Testing swapfile activation..."
 swapon "$MNT/swap/swapfile" && swapoff "$MNT/swap/swapfile" && echo "Swapfile test: OK" || {
-    echo "ERROR: Swapfile failed to activate. Check Btrfs configuration."
-    exit 1
+  echo "ERROR: Swapfile failed to activate. Check Btrfs configuration."
+  exit 1
 }
 
 mount "$BOOT_PART" "$MNT/boot"
 
+TARGET_REPO="$MNT/etc/nixos"
+rm -rf "$TARGET_REPO"
+mkdir -p "$MNT/etc"
+cp -a "$REPO_ROOT" "$TARGET_REPO"
+rm -rf "$TARGET_REPO/.git" "$TARGET_REPO/result" 2>/dev/null || true
+
+
+nixos-generate-config --root "$MNT"
+if [[ -f "$MNT/etc/nixos/hardware-configuration.nix" ]]; then
+  mv "$MNT/etc/nixos/hardware-configuration.nix" "$TARGET_REPO/hosts/nixos/hardware-target.nix"
+fi
+
+echo
+echo "Generated hardware scan saved to: $TARGET_REPO/hosts/nixos/hardware-target.nix"
+echo
+
+if confirm_yes "Run 'nix flake check' on the copied repo before install?"; then
+  (cd "$TARGET_REPO" && nix flake check)
+fi
+
+echo
 echo "Mounts ready at $MNT"
-echo "Swapfile created: /swap/swapfile (8GB)"
-echo "Swapfile tested: swapon/swapoff verified successfully"
-echo "WARNING: Do not snapshot @swap subvolume while swapfile is active"
-echo "@home-paranoid -> /mnt/persist/home/ghost (runtime: /persist/home/ghost)"
+findmnt -R "$MNT"
 echo
-echo "hardware-target.nix derives the /home/ghost tmpfs uid/gid from the configured ghost user."
-echo "Verify users.users.ghost.uid and group match your intended account before nixos-install."
+echo "Planned install command: nixos-install --flake $TARGET_REPO#nixos --no-root-passwd"
+confirm_yes "Proceed with nixos-install now?" || { echo "Stopping before nixos-install. Repo is staged at $TARGET_REPO"; exit 0; }
+
+nixos-install --flake "$TARGET_REPO#nixos" --no-root-passwd
+
 echo
-echo "Next: copy this repo to $MNT/etc/nixos"
-echo "Then refresh the host hardware scan into /mnt/etc/nixos/hosts/nixos/hardware-install-generated.nix"
-echo "Example: nixos-generate-config --root $MNT --show-hardware-config > $MNT/etc/nixos/hosts/nixos/hardware-install-generated.nix"
-echo "Merge hardware detection deltas from hardware-install-generated.nix into hosts/nixos/hardware-target.nix."
-echo "Do not overwrite repo-owned layout, impermanence, or profile policy in hardware-target.nix wholesale."
-echo "Then run nixos-install --flake /mnt/etc/nixos#nixos"
+echo "Base install complete. Next: set user passwords inside the installed system."
+if confirm_yes "Set password for player now?"; then
+  nixos-enter --root "$MNT" -c 'passwd player'
+fi
+if confirm_yes "Set password for ghost now?"; then
+  nixos-enter --root "$MNT" -c 'passwd ghost'
+fi
+
+echo
+cat <<'EOF'
+Install staging complete.
+
+Before rebooting, review:
+- /mnt/etc/nixos/hosts/nixos/hardware-target.nix
+- /mnt/etc/nixos/docs/INSTALL-GUIDE.md
+- /mnt/etc/nixos/docs/TEST-PLAN.md
+
+After reboot:
+1. Choose the daily specialization first.
+2. Follow the first-boot edits in docs/INSTALL-GUIDE.md (hostname and git identity in canonical files).
+3. Run the daily-first checks in docs/TEST-PLAN.md.
+4. Only after daily is good, continue with paranoid validation.
+EOF
