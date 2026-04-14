@@ -13,14 +13,14 @@ All scripts use `set -euo pipefail`. Review them before running.
 
 | Script | Purpose | When to Run | Risk |
 |---|---|---|---|
-| `rebuild-install.sh` | Guided installer for this repo: partition, encrypt, create subvolumes, mount, copy repo, write host-local git/hostname config, generate hardware scan, run `nixos-install`, and prompt for user passwords | Before first install, from the installer ISO | **Destructive** |
+| `rebuild-install.sh` | Guided installer for this repo: partition, encrypt, create subvolumes, mount, copy repo, generate hardware scan, run `nixos-install`, and prompt for user passwords | Before first install, from the installer ISO | **Destructive** |
 | `post-install-secureboot-tpm.sh` | Stage Secure Boot key creation/enrollment and print the remaining TPM step | Only after the first stable encrypted baseline already exists | Medium |
 | `audit-tutorial.sh` | Read-only static repo checks plus a runtime-check handoff | Any time | Low |
 
 ## What scripts do not do
 - they do not replace `docs/PRE-INSTALL.md`
 - they do not replace `docs/INSTALL-GUIDE.md`
-- they still expect you to review generated local files and the updated hardware-target file before treating the machine as stable
+- they still expect you to review the updated hardware-target file, secret-file paths, and the runtime validation docs before treating the machine as stable
 - they do not replace `docs/TEST-PLAN.md`
 - they do not make staged features baseline-ready automatically
 

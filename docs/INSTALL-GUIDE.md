@@ -12,7 +12,7 @@ Only installation steps.
 - `rebuild-install.sh` copies the repo to `/mnt/etc/nixos` automatically
 - it updates `/mnt/etc/nixos/hosts/nixos/hardware-target.nix` from the installer scan for review
 - place or prepare host-local secrets outside git
-- review the generated files before treating the install as final
+- review the generated hardware-target file, expected secret-file paths, and staged repo state before treating the install as final
 - do not overwrite repo-owned layout, impermanence, or profile policy wholesale
 - for a complete inventory of what this repo contains and how the profiles differ, see `docs/FEATURES.md`
 
@@ -27,13 +27,11 @@ Do not add a separate local override layer for basic identity. Make the first bo
 
 Required first-boot edits:
 - set the hostname in `hosts/nixos/default.nix` by changing `networking.hostName`
-- set daily git identity in `modules/home/player.nix` or the shared Home Manager git settings path you choose to own
-- set paranoid git identity in `modules/home/ghost.nix` or the shared Home Manager git settings path you choose to own
+- set git identity in `modules/home/common.nix` or another single shared Home Manager git settings path you intentionally choose to own
 
 Suggested commands after logging into the `daily` specialization:
 - `sudoedit /etc/nixos/hosts/nixos/default.nix`
-- `sudoedit /etc/nixos/modules/home/player.nix`
-- `sudoedit /etc/nixos/modules/home/ghost.nix`
+- `sudoedit /etc/nixos/modules/home/common.nix`
 - `cd /etc/nixos && sudo nixos-rebuild switch --flake .#nixos --specialisation daily`
 
 The first boot goal is not “finish every hardening feature.” The first boot goal is:

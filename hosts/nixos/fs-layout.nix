@@ -64,11 +64,11 @@ in
     options = [ "subvol=@home-paranoid" "compress=zstd" "noatime" ];
   };
 
-  # Daily profile: full home impermanence
+  # Daily profile: persistent daily home on its own Btrfs subvolume
   fileSystems."/home/player" = lib.mkIf isDaily {
     device = "/dev/mapper/cryptroot";
     fsType = "btrfs";
-    neededForBoot = true; # Required for impermanence
+    neededForBoot = true; # Required because the profile expects /home/player during booted operation
     options = [ "subvol=@home-daily" "compress=zstd" "noatime" ];
   };
 
