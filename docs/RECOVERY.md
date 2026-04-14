@@ -89,4 +89,17 @@ Check:
 - confirm `freshclam` works
 - confirm ClamAV timers exist
 - confirm AIDE is initialized before expecting checks to succeed
+- confirm `/boot` and `/nix/var/nix/profiles` are present in `/etc/aide.conf`
 - remember: current ClamAV services log detections as alerts rather than making every detection look like a generic service failure
+- remember: these are persistence/file-integrity layers, not proof against an already-subverted running kernel
+
+## 12. Cross-profile filesystem isolation looks wrong
+Check:
+- `mountpoint /home/player`
+- `mountpoint /home/ghost`
+- `mountpoint /persist/home/ghost`
+- `systemctl status profile-mount-invariants`
+
+Expected:
+- daily: `/home/player` mounted, `/home/ghost` and `/persist/home/ghost` not mounted
+- paranoid: `/home/ghost` and `/persist/home/ghost` mounted, `/home/player` not mounted

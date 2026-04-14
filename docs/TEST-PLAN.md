@@ -22,6 +22,9 @@ Exactly what must be tested to call the repo stable on the target machine.
 - [ ] paranoid machine-id is unique and stable across reboot
 - [ ] `/home/player` is the persistent daily home
 - [ ] `/home/ghost` is tmpfs on paranoid and allowlisted persistence appears under `/persist/home/ghost`
+- [ ] daily does not mount `/home/ghost` or `/persist/home/ghost`
+- [ ] paranoid does not mount `/home/player`
+- [ ] `systemctl status profile-mount-invariants` succeeds on both profiles
 
 ## 4. Daily profile baseline
 - [ ] Steam works
@@ -75,10 +78,12 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 ## 8. Monitoring and integrity verification
 - [ ] `freshclam` succeeds and signatures update normally
 - [ ] `systemctl list-timers` shows both ClamAV timers
+- [ ] ClamAV target set covers durable state and boot surfaces rather than tmpfs-only churn
 - [ ] `systemctl start clamav-impermanence-scan` completes
 - [ ] `systemctl start clamav-deep-scan` completes
 - [ ] ClamAV detections would be logged as alerts rather than looking like a generic service failure
 - [ ] if `myOS.security.aide.enable = true`, AIDE is initialized and `systemctl start aide-daily-check` completes
+- [ ] AIDE configuration includes `/boot` and `/nix/var/nix/profiles` in addition to persisted state
 - [ ] privacy settings match the active profile: MAC randomization mode, IPv6 temporary addresses, and TCP timestamps
 
 ## 9. VM tooling and workflow verification

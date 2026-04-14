@@ -6,6 +6,7 @@ Single-host NixOS repo with one default hardened profile and one explicit daily 
 - `paranoid`: default hardened workstation baseline
 - `daily`: boot specialization for gaming, social, and recovery-friendly use
 - one installation, two users, one encrypted Btrfs/tmpfs-root system
+- inactive profile home filesystems are not mounted; a boot-time invariant check verifies that the other profile's home mount is absent
 - current stable target = complete `docs/PRE-INSTALL.md` + `docs/INSTALL-GUIDE.md` + `docs/TEST-PLAN.md`
 - `docs/POST-STABILITY.md` is non-blocking follow-up work after the stable baseline is already usable on the machine
 

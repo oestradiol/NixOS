@@ -7,6 +7,7 @@ This file maps the current repo security model. It is not a proof document.
 ### Claims the repo can reasonably make
 - root is ephemeral when impermanence is enabled
 - `player` and `ghost` have distinct home models
+- inactive profile home filesystems are not mounted, and boot-time invariants check that separation
 - the paranoid profile defaults to sandboxed browsers
 - daily uses normal Firefox with repo-managed enterprise policies
 - paranoid Firefox uses a sandboxed wrapper plus vendored arkenfox baseline and repo overrides
@@ -53,7 +54,10 @@ The current baseline still accepts NVIDIA complexity for target-hardware reliabi
 ### 2.10 Persistence allowlists
 Selected state still persists by design.
 
-### 2.11 VM tooling is available, not automatic
+### 2.11 File-based monitoring limits
+ClamAV and AIDE can watch durable files and boot-survival surfaces, but they cannot guarantee detection of an already-compromised live kernel.
+
+### 2.12 VM tooling is available, not automatic
 Risky tasks still depend on operator discipline.
 
 ## 3. Daily specialization weakenings

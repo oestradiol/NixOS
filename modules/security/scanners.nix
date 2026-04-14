@@ -3,9 +3,14 @@ let
   daily = config.myOS.profile == "daily";
   paranoid = config.myOS.profile == "paranoid";
 
+  clamTargetPaths =
+    [ "/persist" "/var/lib" "/var/log" "/boot" "/nix/var/nix/profiles" ]
+    ++ lib.optionals daily [ "/home/player" ]
+    ++ lib.optionals paranoid [ "/persist/home/ghost" ];
+
   clamTargets = ''
     targets=()
-    for p in /home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot; do
+    for p in ${lib.escapeShellArgs clamTargetPaths}; do
       if [ -e "$p" ]; then
         targets+=("$p")
       fi
@@ -37,8 +42,8 @@ let
     esac
   '';
 
-  # Daily impermanence scan: all persisted data (impermanence directories)
-  # Critical: runs daily to catch malware in persisted locations
+  # Daily persisted-state scan: durable paths that survive reboot for the active profile only
+  # Critical: runs daily to catch malware in persisted locations and boot surfaces
   # TRUST NOTE: Steam runtime, Flatpak user data (~/.var/app), and Nix store are excluded.
   # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
   clamScanImpermanence = runClamScan "clamav-impermanence-scan" ''
@@ -46,7 +51,7 @@ let
       --max-scansize=200M
     '';
 
-  # Weekly deep scan: comprehensive scan with higher limits
+  # Weekly deep scan: comprehensive scan with higher limits for the active profile only
   # More thorough but resource-intensive, runs weekly when idle
   # TRUST NOTE: Steam runtime, Flatpak user data (~/.var/app), and Nix store are excluded.
   # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
@@ -64,10 +69,10 @@ let
 in {
   config = lib.mkIf (daily || paranoid) {
     # --- DAILY IMPERMANENCE SCAN ---
-    # Daily scan of all impermanence directories - critical for security
-    # These are the only places malware can survive a reboot
+    # Daily scan of all durable state - critical for security
+    # Focuses on paths where malware or tampering can survive a reboot.
     systemd.services.clamav-impermanence-scan = {
-      description = "Daily ClamAV scan of impermanence directories (persisted data)";
+      description = "Daily ClamAV scan of persisted state and boot surfaces";
       path = [ pkgs.clamav pkgs.coreutils pkgs.findutils pkgs.util-linux ];
       serviceConfig = {
         Type = "oneshot";
@@ -99,7 +104,7 @@ in {
     };
 
     # --- WEEKLY DEEP SCAN ---
-    # Comprehensive recursive scan of all persisted data
+    # Comprehensive recursive scan of all durable state and boot chain surfaces
     # Higher resource use, runs weekly, thorough check
     systemd.services.clamav-deep-scan = {
       description = "Weekly deep ClamAV scan (comprehensive recursive check)";
@@ -140,37 +145,41 @@ in {
     };
 
     # --- AIDE INTEGRITY MONITORING ---
-    # Weekly integrity check of critical persisted directories only
+    # Weekly integrity check of stable, security-critical persisted paths only
     # AIDE must be initialized first: sudo aide --init (stored in /persist)
     # Database location persisted via impermanence.nix
     #
-    # DESIGN: High-signal integrity model - only monitor paths where malware can persist
-    # across reboots AND that have stable contents. Volatile paths create noise.
+    # DESIGN: ultra-high-signal integrity model.
+    # AIDE is intentionally NOT pointed at whole homes, logs, caches, runtime state,
+    # package trees, or other naturally changing locations. That would create noise
+    # and train you to ignore it.
     #
     # AIDE vs ClamAV: Different security models
     # - ClamAV: "Is this file known malware?" (signature-based detection)
-    # - AIDE: "Did this file change unexpectedly?" (integrity/hash-based detection)
+    # - AIDE: "Did a stable, security-critical file change unexpectedly?" (integrity/hash-based)
     #
-    # They complement each other:
-    # - ClamAV catches known malware (even if it hasn't modified files yet)
-    # - AIDE catches unknown malware / rootkits that modify persisted files
-    # - Zero-day malware won't be in ClamAV DB, but AIDE will flag file changes
+    # LIMIT: neither tool can prove a live kernel compromise away. If the running kernel is already
+    # malicious, file-based scanners can be blinded. These checks are therefore persistence-aware,
+    # especially for boot, identity, trust, and generation-selection surfaces.
     #
-    # If you prefer ClamAV-only: set myOS.security.aide.enable = false
+    # MONITORED (stable + security-critical):
+    # - /boot: EFI/kernel/initrd generation chain
+    # - /nix/var/nix/profiles: active system-profile links that select generations
+    # - /persist/etc/{passwd,group,shadow,gshadow,subuid,subgid,machine-id}: identity/account base
+    # - /persist/etc/ssh: SSH host identity
+    # - /persist/etc/NetworkManager/system-connections: network trust/config
+    # - /persist/var/lib/{nixos,aide,sbctl}: NixOS state, integrity DB, Secure Boot keys
     #
-    # MONITORED (high-value persisted):
-    # - /persist, /persist/home/ghost: explicit persistence (impermanence.nix)
-    # - /home/player: Btrfs subvolume (daily profile, persisted)
-    # - /var/lib: system state that survives reboot
-    #
-    # EXCLUDED (volatile or inappropriate for integrity monitoring):
-    # - /home/ghost: tmpfs on paranoid (wiped every boot - naturally churns)
-    # - /var/log: log files naturally change; integrity != log monitoring
-    # - /tmp, /var/tmp: tmpfs (wiped on boot)
-    environment.etc."aide.conf".text = lib.mkDefault (lib.concatStringsSep "\n" [
-      "# AIDE configuration - high-signal persisted-state integrity only"
-      "# Monitors paths where malware can survive reboot AND contents are stable"
-      "# Excludes volatile paths (tmpfs, logs) that create noise without security value"
+    # EXCLUDED ON PURPOSE (too noisy for AIDE):
+    # - whole /persist tree
+    # - whole /var/lib tree
+    # - /var/log, /tmp, /var/tmp
+    # - /home/player and /persist/home/ghost user data
+    # - Flatpak trees, Steam trees, browser profiles, app state, package caches
+    environment.etc."aide.conf".text = lib.mkDefault (lib.concatStringsSep "
+" [
+      "# AIDE configuration - ultra-high-signal stable security surfaces only"
+      "# Deliberately excludes noisy user/app/package/runtime state"
       ""
       "# Database settings"
       "database=file:/var/lib/aide/aide.db.gz"
@@ -179,21 +188,24 @@ in {
       "# Rule definitions"
       "R=p+u+g+md5+sha256"
       ""
-      "# Persisted directories only (high-value integrity targets)"
-      "/persist R"
-      "/var/lib R"
+      "# Boot chain / generation selection"
+      "/boot R"
+      "/nix/var/nix/profiles R"
+      "!/nix/var/nix/profiles/per-user"
       ""
-      "# Exclude noisy/volatile paths"
-      "!/persist/var/lib/aide"
-      "!/var/lib/systemd"
-    ]
-    ++ lib.optionals paranoid [
-      "/persist/home/ghost R"
-    ]
-    ++ lib.optionals daily [
-      "/home/player R"
-      "!/home/player/.local/share/Steam"
-      "!/home/player/.steam"
+      "# Persisted identity / trust / system state"
+      "/persist/etc/passwd R"
+      "/persist/etc/group R"
+      "/persist/etc/shadow R"
+      "/persist/etc/gshadow R"
+      "/persist/etc/subuid R"
+      "/persist/etc/subgid R"
+      "/persist/etc/machine-id R"
+      "/persist/etc/ssh R"
+      "/persist/etc/NetworkManager/system-connections R"
+      "/persist/var/lib/nixos R"
+      "/persist/var/lib/aide R"
+      "/persist/var/lib/sbctl R"
     ]);
 
     # AIDE services only if aide.enable is true (allows ClamAV-only if desired)

@@ -33,6 +33,7 @@ Anything in `docs/POST-STABILITY.md` is intentionally non-blocking for that firs
 - `ghost` is the hardened workspace account
 - `/home/player` is a fully persistent Btrfs subvolume on daily
 - `/home/ghost` is tmpfs on paranoid, with explicit allowlisted persistence into `/persist/home/ghost`
+- inactive profile home filesystems are intentionally left unmounted, and a boot-time invariant service checks that cross-profile home mounts are absent
 
 ### Browser model
 - daily Firefox is the normal `programs.firefox` path configured through Firefox enterprise policies
@@ -81,7 +82,10 @@ Current support boundary:
 - repo custom audit rules exist but remain staged off by default due to a known nixpkgs compatibility issue
 - AppArmor currently means framework enablement plus D-Bus mediation baseline
 - custom repo-maintained AppArmor profiles are deferred
-- ClamAV and AIDE are present as monitoring/integrity layers, but they still need live timer/service validation on the target machine
+- ClamAV and AIDE are present as monitoring/integrity layers
+- their scope is now explicitly persistence-aware: durable user/system state, `/boot`, and NixOS system-profile links
+- they still need live timer/service validation on the target machine
+- they do not prove safety against an already-compromised live kernel; they are file/persistence integrity layers, not a runtime kernel attestation system
 
 ## 4. Frozen current-stage decisions
 - KDE Plasma 6 + SDDM remain the desktop target

@@ -1,4 +1,4 @@
-{ lib, config, ... }: 
+{ lib, config, pkgs, ... }: 
 let
   isParanoid = config.myOS.profile == "paranoid";
   isDaily = config.myOS.profile == "daily";
@@ -84,4 +84,27 @@ in
     device = "/swap/swapfile";
     size = 8192;
   }];
+
+  systemd.services.profile-mount-invariants = {
+    description = "Assert profile-specific mount isolation invariants";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "local-fs.target" ];
+    path = [ pkgs.util-linux ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = if isDaily then ''
+      set -eu
+      mountpoint -q /home/player
+      ! mountpoint -q /home/ghost
+      ! mountpoint -q /persist/home/ghost
+    '' else ''
+      set -eu
+      mountpoint -q /home/ghost
+      mountpoint -q /persist/home/ghost
+      ! mountpoint -q /home/player
+    '';
+  };
+
 }
