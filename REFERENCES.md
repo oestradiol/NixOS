@@ -1,67 +1,37 @@
 # REFERENCES
 
-Canonical reference ledger for external sources, validation targets, and archive status.
+Canonical ledger for the external sources this repo depends on for option semantics, platform behavior, and hardening decisions.
 
 ## Purpose
-- single place for the repo's external reference set
-- track what each source is used for
-- record archive/capture status
-- show where each source affects code or docs
-- make future re-audits and assistant handoff easier
+- keep the external-source set in one place
+- record what each source is used for
+- make future re-audits easier
+- separate source inventory from repo-state claims in `PROJECT-STATE.md`
 
-## Structure
-Each entry should track:
-- tier: primary / strong-secondary / cautionary
-- topic
-- source
-- what the repo uses it for
-- archive status
-- repo surfaces influenced
-- current status
-
-## Current state
-This file now exists as the canonical reference surface, but archive capture is not yet complete.
-High-tier structuring is present; full archival snapshots, per-claim section pinning, and immutable capture are still deferred.
-Until that is done, `AUDITS.md` remains the operational audit ledger and this file remains the canonical reference index.
+## Current usage model
+This file is the canonical source index.
+`AUDITS.md` is the operational ledger for what has or has not been validated in the repo.
 
 ## High-tier reference set
 
-| tier | topic | source | use in repo | archive status | repo surfaces | status |
-|---|---|---|---|---|---|---|
-| primary | NixOS options/manual | NixOS manual, option search, MyNixOS | exact option semantics and module expectations | partial live-link only | code + docs repo-wide | active |
-| primary | NixOS operational guidance | NixOS Wiki | installation and service-specific operational guidance | partial live-link only | install, WireGuard, fwupd, Btrfs, networking | active |
-| primary | Firefox hardening baseline | arkenfox | vendored Firefox hardening baseline and override model | vendored snapshot present | `modules/security/browser.nix`, `modules/security/arkenfox/user.js` | active |
-| primary | VM/libvirt policy | libvirt domain/network docs, virt-install docs, SPICE docs | VM classes, host/guest boundary defaults, launcher behavior | partial live-link only | `modules/security/vm-tooling.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | active |
-| strong-secondary | NixOS hardening model | saylessss88 NixOS hardening guide | profile split and NixOS-oriented hardening review | live-link only | `AUDITS.md`, `PROJECT-STATE.md` | active |
-| strong-secondary | Linux hardening model | Madaidan Linux hardening guide | threat-model-driven hardening, kernel/service posture | live-link only | `PROJECT-STATE.md`, `modules/core/boot.nix`, `modules/security/base.nix`, `modules/core/options.nix` | active |
-| strong-secondary | Linux hardening checklist | Trimstray Linux hardening guide | practical checklist cross-checks | live-link only | `AUDITS.md`, `PROJECT-STATE.md` | active |
+| tier | topic | source | use in repo | repo surfaces | status |
+|---|---|---|---|---|---|
+| primary | NixOS options/manual | NixOS manual, option search, MyNixOS | exact option/module semantics | repo-wide code and docs | active |
+| primary | NixOS operational guidance | NixOS Wiki | install and service/operator guidance | install, recovery, staged features | active |
+| primary | Firefox enterprise policies | Mozilla enterprise policy documentation | daily Firefox policy model | `modules/security/browser.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | active |
+| primary | Firefox hardening baseline | arkenfox | paranoid Firefox baseline and override model | `modules/security/browser.nix`, `modules/security/arkenfox/user.js` | active |
+| primary | bubblewrap | bubblewrap man page/docs | wrapper mount/env semantics | `modules/security/sandbox-core.nix`, browser/app wrapper docs | active |
+| primary | xdg-dbus-proxy | upstream docs/help output | filtered D-Bus behavior | wrapper policy and browser/app docs | active |
+| primary | systemd-resolved | systemd docs | DNS/fallback behavior for the staged WireGuard path | `modules/security/wireguard.nix`, recovery/test docs | active |
+| primary | libvirt / virt-install | upstream docs/man pages | VM class automation and lifecycle semantics | `modules/security/vm-tooling.nix`, VM docs | active |
+| primary | kernel SysRq docs | kernel documentation | `kernel.sysrq` meaning and documentation accuracy | `modules/security/base.nix`, options/docs | active |
+| strong-secondary | Flatpak / xdg-desktop-portal | upstream docs | Flatpak + portal behavior | `modules/security/flatpak.nix`, docs | active |
+| strong-secondary | AppArmor | NixOS and upstream docs | framework baseline semantics | `modules/security/base.nix`, docs | active |
+| strong-secondary | ClamAV / AIDE | upstream docs | scanner/integrity semantics | `modules/security/scanners.nix`, docs | active |
 
-## Topic notes
-
-### Audit
-Use NixOS option references plus operational validation. Repo claim should stay limited to what the configured audit subsystem and rule set actually provide.
-
-### AppArmor
-Use NixOS option references for framework semantics. Current repo state is framework + D-Bus mediation baseline, with repo-maintained profiles deferred. `killUnconfinedConfinables` remains a post-stability decision because upstream docs warn it changes process-handling behavior after policy introduction.
-
-### WireGuard
-Use NixOS options/wiki as the main source. Current repo decision keeps `networking.wireguard` and defers `systemd.network` migration evaluation to post-stability unless live validation shows routing, DNS, MTU, or interface-ordering problems.
-
-### VM workflow
-Use libvirt/virt-install/SPICE docs as the main source. Current repo has host-side automation and class policy, but guest templates and real-world tuning still need live trials.
-
-### Browser hardening
-Use arkenfox for Firefox baseline, and keep Tor Browser / Mullvad Browser aligned with their upstream privacy model rather than forcing arkenfox onto them.
-
-## Crosslinks
-- audit conclusions and validation status: `AUDITS.md`
-- repo decisions and support boundaries: `PROJECT-STATE.md`
-- install/test/recovery actions: `docs/`
-- assistant routing: `AGENTS.md`
-
-## Deferred reference-work
-Move these to post-stability governance work:
-- archive every high-tier source into an immutable capture set
-- pin important claims to exact section/header/anchor
-- maintain a stronger claim-to-reference registry with freshness dates
-- add consistency checks so docs/code/audits/reference ledger cannot drift silently
+## Repo policy notes tied to the source set
+- use Mozilla enterprise policies for daily Firefox
+- use arkenfox only for the paranoid Firefox baseline
+- do not force arkenfox onto Tor Browser or Mullvad Browser
+- keep wrapper claims limited to local host containment
+- keep staged WireGuard claims limited until real-world validation is done

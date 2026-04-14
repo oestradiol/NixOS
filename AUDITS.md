@@ -1,72 +1,60 @@
 # AUDITS
 
-Canonical audit surface: completed checks, source-backed claim ledger, validation status, and remaining audit backlog.
+Canonical audit surface: what has been checked, what is only statically verified, what still needs runtime proof, and what is intentionally deferred.
 
 ## Audit status summary
-- static repo architecture pass: complete
-- canonical reference-ledger pass: complete
-- docs boundary/compression pass: complete
-- shared sandbox-core refactor pass: complete
+- repo structure and file-role pass: complete
+- docs truth-surface alignment pass: complete
+- sandbox-core correctness pass: complete
+- browser split correction pass: complete
 - machine-id policy correction pass: complete
-- paranoid WireGuard pinned-endpoint pass: complete
-- script responsibility/flow validation pass: complete
+- staged WireGuard documentation pass: complete
+- helper-script responsibility pass: complete
+- current-stage pipeline pass: complete
 - runtime validation on target hardware: not complete
-- pipeline coverage closure pass: complete
 
 ## Validation ledger
 | surface | state | validation mode | canonical locations | notes |
 |---|---|---|---|---|
-| shared sandbox core | implemented | static review | `modules/security/sandbox-core.nix`, `modules/security/browser.nix`, `modules/security/sandboxed-apps.nix` | one constructor, explicit relaxations |
-| daily Firefox arkenfox-derived baseline | implemented | static review | `modules/security/browser.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | relaxed only for daily usability |
-| paranoid `safe-firefox` arkenfox-derived baseline | implemented | static review | `modules/security/browser.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | stricter local baseline inside wrapper |
-| Tor Browser / Mullvad Browser wrapper path | implemented+manual | static review | `modules/security/browser.nix`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | further tightening trials deferred |
-| paranoid WireGuard pinned endpoint | implemented | static review | `modules/security/wireguard.nix`, `profiles/paranoid.nix`, `docs/PRE-INSTALL.md`, `docs/TEST-PLAN.md` | exact endpoint exception only |
-| paranoid audit path | implemented | static review | `modules/security/base.nix`, `profiles/paranoid.nix`, `docs/TEST-PLAN.md`, `docs/RECOVERY.md` | audit subsystem + auditd + repo rules; live validation still required |
-| AppArmor baseline | implemented+manual | static review | `modules/security/base.nix`, `profiles/daily.nix`, `profiles/paranoid.nix`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | framework + D-Bus mediation baseline; custom repo profiles deferred |
-| ClamAV + AIDE monitoring path | implemented | static review | `modules/security/scanners.nix`, `docs/TEST-PLAN.md`, `docs/RECOVERY.md` | live timer/service validation still required |
-| Flatpak remote + portal baseline | implemented | static review | `modules/security/flatpak.nix`, `docs/TEST-PLAN.md` | remote bootstrap and portal path are in current-stage validation |
-| fwupd baseline | implemented | static review | `modules/desktop/base.nix`, `docs/TEST-PLAN.md` | current-stage runtime check required |
-| privacy network-identity settings | implemented | static review | `modules/security/privacy.nix`, `docs/TEST-PLAN.md` | verify MAC and TCP timestamp mode per profile |
-| VM tooling layer + workflow classes | implemented | static review | `modules/security/vm-tooling.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | repo-managed NAT + isolated networks and `repo-vm-class` encode the four classes; guest templates still need live validation |
-| wrapper seccomp | deferred | static review | `PROJECT-STATE.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | do not overclaim |
-| wrapper Landlock | deferred | static review | `PROJECT-STATE.md`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | do not overclaim |
-| install script | implemented | static review | `scripts/rebuild-install.sh`, `scripts/README.md`, `docs/INSTALL-GUIDE.md` | destructive layout prep only |
-| secure-boot staging script | implemented | static review | `scripts/post-install-secureboot-tpm.sh`, `scripts/README.md`, `docs/POST-STABILITY.md` | staging helper, not full automation |
-| audit script | implemented | static review | `scripts/audit-tutorial.sh`, `scripts/README.md`, `AUDITS.md` | read-only handoff script |
+| shared sandbox core | implemented | static review | `modules/security/sandbox-core.nix`, `modules/security/browser.nix`, `modules/security/sandboxed-apps.nix` | shared constructor, explicit relaxations, cleared environment |
+| daily Firefox enterprise-policy path | implemented | static review | `modules/security/browser.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | normal Firefox path, not arkenfox-managed |
+| paranoid `safe-firefox` arkenfox-derived baseline | implemented | static review | `modules/security/browser.nix`, `modules/security/arkenfox/user.js`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md` | wrapper + vendored arkenfox + repo overrides |
+| Tor Browser / Mullvad Browser wrapper path | implemented+manual | static review | `modules/security/browser.nix`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | upstream browser model kept; wrapper compatibility still needs runtime trials |
+| daily app wrappers (`safe-vrcx`, `safe-windsurf`) | implemented+manual | static review | `modules/security/sandboxed-apps.nix`, `docs/TEST-PLAN.md`, `docs/RECOVERY.md` | functionality must be proven on target desktop |
+| staged self-owned WireGuard path | implemented | static review | `modules/security/wireguard.nix`, `modules/security/networking.nix`, `docs/PRE-INSTALL.md`, `docs/TEST-PLAN.md` | present in repo, off by default |
+| paranoid audit subsystem | implemented | static review | `modules/security/base.nix`, `profiles/paranoid.nix`, `docs/TEST-PLAN.md`, `docs/RECOVERY.md` | `security.audit` + `auditd` are baseline on paranoid |
+| repo custom audit rules | deferred | static review | `modules/security/base.nix`, `modules/core/options.nix`, `docs/POST-STABILITY.md`, `docs/TEST-PLAN.md` | intentionally defaulted off pending upstream fix and live revalidation |
+| AppArmor framework baseline | implemented+manual | static review | `modules/security/base.nix`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | framework + D-Bus mediation only; no custom profile library yet |
+| ClamAV + AIDE monitoring path | implemented | static review | `modules/security/scanners.nix`, `docs/TEST-PLAN.md`, `docs/RECOVERY.md` | timers/services still need live validation |
+| Flatpak + Flathub + portals | implemented | static review | `modules/security/flatpak.nix`, `docs/TEST-PLAN.md`, `PROJECT-STATE.md` | containment for relatively trusted GUI apps, not hostile-software guarantee |
+| VM tooling layer + workflow classes | implemented | static review | `modules/security/vm-tooling.nix`, `PROJECT-STATE.md`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | host-side automation present; guest templates still need runtime proof |
+| PAM profile-binding surface | rejected-for-baseline | static review | `modules/security/user-profile-binding.nix`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md` | intentionally blocked, not baseline-ready |
 
-## Source-backed claim ledger
-- arkenfox is treated here as a desktop Firefox hardening baseline that expects local overrides; the repo therefore vendors a snapshot and appends repo-owned overrides instead of claiming an untouched upstream profile.
-- arkenfox is not applied to Tor Browser or Mullvad Browser; those browsers keep their upstream privacy model and only receive local wrapper containment from this repo.
-- the paranoid audit claim is tied to the actual NixOS audit subsystem (`security.audit.enable`) plus the repo rule set, not only to `auditd` being present.
-- the AppArmor claim is limited to the framework baseline and D-Bus mediation baseline; it is not described as a finished custom policy library.
-- the pinned-endpoint WireGuard choice is kept because it removes the standing DNS exception and fits the current nftables design, while the repo still notes that live routing and MTU validation remain necessary.
-- the daily/paranoid split is threat-model-driven rather than copy-pasted maximalism; every compromise is expected to stay explicit in code and docs.
+## Claim ledger
+- daily Firefox is configured through Firefox enterprise policies, not through the vendored arkenfox file
+- paranoid Firefox uses the vendored arkenfox baseline plus repo overrides inside the sandboxed wrapper
+- Tor Browser and Mullvad Browser are not rewritten into arkenfox-managed browsers; they keep their upstream privacy model and only receive local wrapper containment from this repo
+- the paranoid audit baseline means the Linux audit subsystem and `auditd`; repo custom audit rules are a separate staged surface and are currently off by default
+- Flatpak is treated here as a containment layer for relatively trusted GUI apps, not as the sandbox for hostile software
+- same-kernel wrappers are not described here as VM-equivalent isolation
 
 Reference set index: `REFERENCES.md`
 
-## Audit backlog
-Still needs live or future audit work:
-- daily Firefox runtime validation against real sites/workflows
-- paranoid `safe-firefox` runtime validation on target hardware
-- Tor Browser wrapper regression/failure matrix
-- Mullvad Browser wrapper regression/failure matrix
-- live paranoid WireGuard killswitch validation
-- VM class live validation and template refinement
-- stronger doc-governance enforcement layer design
-- future seccomp policy design audit
-- future Landlock policy design audit
+## Runtime backlog
+Still needs target-machine validation:
+- daily first boot and recovery path
+- daily Firefox policy validation in the real desktop session
+- paranoid `safe-firefox` runtime validation
+- Tor Browser wrapper runtime matrix
+- Mullvad Browser wrapper runtime matrix
+- `safe-vrcx` and `safe-windsurf` launch/file-chooser validation
+- Mullvad app-mode connectivity and DNS behavior on both profiles
+- live VM class validation and guest-template refinement
+- scanner timers/services and AIDE initialization flow
 
-## Governance-relevant audit rules
+## Governance rules for future passes
 - static review is not runtime proof
-- same-kernel wrappers must not be described as VM-equivalent isolation
-- unfinished work must be marked implemented+manual, deferred, or rejected
-- if a source warns against blind reuse in another browser, the repo must respect that boundary
-- file-purpose discipline and doc drift checks are required eventually, but stronger automated doc-governance is intentionally deferred to post-stability
-
-## Pipeline coverage closure
-Every implemented security surface must now land in one of three places:
-- current-stage validation in `docs/TEST-PLAN.md`
-- explicit defer in `docs/POST-STABILITY.md`
-- explicit rejection or support-boundary statement in `PROJECT-STATE.md`
-
-Covered now: audit path, AppArmor baseline, ClamAV, AIDE, fwupd, Flatpak remote/portals, daily Mullvad/resolved path, privacy network-identity settings, and the experimental PAM profile-binding surface.
+- staged features must not be described as baseline
+- rejected surfaces must stay clearly rejected until reworked
+- every implemented surface must live in exactly one of these states: baseline, staged, deferred, or rejected-for-baseline
+- every document should describe only its own role and point elsewhere for the rest

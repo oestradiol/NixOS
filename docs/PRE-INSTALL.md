@@ -1,59 +1,52 @@
 # PRE-INSTALL
 
-Checks and preparation before erasing and reinstalling.
+Only the decisions and checks that must be true before you start the install.
 
-## 1. Disk target
-- identify the real target disk
-- verify it is the disk you intend to wipe
-- confirm you have backups for anything still needed
+## 1. Confirm the target model
+- one installation
+- default profile = `paranoid`
+- boot specialization = `daily`
+- `player` = normal daily account
+- `ghost` = hardened workspace account
 
-## 2. Hardware and account assumptions
-- confirm GPU target path still matches the repo
-- confirm the intended `player` and `ghost` account model
-- confirm `users.users.ghost.uid` / group assumptions before install
+## 2. Confirm the storage plan
+You are about to install the repo's expected layout:
+- EFI partition labeled `NIXBOOT`
+- LUKS2 partition labeled `NIXCRYPT`
+- Btrfs subvolumes for `@nix`, `@persist`, `@log`, `@swap`, `@home-daily`, `@home-paranoid`
+- tmpfs root
 
-## 3. Secrets and inputs you must already have
-Prepare, but do not commit:
-- age identities / encrypted secret material
-- if you plan to enable the staged self-owned WireGuard path later: private key file
-- if you plan to enable the staged self-owned WireGuard path later: optional preshared key file
-- if you plan to enable the staged self-owned WireGuard path later: WireGuard address
-- if you plan to enable the staged self-owned WireGuard path later: WireGuard server public key
-- if you plan to enable the staged self-owned WireGuard path later: WireGuard endpoint as literal `IP:port`
+## 3. Confirm secrets and local data you will need
+Before install or immediately after first boot, know where these will live:
+- user password setup method
+- any agenix-managed secret files you will actually use
+- Mullvad app credentials/workflow if you use the app path immediately
+- if you later enable the staged self-owned WireGuard path: private key, optional preshared key, tunnel address, server public key, and pinned literal endpoint `IP:port`
 
-## 4. Profile understanding
-Know the initial profile split before you wipe:
-- daily: `sandbox.apps = true`, `sandbox.browsers = false`, `wireguardMullvad.enable = false`
-- paranoid: `sandbox.apps = false`, `sandbox.browsers = true`, `wireguardMullvad.enable = false` (self-owned WireGuard module exists but is still staged off by default), `sandbox.vms = true`
+## 4. Confirm the current baseline profile split
+Current repo state:
+- daily: `sandbox.apps = true`, `sandbox.browsers = false`, `sandbox.vms = false`, `wireguardMullvad.enable = false`
+- paranoid: `sandbox.apps = false`, `sandbox.browsers = true`, `sandbox.vms = true`, `wireguardMullvad.enable = false`
+- both profiles currently use Mullvad app mode by default
 
-## 5. Browser expectations
-- daily Firefox is now an arkenfox-derived baseline with explicit daily relaxations
-- paranoid `safe-firefox` uses the stricter local version of that baseline inside the browser wrapper
-- Tor Browser and Mullvad Browser keep upstream browser hardening; extra wrapper tightening is a later tuning stage, not a pre-install dependency
+Browser split:
+- daily Firefox = enterprise-policy-managed normal Firefox
+- paranoid Firefox = `safe-firefox` wrapper with vendored arkenfox baseline + repo overrides
+- Tor Browser / Mullvad Browser = upstream browser model + local wrapper containment only
 
-## 6. WireGuard preparation
-The self-owned paranoid WireGuard path requires a pinned endpoint when you choose to enable it later.
-Before turning that staged path on, generate or obtain a self-owned WireGuard config and pin the relay as literal `IP:port` from a trusted environment.
-Current default repo state keeps this module off until validated with real target secrets and endpoints.
+## 5. Confirm what is staged and not baseline yet
+These are not part of the first stable install target:
+- Secure Boot rollout
+- TPM-bound unlock rollout
+- self-owned WireGuard host path
+- repo custom audit rules
+- PAM profile-binding
+- custom AppArmor profile library
 
-## 7. VM tooling expectations
-The VM layer is tooling, not a finished hostile-workload workflow.
-Do not wipe/reinstall assuming hostile-workload VM policy is already fully defined.
-
-## 8. Pre-install static checks
-Before wiping, confirm the repo still matches intent:
-- read `PROJECT-STATE.md`
-- read `AUDITS.md`
-- run `./scripts/audit-tutorial.sh` if available in a Nix-enabled environment
-
-## 9. Stop conditions
-Do not wipe yet if:
-- you intend to enable the staged self-owned WireGuard path soon, but the endpoint still uses a hostname
-- you intend to enable the staged self-owned WireGuard path soon, but the required WireGuard secrets are missing
-- you have not confirmed the target disk
-- you have not confirmed the account/UID assumptions
-
-## 10. Hardware-config reconciliation plan
-- `hosts/nixos/hardware-install-generated.nix` should be created from the installer after the new layout is mounted
-- `hosts/nixos/hardware-target.nix` remains the maintained target file
-- merge fresh hardware detection deltas into `hardware-target.nix`; do not overwrite repo-owned layout, impermanence, or profile policy wholesale
+## 6. Red flags before you start
+Stop and fix these before running the install script:
+- you have not backed up the target disk
+- you are not willing to wipe the target disk completely
+- you have not decided how user passwords will be set before first real boot
+- you intend to enable the staged self-owned WireGuard path soon but do not have a pinned literal endpoint `IP:port`
+- you are planning to treat post-stability items as blocking for the first machine-usable baseline

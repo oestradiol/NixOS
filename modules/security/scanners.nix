@@ -3,13 +3,7 @@ let
   daily = config.myOS.profile == "daily";
   paranoid = config.myOS.profile == "paranoid";
 
-  # Daily impermanence scan: all persisted data (impermanence directories)
-  # Critical: runs daily to catch malware in persisted locations
-  # TRUST NOTE: Steam runtime, Flatpak user data (~/.var/app), and Nix store are excluded.
-  # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
-  clamScanImpermanence = pkgs.writeShellScript "clamav-impermanence-scan" ''
-    set -eu
-    # Scan persisted and volatile high-risk paths that actually exist on this profile.
+  clamTargets = ''
     targets=()
     for p in /home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot; do
       if [ -e "$p" ]; then
@@ -20,44 +14,43 @@ let
       echo "No scan targets found; skipping."
       exit 0
     fi
-    exec ${pkgs.clamav}/bin/clamscan -r --infected \
-      --exclude-dir='^/persist/etc/ssh$' \
-      --exclude-dir='^/persist/home/ghost/etc/ssh$' \
-      --exclude-dir='^/home/player/.*\.steam$' \
-      --exclude-dir='^/home/player/\.local/share/Steam$' \
-      --exclude-dir='^/home/player/\.var/app$' \
-      --exclude-dir='^/var/log/journal$' \
-      --max-filesize=100M \
-      --max-scansize=200M \
-      "''${targets[@]}"
   '';
+
+  runClamScan = name: extraArgs: pkgs.writeShellScript name ''
+    set -eu
+    ${clamTargets}
+    rc=0
+    ${pkgs.clamav}/bin/clamscan -r --infected       --exclude-dir='^/persist/etc/ssh$'       --exclude-dir='^/persist/home/ghost/etc/ssh$'       --exclude-dir='^/home/player/.*\.steam$'       --exclude-dir='^/home/player/\.local/share/Steam$'       --exclude-dir='^/home/player/\.local/share/Steam/steamapps$'       --exclude-dir='^/home/player/\.var/app$'       --exclude-dir='^/var/log/journal$'       ${extraArgs}       "''${targets[@]}" || rc=$?
+    case "$rc" in
+      0)
+        exit 0
+        ;;
+      1)
+        echo "ClamAV detected suspicious files during ${name}. See the log for details." >&2
+        ${pkgs.util-linux}/bin/logger -p authpriv.alert -t ${name} "ClamAV detected suspicious files. Review the corresponding scan log immediately."
+        exit 0
+        ;;
+      *)
+        echo "ClamAV scan failed with exit code $rc" >&2
+        exit "$rc"
+        ;;
+    esac
+  '';
+
+  # Daily impermanence scan: all persisted data (impermanence directories)
+  # Critical: runs daily to catch malware in persisted locations
+  # TRUST NOTE: Steam runtime, Flatpak user data (~/.var/app), and Nix store are excluded.
+  # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
+  clamScanImpermanence = runClamScan "clamav-impermanence-scan" ''
+      --max-filesize=100M \
+      --max-scansize=200M
+    '';
 
   # Weekly deep scan: comprehensive scan with higher limits
   # More thorough but resource-intensive, runs weekly when idle
   # TRUST NOTE: Steam runtime, Flatpak user data (~/.var/app), and Nix store are excluded.
   # System Flatpak content under /var/lib/flatpak is scanned as part of /var/lib.
-  clamScanDeep = pkgs.writeShellScript "clamav-deep-scan" ''
-    set -eu
-    # Deep scan: comprehensive check of high-value paths that actually exist.
-    targets=()
-    for p in /home/player /home/ghost /persist /persist/home/ghost /var/lib /var/log /tmp /var/tmp /boot; do
-      if [ -e "$p" ]; then
-        targets+=("$p")
-      fi
-    done
-    if [ "''${#targets[@]}" -eq 0 ]; then
-      echo "No scan targets found; skipping."
-      exit 0
-    fi
-    exec ${pkgs.clamav}/bin/clamscan -r --infected \
-      --exclude-dir='^/persist/etc/ssh$' \
-      --exclude-dir='^/persist/home/ghost/etc/ssh$' \
-      --exclude-dir='^/home/player/.*\.steam$' \
-      --exclude-dir='^/home/player/\.local/share/Steam/steamapps$' \
-      --exclude-dir='^/home/player/\.var/app$' \
-      --exclude-dir='^/var/log/journal$' \
-      "''${targets[@]}"
-  '';
+  clamScanDeep = runClamScan "clamav-deep-scan" "";
 
   aideCheck = pkgs.writeShellScript "aide-daily-check" ''
     set -eu
@@ -75,7 +68,7 @@ in {
     # These are the only places malware can survive a reboot
     systemd.services.clamav-impermanence-scan = {
       description = "Daily ClamAV scan of impermanence directories (persisted data)";
-      path = [ pkgs.clamav pkgs.coreutils pkgs.findutils ];
+      path = [ pkgs.clamav pkgs.coreutils pkgs.findutils pkgs.util-linux ];
       serviceConfig = {
         Type = "oneshot";
         Nice = 15;  # Lower priority than deep scan
@@ -110,7 +103,7 @@ in {
     # Higher resource use, runs weekly, thorough check
     systemd.services.clamav-deep-scan = {
       description = "Weekly deep ClamAV scan (comprehensive recursive check)";
-      path = [ pkgs.clamav pkgs.coreutils pkgs.findutils ];
+      path = [ pkgs.clamav pkgs.coreutils pkgs.findutils pkgs.util-linux ];
       serviceConfig = {
         Type = "oneshot";
         Nice = 10;  # Higher priority (less nice) for deep scan

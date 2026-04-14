@@ -4,27 +4,30 @@ Only installation steps.
 
 ## 1. Prepare the disk
 - boot the NixOS installer
-- run `scripts/rebuild-install.sh` or perform the equivalent manual layout
-- confirm `/mnt`, `/mnt/persist`, and `/mnt/boot` are mounted as expected
+- run `scripts/rebuild-install.sh` or do the exact equivalent manually
+- confirm `/mnt`, `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, and `/mnt/boot` are mounted as expected
 
 ## 2. Place the repo
 - copy this repo to `/mnt/etc/nixos`
-- place or prepare the host-specific secrets out of git
-- generate a fresh hardware scan into `hosts/nixos/hardware-install-generated.nix`
-- reconcile `hardware-install-generated.nix` into `hosts/nixos/hardware-target.nix`
-- copy hardware-detection deltas only; do not overwrite repo-owned layout, impermanence, or profile policy wholesale
+- place or prepare host-local secrets outside git
+- generate a fresh hardware scan into a scratch file such as `/mnt/etc/nixos/hosts/nixos/hardware-install-generated.nix`
+- reconcile hardware-detection deltas into `hosts/nixos/hardware-target.nix`
+- do not overwrite repo-owned layout, impermanence, or profile policy wholesale
 
-## 3. Install daily first
+## 3. Install the system
 - run `nixos-install --flake /mnt/etc/nixos#nixos`
-- reboot into the daily profile first
-- treat the first boot goal as: make daily reachable, recoverable, and operable before spending time on paranoid
+- reboot
+- at the boot menu, choose the `daily` specialization first for the first validation cycle
 
-## 4. After first boot
-- place the required secret files where the config expects them
-- rebuild if any host-local secret paths changed
-- validate only the daily-critical items first so you can reach a stable working base quickly
+## 4. First-boot rule
+The first boot goal is not “finish every hardening feature.”
+The first boot goal is:
+- make daily reachable
+- make daily recoverable
+- make daily good enough to continue iteration safely
 
-## 5. Only then move to paranoid
-- do not boot paranoid until daily is stable enough to recover from failures and continue iteration
-- once daily is operable, continue with the daily-first sections of `docs/TEST-PLAN.md`
-- only after those pass should you continue with the paranoid minimum-state section
+## 5. After first boot
+- place any required secret files where the config expects them
+- rebuild if host-local secret paths changed
+- do daily-first validation from `docs/TEST-PLAN.md`
+- only move to the paranoid validation section after daily is already usable

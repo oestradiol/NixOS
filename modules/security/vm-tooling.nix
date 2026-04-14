@@ -11,7 +11,7 @@ let
   kvmModule =
     if config.hardware.cpu.amd.updateMicrocode or false then "kvm-amd"
     else if config.hardware.cpu.intel.updateMicrocode or false then "kvm-intel"
-    else "kvm-amd";
+    else null;
   repoNat = vmCfg.natNetworkName;
   repoIsolated = vmCfg.isolatedNetworkName;
   storageRoot = vmCfg.storageRoot;
@@ -359,6 +359,7 @@ let
           require_args 2 "$@"
           virsh destroy "$2" >/dev/null 2>&1 || true
           virsh undefine "$2" --nvram >/dev/null 2>&1 || true
+          find "$STORAGE_ROOT/transient" -type f -name "$2.qcow2" -delete >/dev/null 2>&1 || true
           ;;
         *)
           usage >&2
@@ -370,7 +371,7 @@ let
 in {
   config = mkIf vmsEnabled {
     warnings = lib.optional (!(config.hardware.cpu.amd.updateMicrocode or false || config.hardware.cpu.intel.updateMicrocode or false))
-      "VM tooling could not infer CPU vendor from hardware.cpu.*.updateMicrocode; defaulting to kvm-amd. Set the hardware target explicitly before enabling VMs on non-AMD hosts.";
+      "VM tooling could not infer CPU vendor from hardware.cpu.*.updateMicrocode; kernel module autoload is left untouched. Set the hardware target explicitly before enabling VMs if libvirt/QEMU does not load the right KVM module on its own.";
     virtualisation.libvirtd.enable = true;
     virtualisation.libvirtd.qemu.package = pkgs.qemu_kvm;
     virtualisation.libvirtd.qemu.swtpm.enable = true;
@@ -382,11 +383,14 @@ in {
     '';
 
     programs.virt-manager.enable = true;
-    boot.kernelModules = [ kvmModule ];
+    boot.kernelModules = lib.optional (kvmModule != null) kvmModule;
     boot.kernelParams =
-      if kvmModule == "kvm-intel"
-      then [ "iommu=pt" "intel_iommu=on" ]
-      else [ "iommu=pt" "amd_iommu=on" ];
+      [ "iommu=pt" ] ++
+      (if kvmModule == "kvm-intel"
+       then [ "intel_iommu=on" ]
+       else if kvmModule == "kvm-amd"
+       then [ "amd_iommu=on" ]
+       else [ ]);
 
     users.users.player.extraGroups = [ "libvirtd" ];
     users.users.ghost.extraGroups = [ "libvirtd" ];

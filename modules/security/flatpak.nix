@@ -1,5 +1,7 @@
 { config, lib, pkgs, ... }:
 {
+  # Flatpak is the containment layer for relatively trusted daily GUI apps.
+  # Higher-risk software should stay in bubblewrap wrappers or VMs instead.
   services.flatpak.enable = true;
 
   systemd.services.flatpak-repo = {

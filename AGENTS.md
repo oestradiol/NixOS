@@ -39,13 +39,13 @@ LLM/assistant handoff only.
 - paranoid = hardened within paranoid constraints, with explicit same-kernel and usability limits
 
 ## Useful repo facts
-- Firefox hardening is maintained in-repo as an arkenfox-derived baseline with explicit daily overrides
+- daily Firefox uses enterprise policies; paranoid Firefox uses the vendored arkenfox baseline plus repo overrides
 - Tor Browser and Mullvad Browser keep upstream browser hardening; repo adds local wrapper containment
 - paranoid WireGuard requires pinned literal endpoint `IP:port`
 - VM tooling lives in `modules/security/vm-tooling.nix`; four VM workflow classes and six policy layers are defined in `PROJECT-STATE.md`, and host-side automation now ships through repo-managed networks plus `repo-vm-class`
 - wrapper seccomp and Landlock remain deferred
 
-- paranoid audit means the Linux audit subsystem, auditd, and a repo rule set
+- paranoid audit means the Linux audit subsystem plus auditd; repo custom audit rules remain staged off by default
 - AppArmor currently means framework + D-Bus mediation baseline, not a finished custom policy library
 - `networking.wireguard` is intentionally kept for now; move only if live routing/MTU issues justify it
 - `REFERENCES.md` is the canonical external-source ledger; full archival capture is still deferred

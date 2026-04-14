@@ -21,50 +21,6 @@ let
       ${extraPrefs}
     '';
 
-  dailyFirefoxUserJS = mkUserJs {
-    profileName = "daily-firefox";
-    resistFingerprinting = false;
-    letterboxing = false;
-    webglDisabled = false;
-    extraPrefs = ''
-      // Daily relaxations: keep arkenfox-derived baseline but relax only what daily needs.
-      user_pref("browser.startup.page", 0);
-      user_pref("browser.startup.homepage", "about:blank");
-      user_pref("browser.newtabpage.enabled", false);
-      user_pref("browser.newtabpage.activity-stream.showSponsored", false);
-      user_pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
-      user_pref("browser.discovery.enabled", false);
-      user_pref("browser.urlbar.quicksuggest.enabled", false);
-      user_pref("browser.urlbar.suggest.quicksuggest.nonsponsored", false);
-      user_pref("browser.urlbar.suggest.quicksuggest.sponsored", false);
-      user_pref("toolkit.telemetry.enabled", false);
-      user_pref("toolkit.telemetry.unified", false);
-      user_pref("toolkit.telemetry.archive.enabled", false);
-      user_pref("datareporting.healthreport.uploadEnabled", false);
-      user_pref("datareporting.policy.dataSubmissionEnabled", false);
-      user_pref("app.shield.optoutstudies.enabled", false);
-      user_pref("app.normandy.enabled", false);
-      user_pref("app.normandy.api_url", "");
-      user_pref("geo.enabled", false);
-      user_pref("network.trr.mode", 5);
-      user_pref("privacy.donottrackheader.enabled", true);
-      user_pref("privacy.globalprivacycontrol.enabled", true);
-      user_pref("network.cookie.cookieBehavior", 5);
-      user_pref("network.http.referer.XOriginTrimmingPolicy", 2);
-      user_pref("browser.safebrowsing.downloads.remote.enabled", false);
-      // Keep local malware/phishing protection on daily for usability; arkenfox leaves room for operator choice here.
-      user_pref("browser.safebrowsing.phishing.enabled", true);
-      user_pref("browser.safebrowsing.malware.enabled", true);
-      // Daily usability constraints: keep WebRTC functional for streaming/social use.
-      user_pref("media.peerconnection.enabled", true);
-      user_pref("media.navigator.enabled", true);
-      // Daily usability constraints: allow session restore and normal logins.
-      user_pref("browser.sessionstore.resume_from_crash", true);
-      user_pref("privacy.clearOnShutdown_v2.historyFormDataAndDownloads", false);
-      user_pref("privacy.clearOnShutdown_v2.browsingHistoryAndDownloads", false);
-    '';
-  };
-
   paranoidFirefoxUserJS = mkUserJs {
     profileName = "safe-firefox";
     resistFingerprinting = true;
@@ -104,6 +60,7 @@ let
     binaryName ? name,
     dbusOwnName ? null,
     userJs ? null,
+    persist ? [ ],
     extraArgs ? [ ],
     extraSetup ? "",
   }:
@@ -118,21 +75,41 @@ let
       sessionBusTalk = lib.optionals cfg.dbusFilter (
         lib.optionals cfg.portals [ "org.freedesktop.portal.*" ] ++ [
           "org.a11y.Bus"
-          "org.mpris.MediaPlayer2.*"
         ]
       );
       sessionBusOwn = lib.optionals (cfg.dbusFilter && dbusOwnName != null) [ dbusOwnName ];
       sessionBusBroadcast = lib.optionals (cfg.dbusFilter && cfg.portals) [
         "org.freedesktop.portal.*=@/org/freedesktop/portal/*"
       ];
+      persist = persist;
+      etcMode = "minimal";
+      etcPaths = [
+        "ssl"
+        "pki"
+        "ca-certificates"
+        "fonts"
+        "hosts"
+        "host.conf"
+        "machine-id"
+        "localtime"
+        "nsswitch.conf"
+        "resolv.conf"
+        "gai.conf"
+        "protocols"
+        "services"
+        "mime.types"
+      ];
       extraSetup = ''
         ${lib.optionalString (userJs != null) ''
-          mkdir -p "$SANDBOX_HOME/${name}-profile"
-          cp ${userJs} "$SANDBOX_HOME/${name}-profile/user.js"
+          PROFILE_PATH="/home/sandbox/${if persist != [ ] then builtins.head persist else "${name}-profile"}"
+          mkdir -p "$SANDBOX_HOME/${if persist != [ ] then builtins.head persist else "${name}-profile"}"
+          if [[ ! -e "$SANDBOX_HOME/${if persist != [ ] then builtins.head persist else "${name}-profile"}/user.js" ]]; then
+            cp ${userJs} "$SANDBOX_HOME/${if persist != [ ] then builtins.head persist else "${name}-profile"}/user.js"
+          fi
         ''}
         ${extraSetup}
       '';
-      args = extraArgs ++ lib.optionals (userJs != null) [ "--profile" "/home/sandbox/${name}-profile" ];
+      args = extraArgs ++ lib.optionals (userJs != null) [ "--profile" "/home/sandbox/${if persist != [ ] then builtins.head persist else "${name}-profile"}" ];
     };
 
   safeFirefox = mkBrowser {
@@ -140,6 +117,7 @@ let
     package = pkgs.firefox;
     binaryName = "firefox";
     userJs = paranoidFirefoxUserJS;
+    persist = [ ".mozilla/safe-firefox" ];
     extraArgs = [ "--no-remote" ];
   };
 
@@ -201,7 +179,7 @@ in {
   programs.firefox = lib.mkIf (!browsersEnabled) {
     enable = true;
     policies = {
-      # Derived from vendored arkenfox baseline plus daily overrides above.
+      # Daily Firefox uses enterprise policies; paranoid Firefox uses the arkenfox-based user.js above.
       Preferences = {
         "browser.startup.page" = 0;
         "browser.startup.homepage" = "about:blank";

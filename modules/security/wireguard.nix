@@ -43,13 +43,22 @@ let
       n = lib.toInt s;
       valid = n >= 1 && n <= 65535;
     in if valid then n else null;
+    ipv4Valid = host:
+      let
+        octets = lib.splitString "." host;
+        validOctet = octet:
+          let
+            parsed = builtins.tryEval (lib.toInt octet);
+          in parsed.success && parsed.value >= 0 && parsed.value <= 255 && (toString parsed.value) == octet;
+      in builtins.length octets == 4 && lib.all validOctet octets;
 
     # Build parsed result if pattern matched
     parsedEndpoint = if matched == null then null else let
       host = builtins.elemAt matched 0;
       portStr = builtins.elemAt matched 1;
       port = parsePort portStr;
-    in if port == null then null else {
+      ipv4Ok = ipv4Match == null || ipv4Valid host;
+    in if port == null || !ipv4Ok then null else {
       host = host;
       port = port;
       isIPv6 = ipv6Match != null;
@@ -263,11 +272,13 @@ in {
     };
 
     # systemd-resolved configuration for DNS leak prevention
+    networking.networkmanager.dns = "systemd-resolved";
     services.resolved = {
       enable = true;
       # Use the DNS server provided through WireGuard (Mullvad's DNS)
-      # This is set via the WireGuard interface dns option above
-      fallbackDns = [];  # No fallback - if tunnel DNS fails, queries fail (secure)
+      # This is set via the WireGuard interface dns option above.
+      # null here intentionally renders an explicit empty FallbackDNS= line.
+      fallbackDns = null;
     };
 
     # sysctl settings for WireGuard interface security

@@ -1,305 +1,146 @@
 # PROJECT STATE
 
-## Purpose
-Canonical current state: architecture, policy, constraints, implemented support scope, explicit decisions, explicit rejections, and deferred work.
+Canonical current state: actual architecture, profile split, implemented support boundary, current-stage pipeline, explicit deferred work, and removed/rejected ideas.
 
-## Repository role
-Single NixOS host with one hardened default plus one explicit relaxation specialization:
-- `paranoid`: default hardened workstation baseline with explicit documented residual surfaces
-- `daily`: boot specialization that weakens selected controls for gaming/social compatibility
+## 1. Repository role
+One NixOS installation with two boot states and two users:
+- `paranoid`: default hardened workstation baseline for the `ghost` user
+- `daily`: boot specialization for the `player` user
 
-Separate users:
-- `player` for daily
-- `ghost` for paranoid
+This repo is not trying to be a high-assurance appliance.
+It is a hardened desktop/workstation with explicit same-kernel, desktop-integration, and usability limits.
 
-## Frozen operational decisions
-- KDE Plasma 6 remains the desktop target; current design assumes SDDM login and Wayland-first sessions.
-- NVIDIA remains enabled initially on both profiles for target-hardware reliability.
-- Windows is not part of the steady-state design.
-- swap remains split between zram and an 8GB Btrfs swapfile on `@swap`.
-- daily keeps Steam, VR, Signal, Bitwarden, and general social/desktop compatibility.
-- paranoid forbids Steam, VR, and Vesktop by default; Signal remains allowed.
-- controllers are enabled on daily and disabled on paranoid.
-- Firefox Sync remains disabled by policy.
-- AppArmor framework stays enabled on both profiles; custom repo-maintained AppArmor policies remain deferred until the framework baseline is live-validated.
-- `init_on_free=1` stays paranoid-only.
-- `nosmt=force` stays paranoid-only.
-- selected non-Flatpak daily apps are wrapped with bubblewrap; Signal remains a Flatpak path.
+## 2. Current stable-baseline definition
+The repo reaches its first stable machine-usable state when all three are complete on target hardware:
+1. `docs/PRE-INSTALL.md`
+2. `docs/INSTALL-GUIDE.md`
+3. `docs/TEST-PLAN.md`
 
-## Current architecture
+Anything in `docs/POST-STABILITY.md` is intentionally non-blocking for that first stable version.
+
+## 3. Current architecture
 
 ### System model
-- one NixOS installation
-- encrypted root with tmpfs root + impermanence
-- explicit `/persist` allowlist for state survival
-- boot specialisations select profile policy without separate installs
-- staged Secure Boot + TPM rollout after first stable encrypted boot
+- one encrypted LUKS2 root device
+- Btrfs subvolumes under LUKS
+- tmpfs root
+- impermanence-managed persisted state under `/persist`
+- one default profile plus one boot specialization
+- Secure Boot and TPM remain staged until after first stable boot and validation
 
-### Repository shape
-- `hosts/nixos/` wires host-specific layout and hardware references
-- `profiles/paranoid.nix` defines the default hardened workstation baseline
-- `profiles/daily.nix` defines explicit relaxations as the daily specialization
-- `modules/core/` defines base system wiring and option surface
-- `modules/security/` defines hardening, privacy, sandboxing, networking, persistence, governance, secrets, VM tooling, and browser policy
-- `docs/` defines install/test/recovery/performance procedures
-- `REFERENCES.md` is the canonical external reference ledger
-- `AUDITS.md` tracks audit coverage, validation status, source-backed claims, and pending audit work
+### Users and home model
+- `player` is the normal daily account
+- `ghost` is the hardened workspace account
+- `/home/player` is a fully persistent Btrfs subvolume on daily
+- `/home/ghost` is tmpfs on paranoid, with explicit allowlisted persistence into `/persist/home/ghost`
 
-### Bubblewrap architecture
-- one shared sandbox constructor in `modules/security/sandbox-core.nix`
-- browser and app modules are thin wrappers over that core
-- default posture is strict; every relaxation must be explicit per wrapper
-- exact runtime socket exposure replaces broad `/run/user/$UID` exposure
-- broad home and broad `/var` binds are not used by default
-- filtered D-Bus via `xdg-dbus-proxy` is the intended wrapper path when enabled
+### Browser model
+- daily Firefox is the normal `programs.firefox` path configured through Firefox enterprise policies
+- paranoid Firefox is `safe-firefox`, a bubblewrap wrapper using the vendored arkenfox baseline plus repo overrides
+- Tor Browser and Mullvad Browser keep their upstream browser privacy model; the repo adds local wrapper containment only
+- browser wrappers are local host containment, not VM-equivalent isolation
+- the paranoid browser wrappers now use a tighter minimal `/etc` allowlist rather than broad `/etc`
+- paranoid Firefox state persists in `.mozilla/safe-firefox`
 
-### Browser architecture
-- daily Firefox uses an in-repo arkenfox-derived baseline, relaxed only where daily usability needs it
-- paranoid `safe-firefox` uses the same baseline without the daily relaxations and runs inside the shared sandbox core
-- Tor Browser and Mullvad Browser keep their upstream browser-hardening model; the repo adds local wrapper containment only
-- wrapper scope is local containment on the host, not VM-equivalent isolation
+### Sandbox model
+- `modules/security/sandbox-core.nix` is the shared bubblewrap constructor
+- browser and app wrappers are thin policy layers over that constructor
+- wrappers now clear inherited environment variables first and then repopulate only explicit values
+- filtered D-Bus via `xdg-dbus-proxy` remains the intended path when enabled
+- broad home binds and broad `/var` binds are not part of the default wrapper posture
 
-### AppArmor policy
-- current implemented state is framework enablement plus D-Bus mediation baseline
-- reboot is required when first enabling the framework
-- repo-maintained AppArmor profiles remain deferred
-- `killUnconfinedConfinables` stays off for now and is only a post-stability decision
-- any future profile rollout should start with explicit validation of loaded profiles, denial logs, and complain/enforce state
+### Flatpak model
+- Flatpak is enabled repo-wide
+- Flathub is bootstrapped automatically
+- Flatpak is the containment layer for relatively trusted daily GUI apps
+- higher-risk software should stay in wrappers or VMs instead of being treated as “safe because Flatpak”
+- Signal is intended as a Flatpak path, including on paranoid
 
-### Network architecture
-- daily uses Mullvad app mode
-- daily uses Mullvad app mode
-- paranoid currently also stays on Mullvad app mode by default while the self-owned `networking.wireguard` path remains staged off pending validation with real secrets/endpoints
-- when the staged self-owned WireGuard path is enabled later, it requires a pinned literal endpoint `IP:port`
-- that staged path is designed to allow no standing non-tunnel DNS exception
-- its exact non-WireGuard egress exception is limited to the pinned endpoint `IP:port`
-- endpoint rotation is therefore an explicit operator maintenance task when that path is enabled
-- `networking.wireguard` is kept in-repo for that staged path because it already matches the repo’s deterministic nftables and option surface; a `systemd.network` migration is deferred unless live validation exposes routing or MTU problems
+### Network model
+- both profiles currently use Mullvad app mode by default
+- the self-owned WireGuard path exists in-repo but is staged off by default
+- when that staged path is enabled later, it requires a pinned literal endpoint `IP:port`
+- the staged path owns nftables directly and is designed to avoid a standing non-tunnel DNS exception
+- endpoint rotation remains an explicit operator maintenance task when that path is enabled
 
-### VM architecture
+### VM model
+The repo ships a host-side VM tooling layer in `modules/security/vm-tooling.nix` with four canonical classes:
+- `trusted-work-vm`
+- `risky-browser-vm`
+- `malware-research-vm`
+- `throwaway-untrusted-file-vm`
 
-#### VM workflow classes
-Four VM classes are now canonical:
-- `trusted-work-vm`: persistent VM for lower-risk work that still benefits from separation from the main host
-- `risky-browser-vm`: browser-focused VM for sites or workflows that should not rely on same-kernel browser containment alone
-- `malware-research-vm`: high-risk analysis VM for unknown binaries or clearly hostile content; strongest separation, highest friction
-- `throwaway-untrusted-file-vm`: disposable VM for opening unknown documents or archives with minimal host trust
+Current support boundary:
+- host-side class tooling exists
+- repo-managed NAT and isolated libvirt networks exist
+- class policy is encoded in the launcher and documented in the repo
+- guest templates and guest-hardening practice still need live validation
 
-#### VM workflow layers
-Every class is defined across these six layers:
-1. threat class and intended use
-2. host-to-guest boundary policy
-3. network policy
-4. disposability policy
-5. guest hardening baseline
-6. operator workflow
+### Monitoring / integrity model
+- paranoid enables the Linux audit subsystem and `auditd`
+- repo custom audit rules exist but remain staged off by default due to a known nixpkgs compatibility issue
+- AppArmor currently means framework enablement plus D-Bus mediation baseline
+- custom repo-maintained AppArmor profiles are deferred
+- ClamAV and AIDE are present as monitoring/integrity layers, but they still need live timer/service validation on the target machine
 
-#### Current class definitions
+## 4. Frozen current-stage decisions
+- KDE Plasma 6 + SDDM remain the desktop target
+- NVIDIA remains enabled initially for target-hardware reliability
+- Windows is not part of the steady-state design
+- swap remains zram plus an 8 GiB Btrfs swapfile on the daily profile
+- daily keeps Steam, VR, Signal, Bitwarden, and general social/desktop compatibility in scope
+- paranoid forbids Steam, VR, and Vesktop by default; Signal remains in scope through Flatpak
+- controllers are enabled on daily and disabled on paranoid
+- Firefox Sync remains disabled by policy
+- `nosmt=force` stays paranoid-only
+- `init_on_free=1` stays paranoid-only
+- wrapped daily apps remain same-kernel containment only
+- PAM profile-binding remains intentionally blocked and out of baseline scope
 
-##### `trusted-work-vm`
-1. Threat class: lower-risk work that still should not live directly on the host.
-2. Host-to-guest boundary: clipboard allowed only when intentionally needed; no bidirectional trust by default, no shared folders by default, explicit import/export only, USB passthrough off by default, drag-and-drop off by default, audio allowed if needed, display integration minimal, guest agent justified only if a specific workflow needs it.
-3. Network: NAT-only by default; host-VPN-only acceptable when the host network path is already trusted enough for the task.
-4. Disposability: persistent VM allowed; snapshot before major changes recommended.
-5. Guest baseline: auto-updates on, guest firewall on, browser hardened, no host-share auto-mounts, no password reuse, no identity reuse if the task does not require it.
-6. Operator workflow: use for ordinary compartmentalized work that benefits from separation but does not justify the higher-friction classes.
+## 5. Current pipeline
 
-##### `risky-browser-vm`
-1. Threat class: websites or web apps too risky for host browsers or same-kernel wrappers alone.
-2. Host-to-guest boundary: clipboard off by default, temporary host→guest transfer only when necessary, no shared folders, no USB passthrough, no drag-and-drop, audio only if the site genuinely needs it, minimal display integration, guest agent discouraged.
-3. Network: NAT-only or VPN-inside-guest; prefer a path that keeps host browsing identity separate from the guest.
-4. Disposability: snapshot reset after risky sessions strongly preferred; disposable overlays acceptable.
-5. Guest baseline: hardened browser only, auto-updates on, guest firewall on, no host credentials, no sync accounts reused from the host.
-6. Operator workflow: use for suspicious or high-tracking browsing; if browser containment on the host feels insufficient, move the task here instead of weakening host policy.
+### Current-stage blocking pipeline
+- `docs/PRE-INSTALL.md`
+- `docs/INSTALL-GUIDE.md`
+- `docs/TEST-PLAN.md`
 
-##### `malware-research-vm`
-1. Threat class: hostile binaries or content with active exploitation risk.
-2. Host-to-guest boundary: clipboard off, shared folders off, USB passthrough off, drag-and-drop off, audio off unless the sample requires it, minimal display integration, guest agent off unless strictly justified.
-3. Network: no network by default; isolated internal network or tightly staged research network only when the task requires it.
-4. Disposability: disposable or snapshot-reset-first only; treat persistence as exceptional.
-5. Guest baseline: separate identity, no reused passwords, guest firewall on, updates staged carefully, no host shares, no productivity accounts, minimal software footprint.
-6. Operator workflow: for unknown binaries or malware-adjacent research, do not rely on bubblewrap; use this class or a stricter offline analysis path only.
+### Current-stage support docs
+- `docs/RECOVERY.md`
+- `docs/PERFORMANCE-NOTES.md`
+- `docs/SECURITY-SURFACES.md`
+- `docs/NIX-IMPORT-TREE.md`
+- `scripts/README.md`
 
-##### `throwaway-untrusted-file-vm`
-1. Threat class: unknown documents, archives, or media files that are risky but do not require a full malware-research environment.
-2. Host-to-guest boundary: clipboard off by default, no shared folders, explicit one-way import folder only, USB passthrough off, drag-and-drop off, audio only if the file type needs it, minimal display integration, guest agent discouraged.
-3. Network: no network by default; temporary NAT only if the file must fetch dependencies to render.
-4. Disposability: disposable overlay or snapshot reset after each use.
-5. Guest baseline: small guest image, auto-updates on, guest firewall on, no account reuse, no host-share auto-mounts.
-6. Operator workflow: open unknown files here first; promote to `malware-research-vm` if the behavior looks actively suspicious.
+### Deferred-only pipeline
+- `docs/POST-STABILITY.md`
 
-- `modules/security/vm-tooling.nix` is the host capability/tooling layer for the VM workflow defined below
-- it provides libvirt/QEMU/KVM support, repo-managed NAT + isolated networks, and the `repo-vm-class` launcher
-- the launcher encodes class defaults for boundary policy, network mode, disposability, guest boot shape, and minimal operator workflow
-- host defaults remain conservative: no USB redirection by default, no automatic browser/app coupling, and no implicit clipboard or host-share trust
-- the workflow is explicitly defined across four classes and six policy layers
-- host-side enforcement is automated through repo-managed libvirt networks plus the `repo-vm-class` launcher
-- guest image contents still remain operator-supplied and must be validated per class
-- guest templates and real-world tuning still need live trials before any class is treated as fully proven
+## 6. Support boundary and non-claims
+The repo can reasonably claim:
+- explicit profile split
+- explicit persistence model
+- explicit same-kernel wrapper limits
+- explicit staged-vs-baseline separation
+- explicit VM escalation path for riskier work
 
-## Policy
+The repo must not claim:
+- wrapper isolation is VM-equivalent
+- the desktop stack is high assurance
+- static review alone proves runtime safety
+- staged features are part of the baseline before validation
 
-### Daily policy
-Goal: preserve gaming, VR, socialization, normal browsing, and desktop reliability while enabling low-friction hardening unlikely to break normal use.
+## 7. Removed or rejected ideas
+These are not current policy:
+- shared Whonix-style machine-id on the host
+- describing Tor Browser or Mullvad Browser as arkenfox-managed
+- describing daily Firefox as arkenfox-managed
+- enabling PAM profile-binding in the current baseline
+- treating repo custom audit rules as baseline when they are still staged off
 
-Daily policy means:
-- enable transparent or low-cost hardening by default
-- avoid known high-breakage hardening unless already proven acceptable for daily use
-- keep browser use convenient while still anchored to an arkenfox-derived baseline
-- allow app compatibility concessions where needed for daily-driver usability
-- keep security/privacy controls explicit through options rather than ad hoc edits
-
-### Paranoid policy
-Goal: push host hardening, wrapper hardening, and network policy hard without pretending the repo can remove usability requirements or same-kernel limits. During the first staged rollout, paranoid only needs to reach minimum functional state after daily is already operable. After that, post-stability work treats paranoid as the place to pursue the maximum achievable hardening under the repo's stated constraints through careful trials and validation.
-
-Paranoid policy means:
-- enforce stronger hardening through explicit profile overrides
-- require stricter governance assertions
-- prefer pinned and deterministic network policy
-- keep a usable desktop
-- keep networked browsers
-- keep Wayland/X11/display integration
-- keep audio/portal/session usability
-- treat bubblewrap wrappers as same-kernel containment, not sufficient hostile-workload isolation
-- document all meaningful breakage and workaround paths in `docs/RECOVERY.md` and validate them through `docs/TEST-PLAN.md`
-
-## Constraints
-
-### Daily constraints
-Daily must still support:
-- gaming
-- VR
-- controllers and Bluetooth accessories
-- desktop portals and file chooser flows
-- social and messaging apps
-- ordinary browsing without wrapper friction
-- NVIDIA reliability on the target hardware path
-
-### Paranoid constraints
-Paranoid remains constrained by:
-- same-kernel boundary for bubblewrap wrappers
-- browser need for network access
-- required Wayland/X11/display integration
-- required audio/portal/session usability
-- possible GPU/runtime socket needs for usability
-- incomplete hostile-workload VM workflow
-- pinned-endpoint WireGuard maintenance when the provider changes relay IPs
-
-These constraints define the current meaning of “maximally hardened within paranoid constraints.”
-
-## Implemented state
-
-### Profiles
-`daily` currently enables:
-- gaming and VR support
-- Firefox with an arkenfox-derived baseline plus explicit daily relaxations
-- tightened bubblewrap wrappers for VRCX and Windsurf
-- Mullvad app mode
-- desktop compatibility-oriented defaults
-
-`paranoid` currently enables:
-- tighter kernel and system hardening
-- browser wrappers
-- Mullvad app mode by default; self-owned pinned-endpoint WireGuard path staged but present in-repo
-- VM tooling layer
-- stricter governance assertions
-
-### Security and privacy state
-Implemented now:
-- tmpfs root + impermanence
-- persisted host-local machine-id on both profiles
-- zram plus Btrfs swapfile memory model
-- shared bubblewrap core
-- filtered D-Bus wrapper path
-- exact persistence binds for wrapped apps
-- staged paranoid pinned-endpoint WireGuard policy module present in-repo but off by default
-- Linux audit subsystem + auditd; repo-maintained custom audit rules staged off by default
-- AppArmor framework baseline + D-Bus mediation baseline
-- stricter firewall policy for paranoid
-- service hardening for selected system services
-- ClamAV and AIDE monitoring path
-- flatpak remote bootstrap + portal baseline
-- fwupd enabled on the base desktop path
-- option-driven daily/paranoid hardening split
-
-### Support scope statements
-Current supported claims:
-- daily Firefox is arkenfox-derived and intentionally relaxed only for daily usability constraints
-- paranoid `safe-firefox` is arkenfox-derived and uses the stricter local baseline inside the wrapper
-- daily app wrappers provide tightened daily containment for selected non-Flatpak apps
-- paranoid browsers provide tightened local browser containment on the host
-- paranoid audit path means the Linux audit subsystem is enabled, auditd is enabled, and a repo-maintained rule set is loaded
-- AppArmor means the kernel framework and D-Bus mediation baseline are enabled; it does not imply a finished repo-maintained custom profile library yet
-- VM tooling is available as a host capability layer
-
-Current unsupported claims:
-- wrapper layer is not VM-equivalent isolation
-- VM class policy is not yet fully auto-enforced by code; parts remain procedural and test-driven
-- seccomp and Landlock are not implemented in the wrapper core
-- custom repo-maintained AppArmor policy coverage is not complete yet
-- AppArmor follow-up still includes evaluating `killUnconfinedConfinables`, deciding complain-vs-enforce rollout strategy for new profiles, and validating denial-log / D-Bus mediation behavior after each policy addition
-- Tor Browser and Mullvad Browser are not claimed to be maximally tightened yet; further containment trials are deferred
-
-## Explicit decisions
-- one host, two specialisations
-- separate users for daily and paranoid
-- tmpfs root + explicit persistence
-- Secure Boot + TPM rollout staged after first stable encrypted boot
-- daily remains usability-first within a hardened baseline
-- paranoid remains security-first within explicit operational constraints
-- machine-id stays host-local and unique on both profiles
-- if the staged paranoid WireGuard path is enabled, its endpoint must be a pinned literal `IP:port`
-- wrapper logic stays centralized in the shared sandbox core
-- Firefox hardening is maintained in-repo as a vendored arkenfox baseline with explicit local overrides
-- `networking.wireguard` stays for now instead of a `systemd.network` migration because it already matches the current repo firewall design and secret wiring; migration remains conditional on live issues, not assumed necessary, and is tracked in `docs/POST-STABILITY.md` for evaluation if routing, MTU, DNS, or interface-ordering issues appear
-- anything unfinished must be deferred into `docs/POST-STABILITY.md` / `AUDITS.md` or explicitly rejected
-
-## Explicit rejections
-- shared Whonix machine-id on the host
-- documenting bubblewrap wrappers as strong isolation or VM-equivalent isolation
-- hostname-based paranoid WireGuard endpoints
-- standing non-WireGuard DNS exception for paranoid
-- silently implying unfinished VM workflow policy is complete
-- silently implying seccomp or Landlock are already active in the wrapper core
-- silently implying AppArmor already has a finished repo-maintained policy set
-- silently claiming Tor Browser or Mullvad Browser wrapper limits are fully explored already
-
-## Deferred items
-These remain deferred until implemented and live-validated:
-- wrapper seccomp wiring
-- wrapper Landlock wiring
-- per-app seccomp policy generation
-- stricter no-GPU browser variants
-- further Tor Browser and Mullvad Browser containment trials
-- stronger wrapper tightening after runtime proof where safe
-- custom AppArmor policy rollout after framework-baseline validation
-- VM workflow completion
-- Secure Boot + TPM final rollout after daily stability
-- hardened allocator rollout after stability testing
-- greetd / tuigreet migration
-- `modules_disabled=1` after module-load validation
-- any experimental revisit of Whonix-style shared machine-id behavior, only as a documented experiment and not as current policy
-- experimental `myOS.security.pamProfileBinding.enable` rollout after a dedicated lockout-recovery rehearsal
-
-## Trust boundaries and truthfulness rules
-- static review is not runtime proof
-- wrapper behavior on target hardware remains subject to live validation
-- doc claims must match code and current support scope
-- unfinished work must exist somewhere on the pipeline: `PROJECT-STATE.md`, `AUDITS.md`, `docs/TEST-PLAN.md`, `docs/POST-STABILITY.md`, or `docs/RECOVERY.md`
-
-## Known remaining trust gaps
-Static review cannot prove:
-- all wrappers behave correctly on the target GPU/session stack
-- exact portal and D-Bus needs for every wrapped app on target hardware
-- full boot/install/recovery success on the real machine
-- full VM guest-isolation workflow quality without further policy work
-
-## Canonical routing
-- install prep only → `docs/PRE-INSTALL.md`
-- install procedure only → `docs/INSTALL-GUIDE.md`
-- current-stage validation only → `docs/TEST-PLAN.md`
-- deferred/aggressive work only → `docs/POST-STABILITY.md`
-- failure map and recovery only → `docs/RECOVERY.md`
-- performance only → `docs/PERFORMANCE-NOTES.md`
-- references / external-source ledger → `REFERENCES.md`
-- audits, validations, source-backed claims, and pending audits → `AUDITS.md`
+## 8. What counts as post-stability work
+Examples of non-blocking work after the first stable baseline:
+- Secure Boot and TPM rollout
+- re-enabling repo custom audit rules after the upstream issue is fixed and revalidated
+- custom AppArmor policy library
+- seccomp and Landlock wrapper work
+- guest-template refinement for VM classes
+- tighter browser/runtime containment trials that are not required for the current minimum functional state

@@ -8,6 +8,16 @@ let
       mkdir -p "$HOST_HOME/${p}" "$SANDBOX_HOME/${p}"
       BWRAP_ARGS+=( --bind "$HOST_HOME/${p}" "/home/sandbox/${p}" )
     '') persist;
+  mkEtcLines = etcPaths:
+    lib.concatMapStringsSep "\n" (p: ''
+      if [[ -e "/etc/${p}" ]]; then
+        if [[ -d "/etc/${p}" ]]; then
+          BWRAP_ARGS+=( --dir "/etc/${p}" )
+        fi
+        BWRAP_ARGS+=( --ro-bind "/etc/${p}" "/etc/${p}" )
+      fi
+    '') etcPaths;
+  passthroughEnv = [ "LANG" "LANGUAGE" "LC_ALL" "LC_CTYPE" "TZ" "TERM" "COLORTERM" ];
 in {
   mkSandboxWrapper = {
     name,
@@ -28,6 +38,8 @@ in {
     extraBwrapArgs ? [ ],
     extraEnv ? { },
     extraSetup ? "",
+    etcMode ? "full",
+    etcPaths ? [ ],
   }:
     pkgs.writeShellScriptBin "safe-${name}" ''
       set -euo pipefail
@@ -55,6 +67,7 @@ in {
         --unshare-pid
         --unshare-uts
         --unshare-cgroup
+        --clearenv
         --proc /proc
         --dev /dev
         --tmpfs /tmp
@@ -64,7 +77,7 @@ in {
         --dir /run/user/$HOST_UID/pulse
         --dir /run/dbus
         --ro-bind /nix /nix
-        --ro-bind /etc /etc
+        ${if etcMode == "full" then "--ro-bind /etc /etc" else "--tmpfs /etc"}
         --ro-bind /run/current-system /run/current-system
         --ro-bind /sys/dev/char /sys/dev/char
         --dir /home
@@ -79,6 +92,12 @@ in {
         --setenv XDG_RUNTIME_DIR /run/user/$HOST_UID
         --cap-drop ALL
       )
+
+      ${lib.concatMapStringsSep "\n" (var: ''
+      if [[ -n "''${${var}:-}" ]]; then
+        BWRAP_ARGS+=( --setenv ${var} "''${${var}}" )
+      fi
+      '') passthroughEnv}
 
       ${lib.optionalString (!network) ''
       BWRAP_ARGS+=( --unshare-net )
@@ -155,9 +174,10 @@ in {
       ''}
 
       ${mkPersistLines persist}
+      ${lib.optionalString (etcMode == "minimal") (mkEtcLines etcPaths)}
 
       ${lib.concatMapStringsSep "\n" (arg: ''BWRAP_ARGS+=( ${quote arg} )'') extraBwrapArgs}
-      ${lib.concatMapStringsSep "\n" (name: ''BWRAP_ARGS+=( --setenv ${name} ${quote extraEnv.${name}} )'') (builtins.attrNames extraEnv)}
+      ${lib.concatMapStringsSep "\n" (var: ''BWRAP_ARGS+=( --setenv ${var} ${quote extraEnv.${var}} )'') (builtins.attrNames extraEnv)}
 
       ${extraSetup}
 

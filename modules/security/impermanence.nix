@@ -54,40 +54,12 @@ in {
           "/etc/ssh/ssh_host_rsa_key.pub"
         ];
 
-        # NOTE: Daily profile (/home/player): fully persistent Btrfs subvolume (@home-daily)
-        # These allowlists manage dotfiles within an already-persistent home.
+        # NOTE: Daily profile (/home/player): fully persistent Btrfs subvolume (@home-daily).
+        # Do not duplicate that persistence through impermanence allowlists here.
         #
         # NOTE: Paranoid profile (/home/ghost): selective impermanence (tmpfs + allowlist)
-        # @home-paranoid is mounted to /persist/home/ghost, and only allowlisted items
-        # are persisted. The home directory itself is tmpfs - wiped on every boot.
-        # This is "ephemeral root + selective home persistence" for paranoid.
-        users.player = {
-          directories = [
-            "Data"
-            ".local/share/Steam"
-            ".steam"
-            ".config/Signal"
-            # NOTE: KeePassXC is paranoid-only; daily uses Bitwarden (Flatpak)
-            ".local/share/keyrings"
-            ".local/share/applications"  # Custom desktop entries
-            ".gnupg"
-            ".ssh"
-            # Flatpak app data
-            ".local/share/flatpak"
-            ".var/app/org.signal.Signal"
-            ".var/app/com.spotify.Client"
-            ".var/app/com.bitwarden.desktop"
-            ".var/app/dev.vencord.Vesktop"
-            ".var/app/md.obsidian.Obsidian"
-            # Windsurf (sandboxed app) - persists configs
-            ".config/Windsurf"
-            ".local/share/Windsurf"
-            # VRCX (sandboxed app) - persists configs
-            ".config/VRCX"
-          ];
-          files = [ ".zsh_history" ];
-        };
-
+        # @home-paranoid is mounted at /persist/home/ghost, and only allowlisted items
+        # are persisted. The home directory itself is tmpfs and is wiped on every boot.
         users."ghost" = {
           # Note: home directory is now automatically deduced by impermanence module
           # @home-paranoid should be mounted at /persist/home/ghost
@@ -103,6 +75,7 @@ in {
             ".ssh"
             ".local/share/flatpak"
             ".var/app/org.signal.Signal"
+            ".mozilla/safe-firefox"
           ];
           files = [ ".zsh_history" ];
         };

@@ -102,7 +102,7 @@ in {
 
     # Stronger kernel controls (Madaidan-aligned)
     "kernel.kexec_load_disabled" = lib.mkIf sec.kernelHardening.kexecLoadDisabled 1;
-    "kernel.sysrq" = lib.mkIf sec.kernelHardening.sysrqRestrict 4;  # 4 = only sync/reboot
+    "kernel.sysrq" = lib.mkIf sec.kernelHardening.sysrqRestrict 4;  # 4 = keyboard-control functions only
     "kernel.modules_disabled" = lib.mkIf sec.kernelHardening.modulesDisabled 1;
     "kernel.io_uring_disabled" = sec.kernelHardening.ioUring;
     "fs.protected_symlinks" = 1;

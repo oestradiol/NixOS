@@ -252,7 +252,7 @@
         sysrqRestrict = lib.mkOption {
           type = lib.types.bool;
           default = true;
-          description = "Restrict SysRq key (kernel.sysrq=4).";
+          description = "Restrict SysRq key to keyboard-control functions only (kernel.sysrq=4).";
         };
         modulesDisabled = lib.mkOption {
           type = lib.types.bool;
