@@ -4,7 +4,6 @@ set -euo pipefail
 MNT="/mnt"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
-DISK="${1:-}"
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -31,7 +30,7 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-for cmd in lsblk findmnt sgdisk partprobe mkfs.fat cryptsetup mkfs.btrfs mount umount btrfs swapon swapoff nixos-generate-config nixos-install nixos-enter sed awk grep; do
+for cmd in lsblk findmnt sgdisk mkfs.fat cryptsetup mkfs.btrfs mount umount btrfs swapon swapoff nixos-generate-config nixos-install nixos-enter sed awk grep; do
   need_cmd "$cmd"
 done
 
@@ -41,60 +40,55 @@ if [[ ! -f "$REPO_ROOT/flake.nix" || ! -d "$REPO_ROOT/hosts/nixos" ]]; then
   exit 1
 fi
 
-echo "Guided installer for this repo"
+echo "Guided installer for this repo (dual-boot mode)"
 echo "Repo root: $REPO_ROOT"
 echo
+echo "This script will only reformat /dev/nvme0n1p1 (EFI) and /dev/nvme0n1p5 (Linux)."
+echo "All other partitions and disks will be preserved."
+echo
 
-if [[ -z "$DISK" ]]; then
-  echo "Available disks:"
-  lsblk -dpno NAME,SIZE,MODEL,TYPE | awk '$4=="disk" {print}'
-  DISK="$(prompt_default 'Target disk to wipe and install to' '/dev/nvme0n1')"
+# Hardcoded to use only nvme0n1p1 (EFI) and nvme0n1p5 (Linux)
+# Preserves p2, p3, p4 and all other disks
+DISK="/dev/nvme0n1"
+BOOT_PART="${DISK}p1"
+CRYPT_PART="${DISK}p5"
+
+# Verify target partitions exist
+if [[ ! -b "$BOOT_PART" ]]; then
+  echo "ERROR: EFI partition not found: $BOOT_PART" >&2
+  exit 1
 fi
-
-if [[ ! -b "$DISK" ]]; then
-  echo "Target disk not found: $DISK" >&2
+if [[ ! -b "$CRYPT_PART" ]]; then
+  echo "ERROR: Linux partition not found: $CRYPT_PART" >&2
   exit 1
 fi
 
-if findmnt -rn -S "$DISK" >/dev/null 2>&1; then
-  echo "Refusing to continue: $DISK already has mounted filesystems." >&2
-  lsblk "$DISK"
+# Verify target partitions are not mounted
+if findmnt -rn -S "$BOOT_PART" >/dev/null 2>&1; then
+  echo "ERROR: EFI partition is mounted: $BOOT_PART" >&2
   exit 1
 fi
-
-mounted_parts=$(lsblk -nrpo NAME "$DISK" | tail -n +2 | while read -r part; do
-  findmnt -rn -S "$part" >/dev/null 2>&1 && echo "$part"
-done)
-if [[ -n "${mounted_parts:-}" ]]; then
-  echo "Refusing to continue: one or more partitions on $DISK are mounted:" >&2
-  printf '%s\n' "$mounted_parts" >&2
-  lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS "$DISK"
+if findmnt -rn -S "$CRYPT_PART" >/dev/null 2>&1; then
+  echo "ERROR: Linux partition is mounted: $CRYPT_PART" >&2
   exit 1
 fi
 
 echo
-echo "About to DESTROY all data on: $DISK"
+echo "Target configuration:"
+echo "  EFI partition: $BOOT_PART (will be reformatted)"
+echo "  LUKS partition: $CRYPT_PART (will be reformatted)"
+echo "  Preserved: ${DISK}p2, ${DISK}p3, ${DISK}p4, /dev/sda, /dev/sdb"
+echo
 lsblk -o NAME,SIZE,TYPE,MOUNTPOINTS "$DISK"
-read -r -p "Type WIPE to continue: " CONFIRM
-[[ "$CONFIRM" == "WIPE" ]] || { echo "Aborted."; exit 1; }
+read -r -p "Type REFORMAT to continue: " CONFIRM
+[[ "$CONFIRM" == "REFORMAT" ]] || { echo "Aborted."; exit 1; }
 
 umount -R "$MNT" >/dev/null 2>&1 || true
 swapoff -a >/dev/null 2>&1 || true
 cryptsetup close cryptroot >/dev/null 2>&1 || true
 
-sgdisk --zap-all "$DISK"
-partprobe "$DISK"
-
-sgdisk -n 1:1MiB:+512MiB -t 1:EF00 -c 1:NIXBOOT "$DISK"
-sgdisk -n 2:0:0      -t 2:8309 -c 2:NIXCRYPT "$DISK"
-partprobe "$DISK"
-
-PARTSEP=""
-case "$DISK" in
-  *[0-9]) PARTSEP="p" ;;
-esac
-BOOT_PART="${DISK}${PARTSEP}1"
-CRYPT_PART="${DISK}${PARTSEP}2"
+# Set partition label for LUKS partition (required by fs-layout.nix)
+sgdisk -c 5:NIXCRYPT "$DISK"
 
 mkfs.fat -F 32 -n NIXBOOT "$BOOT_PART"
 echo
