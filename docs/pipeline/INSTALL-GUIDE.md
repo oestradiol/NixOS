@@ -12,9 +12,9 @@ Only installation steps.
 - `rebuild-install.sh` copies the repo to `/mnt/etc/nixos` automatically
 - it updates `/mnt/etc/nixos/hosts/nixos/hardware-target.nix` from the installer scan for review
 - place or prepare host-local secrets outside git
-- review the generated hardware-target file, expected secret-file paths, and staged repo state before treating the install as final
+- review the generated files before treating the install as final
 - do not overwrite repo-owned layout, impermanence, or profile policy wholesale
-- for a complete inventory of what this repo contains and how the profiles differ, see `docs/FEATURES.md`
+- for a complete inventory of what this repo contains and how the profiles differ, see `docs/maps/FEATURES.md`
 
 ## 3. Install the system
 - if you let the script continue, it will run `nixos-install --flake /mnt/etc/nixos#nixos --no-root-passwd` for you
@@ -27,7 +27,8 @@ Do not add a separate local override layer for basic identity. Make the first bo
 
 Required first-boot edits:
 - set the hostname in `hosts/nixos/default.nix` by changing `networking.hostName`
-- set git identity in `modules/home/common.nix` or another single shared Home Manager git settings path you intentionally choose to own
+- set git identity in the canonical shared Home Manager path: `modules/home/common.nix`
+- only move git identity into per-user files later if you intentionally want different identities per account
 
 Suggested commands after logging into the `daily` specialization:
 - `sudoedit /etc/nixos/hosts/nixos/default.nix`
@@ -42,5 +43,5 @@ The first boot goal is not “finish every hardening feature.” The first boot 
 ## 5. After first boot
 - place any required secret files where the config expects them
 - rebuild if secret paths changed
-- do daily-first validation from `docs/TEST-PLAN.md`
+- do daily-first validation from `docs/pipeline/TEST-PLAN.md`
 - only move to the paranoid validation section after daily is already usable

@@ -176,12 +176,12 @@ Install staging complete.
 
 Before rebooting, review:
 - /mnt/etc/nixos/hosts/nixos/hardware-target.nix
-- /mnt/etc/nixos/docs/INSTALL-GUIDE.md
-- /mnt/etc/nixos/docs/TEST-PLAN.md
+- /mnt/etc/nixos/docs/pipeline/INSTALL-GUIDE.md
+- /mnt/etc/nixos/docs/pipeline/TEST-PLAN.md
 
 After reboot:
 1. Choose the daily specialization first.
-2. Follow the first-boot edits in docs/INSTALL-GUIDE.md (hostname and git identity in canonical files).
-3. Run the daily-first checks in docs/TEST-PLAN.md.
+2. Follow the first-boot edits in docs/pipeline/INSTALL-GUIDE.md (hostname and git identity in canonical files).
+3. Run the daily-first checks in docs/pipeline/TEST-PLAN.md.
 4. Only after daily is good, continue with paranoid validation.
 EOF

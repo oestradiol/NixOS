@@ -108,7 +108,7 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] no standing non-WG DNS exception exists
 - [ ] DNS works through the tunnel
 - [ ] non-WG egress is blocked when the tunnel is down
-- [ ] the endpoint-update procedure in `docs/RECOVERY.md` is understandable
+- [ ] the endpoint-update procedure in `docs/pipeline/RECOVERY.md` is understandable
 
 ## 11. Monitoring and integrity verification
 - [ ] `freshclam` succeeds and signatures update normally
@@ -128,7 +128,7 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] `nixos-rebuild` works from the daily profile
 - [ ] rollback to a prior generation works
 - [ ] a broken paranoid change does not remove the ability to reach a working daily state
-- [ ] the recovery steps in `docs/RECOVERY.md` are understandable enough to follow on the real machine
+- [ ] the recovery steps in `docs/pipeline/RECOVERY.md` are understandable enough to follow on the real machine
 
 ## 13. VM tooling and workflow verification
 - [ ] libvirt starts on paranoid

@@ -12,7 +12,7 @@ else
 fi
 
 echo "== 2. Canonical surface review =="
-for f in README.md PROJECT-STATE.md REFERENCES.md AGENTS.md AUDITS.md docs/PRE-INSTALL.md docs/INSTALL-GUIDE.md docs/TEST-PLAN.md docs/POST-STABILITY.md docs/RECOVERY.md docs/PERFORMANCE-NOTES.md docs/SECURITY-SURFACES.md docs/NIX-IMPORT-TREE.md; do
+for f in README.md PROJECT-STATE.md REFERENCES.md docs/maps/AUDIT-STATUS.md docs/pipeline/PRE-INSTALL.md docs/pipeline/INSTALL-GUIDE.md docs/pipeline/TEST-PLAN.md docs/pipeline/POST-STABILITY.md docs/pipeline/RECOVERY.md docs/maps/PERFORMANCE-NOTES.md docs/maps/SECURITY-SURFACES.md docs/maps/NIX-IMPORT-TREE.md; do
   test -f "$f" && echo "present: $f" || echo "missing: $f"
 done
 
@@ -35,5 +35,5 @@ cat <<'RUNTIME'
 - bootctl status
 - sbctl status
 - systemd-cryptenroll --dump /dev/disk/by-partlabel/NIXCRYPT
-- run the exact daily/paranoid steps in docs/TEST-PLAN.md
+- run the exact daily/paranoid steps in docs/pipeline/TEST-PLAN.md
 RUNTIME

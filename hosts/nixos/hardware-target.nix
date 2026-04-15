@@ -1,7 +1,7 @@
 # Hardware-adapted target layout for the main NVMe reinstall.
 # This replaces the current ext4 layout with:
 # EFI -> LUKS2 -> Btrfs subvolumes -> tmpfs root + impermanence.
-# Use the partition labels from docs/INSTALL-GUIDE.md exactly.
+# Use the partition labels from docs/pipeline/INSTALL-GUIDE.md exactly.
 { config, lib, pkgs, modulesPath, ... }:
 {
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];

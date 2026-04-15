@@ -73,7 +73,7 @@ in
   };
 
   # Swap subvolume — must be created during install as @swap with nocow.
-  # See docs/INSTALL-GUIDE.md Phase 1.
+  # See docs/pipeline/INSTALL-GUIDE.md Phase 1.
   fileSystems."/swap" = lib.mkIf isDaily {
     device = "/dev/mapper/cryptroot";
     fsType = "btrfs";

@@ -148,6 +148,6 @@ in {
 
   # Warn about audit rules + AppArmor compatibility issue
   warnings = lib.mkIf (sec.apparmor && sec.auditd && !sec.auditRules.enable) [
-    "AppArmor + custom NixOS audit rules are staged off by default due to a current nixpkgs issue. See docs/POST-STABILITY.md for details and re-enable conditions."
+    "AppArmor + custom NixOS audit rules are staged off by default due to a current nixpkgs issue. See docs/pipeline/POST-STABILITY.md for details and re-enable conditions."
   ];
 }

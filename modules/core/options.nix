@@ -280,7 +280,7 @@
         enable = lib.mkOption {
           type = lib.types.bool;
           default = false;
-          description = "Load custom NixOS audit rules (separate from running auditd). Currently defaulted off due to AppArmor + audit-rules incompatibility on affected nixpkgs revisions (see docs/POST-STABILITY.md). Re-enable only after validating on your target nixpkgs revision.";
+          description = "Load custom NixOS audit rules (separate from running auditd). Currently defaulted off due to AppArmor + audit-rules incompatibility on affected nixpkgs revisions (see docs/pipeline/POST-STABILITY.md). Re-enable only after validating on your target nixpkgs revision.";
         };
       };
       lockRoot = lib.mkOption {

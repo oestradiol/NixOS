@@ -1,0 +1,134 @@
+# Hardening tracker
+
+This file tracks the major hardening/privacy knobs in the repo.
+
+Status values:
+- `baseline` = active now in the shared base or `paranoid`
+- `daily-softened` = active in base/paranoid, explicitly weakened in `daily`
+- `staged` = implemented but off by default
+- `deferred` = acknowledged follow-up, not baseline today
+- `rejected` = intentionally not part of this repo design
+- `absent` = not implemented
+
+## Identity, users, and account model
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| two-account split (`ghost` / `player`) | baseline | keep | `modules/core/users.nix`, `PROJECT-STATE.md` | core governance model |
+| `ghost` expected on `paranoid` | baseline | keep | `PROJECT-STATE.md`, `modules/security/governance.nix` | hardened workspace split |
+| `player` expected on `daily` | baseline | keep | `PROJECT-STATE.md` | normal desktop split |
+| `users.mutableUsers = true` | baseline | keep for now | `modules/core/users.nix` | current install path still uses imperative password setup |
+| `users.mutableUsers = false` | staged | maybe later | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | only after declarative secret-backed passwords are deployed |
+| root account locked | baseline | keep | `modules/security/base.nix` | reduce direct root login surface |
+| `ghost` in wheel by default | rejected | do not add | `modules/security/governance.nix` | paranoid user should not have default wheel escalation |
+| PAM profile-binding | rejected | keep blocked | `modules/security/user-profile-binding.nix`, `docs/pipeline/POST-STABILITY.md` | current implementation path is unsafe/stack-replacing |
+
+## Kernel and boot hardening
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| stock kernel packages | baseline | keep | `modules/core/boot.nix` | reliability-first workstation baseline |
+| `linux-hardened` kernel | absent | not baseline | none | not chosen due to compatibility/runtime confidence tradeoff |
+| `randomize_kstack_offset=on` | baseline | keep | `modules/core/boot.nix` | low-cost kernel hardening |
+| `debugfs=off` | baseline | keep | `modules/core/boot.nix` | reduce kernel attack/debug surface |
+| `slub_debug=FZP` + `page_poison=1` | baseline | keep | `modules/core/boot.nix` | memory-corruption detection posture |
+| `slab_nomerge` | baseline | keep | `profiles/paranoid.nix`, `profiles/daily.nix`, `modules/core/boot.nix` | low-risk hardening |
+| `init_on_alloc=1` | baseline | keep | `profiles/*`, `modules/core/boot.nix` | hardening at acceptable cost |
+| `init_on_free=1` | daily-softened | keep paranoid-only | `profiles/paranoid.nix`, `profiles/daily.nix` | performance/compatibility tradeoff |
+| `page_alloc.shuffle=1` | baseline | keep | `profiles/*`, `modules/core/boot.nix`, `modules/security/governance.nix` | low-cost hardening |
+| `nosmt=force` | daily-softened | keep paranoid-only | `profiles/paranoid.nix`, `profiles/daily.nix`, `modules/security/governance.nix` | strong hardening but daily usability/perf cost |
+| `usbcore.authorized_default=2` | daily-softened | keep paranoid-only | `profiles/paranoid.nix`, `profiles/daily.nix`, `modules/security/governance.nix` | physical-device friction accepted only on paranoid |
+| `pti=on` | baseline | keep | `profiles/*`, `modules/core/boot.nix` | speculative-execution mitigation |
+| `vsyscall=none` | baseline | keep | `profiles/*`, `modules/core/boot.nix` | shrink legacy attack surface |
+| `oops=panic` | staged | keep off for now | `profiles/*`, `modules/core/boot.nix` | stronger reaction but higher availability risk |
+| `module.sig_enforce=1` | staged | keep off for now | `profiles/*`, `modules/core/boot.nix` | good hardening, but runtime/driver friction risk |
+| `kernel.modules_disabled=1` | staged | keep off for now | `profiles/*`, `modules/security/base.nix` | strong lock-down, but poor operator recovery margin |
+| `kernel.kexec_load_disabled=1` | baseline | keep | `profiles/*`, `modules/security/base.nix`, `modules/security/governance.nix` | reduce alternate-kernel loading surface |
+| restricted SysRq | baseline | keep | `profiles/*`, `modules/security/base.nix`, `modules/security/governance.nix` | emergency functions only |
+| `kernel.io_uring_disabled=2` on paranoid / `1` on daily | daily-softened | keep | `profiles/*`, `modules/security/base.nix`, `modules/security/governance.nix` | stronger disablement on paranoid |
+| module blacklist (dccp/sctp/rds/tipc/firewire) | baseline | keep | `modules/security/base.nix` | remove unused attack surface |
+| Secure Boot via Lanzaboote | staged | post-stability rollout | `modules/security/secure-boot.nix`, `scripts/post-install-secureboot-tpm.sh`, `docs/pipeline/POST-STABILITY.md` | valuable, but intentionally not baseline until validated |
+| TPM-bound unlock | staged | post-stability rollout | `modules/security/secure-boot.nix`, `docs/pipeline/POST-STABILITY.md` | same reason as above |
+
+## Sysctl / kernel runtime controls
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| `kernel.dmesg_restrict=1` | baseline | keep | `modules/security/base.nix` | reduce info leaks |
+| `kernel.kptr_restrict=2` | baseline | keep | `modules/security/base.nix` | reduce kernel pointer leaks |
+| `kernel.unprivileged_bpf_disabled=1` | baseline | keep | `modules/security/base.nix` | reduce unprivileged kernel attack surface |
+| `net.core.bpf_jit_harden=2` | baseline | keep | `modules/security/base.nix` | BPF JIT hardening |
+| `kernel.perf_event_paranoid=3` | baseline | keep | `modules/security/base.nix` | perf restriction |
+| ptrace scope | daily-softened | keep split | `profiles/*`, `modules/security/base.nix` | paranoid uses tighter value |
+| rp_filter / redirect protections | baseline | keep | `modules/security/base.nix` | sane network hardening defaults |
+| IPv6 temporary addresses | baseline | keep | `modules/security/base.nix` | privacy improvement |
+| `net.ipv4.tcp_timestamps=0` on paranoid | daily-softened | keep split | `modules/security/privacy.nix` | privacy vs networking/game compatibility |
+| `icmp_echo_ignore_all=1` | daily-softened | keep paranoid-only | `profiles/*`, `modules/core/boot.nix` | reduces network discoverability |
+| `dev.tty.ldisc_autoload=0` | absent | candidate later | none | useful but not currently encoded |
+| `vm.unprivileged_userfaultfd=0` | absent | candidate later | none | useful but not currently encoded |
+| `kernel.unprivileged_userns_clone=0` | absent | not chosen | none | conflicts with common desktop/container compatibility |
+| `hidepid` for `/proc` | absent | candidate later | none | worth evaluating after stability |
+| `/sys` access restriction layer | deferred | maybe later | `docs/pipeline/POST-STABILITY.md` (conceptual only) | high breakage risk on desktop workloads |
+
+## Isolation and execution surfaces
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| bubblewrap wrapper core | baseline | keep | `modules/security/sandbox-core.nix` | shared same-kernel containment layer |
+| filtered D-Bus for wrappers | baseline | keep | `modules/security/sandbox-core.nix`, `profiles/*` | reduce ambient bus access |
+| wrapped paranoid browsers | baseline | keep | `modules/security/browser.nix`, `profiles/paranoid.nix` | strongest browser baseline short of VMs |
+| ordinary Firefox on daily | daily-softened | keep | `modules/security/browser.nix`, `profiles/daily.nix` | compatibility/social use |
+| app wrappers for daily non-Flatpak apps | daily-softened | keep | `modules/security/sandboxed-apps.nix`, `profiles/daily.nix` | practical containment for daily tools |
+| X11 passthrough in wrappers | daily-softened | keep daily-only | `profiles/daily.nix`, `modules/security/governance.nix` | compatibility relaxation |
+| VM tooling layer | baseline on paranoid | keep | `modules/security/vm-tooling.nix`, `profiles/paranoid.nix` | higher-risk escalation path |
+| VM tooling on daily | daily-softened | keep off | `profiles/daily.nix` | reduce daily complexity |
+| wrapper seccomp | deferred | post-stability | `docs/pipeline/POST-STABILITY.md` | not baseline-ready |
+| wrapper Landlock | deferred | post-stability | `docs/pipeline/POST-STABILITY.md` | not baseline-ready |
+| Firejail | rejected | do not add | none | repo standardizes on bubblewrap wrappers instead |
+| Flatpak | baseline | keep | `modules/security/flatpak.nix` | trusted GUI-app containment layer |
+
+## Browser and privacy posture
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| daily Firefox via enterprise policies | baseline in daily | keep | `modules/security/browser.nix` | stable official policy surface |
+| paranoid Firefox via vendored arkenfox wrapper | baseline in paranoid | keep | `modules/security/browser.nix`, `modules/security/arkenfox/user.js` | stronger privacy baseline |
+| Tor Browser wrapper | baseline optional | keep | `modules/security/browser.nix` | upstream anonymity model + local containment |
+| Mullvad Browser wrapper | baseline optional | keep | `modules/security/browser.nix` | upstream privacy model + local containment |
+| Firefox Sync disabled | baseline | keep | `modules/security/browser.nix`, `PROJECT-STATE.md` | privacy and account-linking reduction |
+| broad `/etc` bind into wrappers | rejected | do not add | `modules/security/sandbox-core.nix` | wrapper posture intentionally tightened |
+
+## Network / identifiers
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| Mullvad app mode | baseline | keep for now | `modules/security/networking.nix`, `PROJECT-STATE.md` | simpler stable baseline |
+| self-owned WireGuard path | staged | post-stability / optional | `modules/security/wireguard.nix`, `modules/core/options.nix` | stronger repo-owned path, but more operator burden |
+| explicit nftables ownership in self-owned WG mode | staged | keep | `modules/security/wireguard.nix` | avoid split authority |
+| MAC randomization on paranoid | baseline | keep | `modules/security/privacy.nix` | stronger identifier reduction |
+| stable-per-network Wi-Fi MAC on daily | daily-softened | keep | `modules/security/privacy.nix` | privacy with fewer daily breakages |
+| OpenSnitch | absent | not baseline | none | not currently needed for repo model |
+
+## Secrets, auditing, monitoring
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| agenix enablement | baseline | keep | `modules/security/secrets.nix`, `profiles/*` | host-side secret path scaffold |
+| actual age secrets payloads | staged | fill later | `modules/security/secrets.nix` | scaffolding exists but secrets are not checked in |
+| `sops-nix` | absent | not chosen | none | agenix chosen instead |
+| audit subsystem + `auditd` on paranoid | baseline | keep | `modules/security/base.nix`, `profiles/paranoid.nix` | visibility layer on hardened profile |
+| `auditd` on daily | daily-softened | keep off | `profiles/daily.nix` | lower noise/overhead |
+| repo custom audit rules | staged | keep off until validated | `modules/security/base.nix`, `docs/pipeline/POST-STABILITY.md` | upstream compatibility issue / needs revalidation |
+| AIDE | baseline | keep | `modules/security/scanners.nix` | integrity monitoring |
+| ClamAV | baseline | keep | `modules/security/scanners.nix` | malware scanning / hygiene layer |
+| AppArmor framework enablement | baseline | keep | `modules/security/base.nix` | useful baseline despite NixOS limitations |
+| custom AppArmor profile library | deferred | post-stability | `docs/pipeline/POST-STABILITY.md` | acknowledged but not baseline-ready |
+| SELinux | absent | not chosen | none | not aligned with current repo shape |
+
+## Source links
+
+- saylesss88 Hardening NixOS: https://saylesss88.github.io/nix/hardening_NixOS.html
+- saylesss88 Browser Privacy: https://saylesss88.github.io/nix/browsing_security.html
+- saylesss88 Lanzaboote: https://saylesss88.github.io/installation/enc/lanzaboote.html
+- Madaidan Linux Hardening Guide: https://madaidans-insecurities.github.io/guides/linux-hardening.html
+- NixOS / MyNixOS `users.mutableUsers`: https://mynixos.com/nixpkgs/option/users.mutableUsers

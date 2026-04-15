@@ -3,7 +3,7 @@
 Only work that happens after the first stable machine-usable baseline is already complete.
 
 ## Rule
-Do not move anything from this file into the baseline path unless it is revalidated and then promoted into `docs/TEST-PLAN.md`.
+Do not move anything from this file into the baseline path unless it is revalidated and then promoted into `docs/pipeline/TEST-PLAN.md`.
 
 ## 1. Secure Boot and TPM rollout
 After the encrypted baseline is stable:

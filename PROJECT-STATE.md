@@ -3,24 +3,31 @@
 Canonical current state: actual architecture, profile split, implemented support boundary, current-stage pipeline, explicit deferred work, and removed/rejected ideas.
 
 ## 1. Repository role
-One NixOS installation with two boot states and two users:
-- `paranoid`: default hardened workstation baseline for the `ghost` user
-- `daily`: boot specialization for the `player` user
+One NixOS installation with one shared hardening base, two boot states, and two users:
+- shared `base`: the non-bootable policy substrate encoded across `hosts/nixos/default.nix`, `modules/core/*`, `modules/security/*`, and shared desktop plumbing
+- `paranoid`: instantiates that shared base as the default hardened workstation baseline for the `ghost` user
+- `daily`: instantiates that shared base as the explicit relaxation layer for the `player` user
+
+Canonical policy reading:
+- `base` should be as hardened as possible, but it is not instantiated alone
+- `paranoid` should soften `base` only enough to remain a real workstation for `ghost`, while staying as hardened and private as the current desktop/workstation model allows
+- `daily` should soften `base` only enough for `player` to handle socialization, gaming, and ordinary recovery-friendly use, while staying as hardened and private as that use case realistically allows
 
 This repo is not trying to be a high-assurance appliance.
 It is a hardened desktop/workstation with explicit same-kernel, desktop-integration, and usability limits.
 
 ## 2. Current stable-baseline definition
-The repo reaches its first stable machine-usable state when all three are complete on target hardware and `docs/TEST-PLAN.md` has been used as the runtime-proof checklist:
-1. `docs/PRE-INSTALL.md`
-2. `docs/INSTALL-GUIDE.md`
-3. `docs/TEST-PLAN.md`
+The repo reaches its first stable machine-usable state when all three are complete on target hardware and `docs/pipeline/TEST-PLAN.md` has been used as the runtime-proof checklist:
+1. `docs/pipeline/PRE-INSTALL.md`
+2. `docs/pipeline/INSTALL-GUIDE.md`
+3. `docs/pipeline/TEST-PLAN.md`
 
-Anything in `docs/POST-STABILITY.md` is intentionally non-blocking for that first stable version.
+Anything in `docs/pipeline/POST-STABILITY.md` is intentionally non-blocking for that first stable version.
 
 ## 3. Current architecture
 
 ### System model
+- one shared hardening base (not a standalone boot profile)
 - one encrypted LUKS2 root device
 - Btrfs subvolumes under LUKS
 - tmpfs root
@@ -104,19 +111,20 @@ Current support boundary:
 ## 5. Current pipeline
 
 ### Current-stage blocking pipeline
-- `docs/PRE-INSTALL.md`
-- `docs/INSTALL-GUIDE.md`
-- `docs/TEST-PLAN.md`
+- `docs/pipeline/PRE-INSTALL.md`
+- `docs/pipeline/INSTALL-GUIDE.md`
+- `docs/pipeline/TEST-PLAN.md`
 
 ### Current-stage support docs
-- `docs/RECOVERY.md`
-- `docs/PERFORMANCE-NOTES.md`
-- `docs/SECURITY-SURFACES.md`
-- `docs/NIX-IMPORT-TREE.md`
+- `docs/pipeline/RECOVERY.md`
+- `docs/maps/PERFORMANCE-NOTES.md`
+- `docs/maps/SECURITY-SURFACES.md`
+- `docs/maps/NIX-IMPORT-TREE.md`
+- `docs/maps/README.md`
 - `scripts/README.md`
 
 ### Deferred-only pipeline
-- `docs/POST-STABILITY.md`
+- `docs/pipeline/POST-STABILITY.md`
 
 ## 6. Support boundary and non-claims
 The repo can reasonably claim:
