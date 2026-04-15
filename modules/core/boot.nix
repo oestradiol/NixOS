@@ -1,45 +1,41 @@
-{ pkgs, ... }: {
-  # Bootloader.
+{ config, lib, pkgs, ... }:
+let
+  kh = config.myOS.security.kernelHardening;
+  sec = config.myOS.security;
+in {
   boot.loader = {
+    systemd-boot.enable = lib.mkDefault (!sec.secureBoot.enable);
     efi.canTouchEfiVariables = true;
     timeout = 2;
-    grub = {
-      enable = true;
-      efiSupport = true;
-      useOSProber = true;
-      devices = [ "nodev" ];
-      default = "saved";
-    };
   };
 
-  # ntsync: required for game compatibility (Proton/Wine synchronization)
-  boot.kernelModules = [ "ntsync" ];
+  boot.kernelPackages = lib.mkDefault pkgs.linuxPackages;
 
-  # SteamOS-aligned sysctl tuning (ported from Jovian-NixOS steamos/sysctl.nix)
+  boot.kernelModules = [ "ntsync" ];
+  boot.kernelParams = [
+    "nvidia_drm.modeset=1"
+    "randomize_kstack_offset=on"
+    "debugfs=off"
+  ] ++ lib.optionals kh.slabNomerge       [ "slab_nomerge" ]
+    ++ lib.optionals kh.initOnAlloc        [ "init_on_alloc=1" ]
+    ++ lib.optionals kh.initOnFree         [ "init_on_free=1" ]
+    ++ lib.optionals kh.pageAllocShuffle   [ "page_alloc.shuffle=1" ]
+    ++ lib.optionals sec.disableSMT        [ "nosmt=force" ]
+    ++ lib.optionals sec.usbRestrict       [ "usbcore.authorized_default=2" ];
+
   boot.kernel.sysctl = {
-    # Gaming scheduler tuning (from steamos-customizations-jupiter)
+    "vm.swappiness" = 30;
+    "vm.max_map_count" = 2147483642;
+    "net.ipv4.tcp_mtu_probing" = true;
+    "net.ipv4.tcp_fin_timeout" = 5;
+  } // lib.optionalAttrs sec.gamingSysctls {
     "kernel.sched_cfs_bandwidth_slice_u" = 3000;
     "kernel.sched_latency_ns" = 3000000;
     "kernel.sched_min_granularity_ns" = 300000;
     "kernel.sched_wakeup_granularity_ns" = 500000;
     "kernel.sched_migration_cost_ns" = 50000;
     "kernel.sched_nr_migrate" = 128;
-
-    # Disable split-lock mitigation (performance impact on some games)
     "kernel.split_lock_mitigate" = 0;
-
-    # Required by many modern games (Proton/Wine)
-    "vm.max_map_count" = 2147483642;
-
-    # Fix Ubisoft Connect and similar services
-    "net.ipv4.tcp_mtu_probing" = true;
-
-    # Faster TCP port reuse for games killed and restarted quickly
-    "net.ipv4.tcp_fin_timeout" = 5;
-
-    # Remove 95% CPU cap on real-time tasks.
-    # VR compositors and audio threads require unrestricted RT scheduling.
-    # Acceptable on a dedicated gaming machine with no multi-user workloads.
     "kernel.sched_rt_runtime_us" = -1;
   };
 }

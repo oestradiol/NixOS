@@ -1,6 +1,6 @@
 { config, lib, pkgs, ... }: {
-  imports = [ ./vr.nix ]; #./other/controllers.nix
-  
+  imports = [ ./vr.nix ]; #./controllers.nix
+
   # Steam
   programs.steam = {
     enable = true;
@@ -58,7 +58,7 @@
     #STEAM_MULTIPLE_XWAYLANDS = "1"; # Great but makes VRChat not open :(
   };
 
-  # Other
+  # xdg portal for Flatpak and Wayland app integration
   xdg.portal = {
     enable = true;
     extraPortals = [ pkgs.xdg-desktop-portal-gtk ];

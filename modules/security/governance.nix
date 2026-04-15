@@ -1,0 +1,65 @@
+{ config, lib, ... }:
+let
+  persistRoot = config.myOS.persistence.root;
+  isDaily = config.myOS.profile == "daily";
+  isParanoid = config.myOS.profile == "paranoid";
+in {
+  assertions = [
+    {
+      assertion = config.users.users ? player;
+      message = "Governance invariant: daily user 'player' must exist.";
+    }
+    {
+      assertion = config.users.users ? "ghost";
+      message = "Governance invariant: paranoid user 'ghost' must exist.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.browserLockdown.enable;
+      message = "Paranoid profile must enable browser lockdown.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.mullvad.enable;
+      message = "Paranoid profile must enable Mullvad/VPN path.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.mullvad.lockdown;
+      message = "Paranoid profile must enable lockdown networking by default.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.impermanence.enable;
+      message = "Paranoid profile must keep impermanence enabled.";
+    }
+    {
+      assertion = !isParanoid || config.myOS.security.agenix.enable;
+      message = "Paranoid profile must keep secrets management enabled.";
+    }
+    {
+      assertion = !isParanoid || (!config.programs.steam.enable);
+      message = "Paranoid profile must not enable Steam.";
+    }
+    {
+      assertion = !config.myOS.security.impermanence.enable || config.fileSystems ? "${persistRoot}";
+      message = "Impermanence requires the configured persist root to be mounted.";
+    }
+    {
+      assertion = !(config.myOS.security.secureBoot.enable && config.boot.loader.grub.enable);
+      message = "Secure Boot path must not coexist with GRUB.";
+    }
+    {
+      assertion = !config.myOS.security.secureBoot.enable || config.boot.loader.efi.canTouchEfiVariables;
+      message = "Secure Boot path requires EFI variable access.";
+    }
+    {
+      assertion = !config.myOS.security.tpm.enable || config.boot.initrd.systemd.enable;
+      message = "TPM-bound unlock requires systemd in the initrd.";
+    }
+    {
+      assertion = !isDaily || config.services.displayManager.sddm.enable;
+      message = "This design assumes SDDM is enabled for explicit user-choice login.";
+    }
+    {
+      assertion = !isParanoid || !(builtins.elem "wheel" config.users.users."ghost".extraGroups);
+      message = "Paranoid user must not be in the wheel group by default.";
+    }
+  ];
+}

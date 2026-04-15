@@ -1,8 +1,11 @@
-# User account, groups, shell
-{ pkgs, ... }: {
-  users.users.ruby = {
+{ pkgs, config, lib, ... }:
+{
+  users.mutableUsers = false;
+
+  users.users.player = {
     isNormalUser = true;
-    description = "Ruby";
+    description = "Daily desktop";
+    home = "/home/player";
     shell = pkgs.zsh;
     extraGroups = [
       "wheel"
@@ -10,12 +13,35 @@
       "video"
       "audio"
       "input"
+      "render"
       "realtime"
-      "gamemode" # Feral GameMode performance daemon
-      "render"   # GPU render node access (Vulkan compute, VR)
+      "gamemode"
+      "libvirtd"
+      "kvm"
+      "flatpak"
     ];
-    packages = with pkgs; [
-      kdePackages.kate
+    initialHashedPassword = lib.mkDefault "!";
+  };
+
+  users.users."ghost" = {
+    isNormalUser = true;
+    description = "Hardened workspace";
+    home = "/home/ghost";
+    shell = pkgs.zsh;
+    extraGroups = [
+      "networkmanager"
+      "video"
+      "audio"
+      "input"
+      "render"
+      "flatpak"
     ];
+    initialHashedPassword = lib.mkDefault "!";
+  };
+
+  security.sudo = {
+    enable = true;
+    wheelNeedsPassword = true;
+    execWheelOnly = true;
   };
 }

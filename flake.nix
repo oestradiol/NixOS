@@ -1,38 +1,53 @@
 {
-  description = "NixOS";
+  description = "NixOS: one install, two boot specialisations, daily + paranoid";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    # Bleeding-edge XR
-    #nixpkgs-xr = {
-    #  url = "github:nix-community/nixpkgs-xr";
-    #  inputs.nixpkgs.follows = "nixpkgs";
-    #};
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     stylix = {
       url = "github:nix-community/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    impermanence.url = "github:nix-community/impermanence";
+
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, stylix, ... }: { #nixpkgs-xr,
+  outputs = inputs@{ nixpkgs, home-manager, stylix, impermanence, agenix, lanzaboote, ... }: {
     nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
+      specialArgs = { inherit inputs; };
       modules = [
-        ./configuration.nix
+        ./hosts/nixos/default.nix
         home-manager.nixosModules.home-manager
         stylix.nixosModules.stylix
+        impermanence.nixosModules.impermanence
+        agenix.nixosModules.default
+        lanzaboote.nixosModules.lanzaboote
         {
-          #nixpkgs.overlays = [ nixpkgs-xr.overlays.default ];
           nixpkgs.config.allowUnfree = true;
+
           home-manager = {
             backupFileExtension = "bkp";
             useGlobalPkgs = true;
             useUserPackages = true;
-            users.ruby = import ./modules/core/home.nix;
+            extraSpecialArgs = { inherit inputs; };
+            users.player = import ./modules/home/daily.nix;
+            users.ghost = import ./modules/home/paranoid.nix;
           };
         }
       ];

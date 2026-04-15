@@ -1,10 +1,5 @@
 # GPU vendor selection — controls driver and VR runtime defaults
-{ lib, ... }: {
-  options.myOS.gpu = lib.mkOption {
-    type = lib.types.enum [ "nvidia" "amd" ];
-    default = "nvidia";
-    description = "GPU vendor — controls driver selection and VR runtime config.";
-  };
-
+# Option declared in modules/core/options.nix; this file only routes imports.
+{ ... }: {
   imports = [ ./nvidia.nix ./amd.nix ];
 }
