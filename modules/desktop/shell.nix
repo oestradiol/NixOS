@@ -17,7 +17,6 @@
 
     shellAliases = {
       echo_mic = "pactl load-module module-loopback latency_msec=200 source=alsa_input.usb-3142_Fifine_Microphone-00.mono-fallback sink=alsa_output.pci-0000_09_00.4.analog-stereo";
-      #rustdesk = "sudo cp /run/sddm/$(sudo ls /run/sddm) ~/.Xauthority && XAUTHORITY=$HOME/.Xauthority DISPLAY=:0 sudo -S rustdesk";
       flake-switch = "sudo nixos-rebuild switch --flake /etc/nixos#nixos";
       flake-update = "sudo nix flake update --flake /etc/nixos";
       nix-update = "flake-update && flake-switch";
