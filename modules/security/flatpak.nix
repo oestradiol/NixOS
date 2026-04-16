@@ -28,10 +28,15 @@
       ProtectKernelTunables = true;
       ProtectKernelLogs = true;
       ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectHostname = true;
       RestrictSUIDSGID = true;
       LockPersonality = true;
       RestrictNamespaces = true;
       RestrictRealtime = true;
+      MemoryDenyWriteExecute = true;
+      SystemCallArchitectures = "native";
+      CapabilityBoundingSet = "";
     };
   };
 
