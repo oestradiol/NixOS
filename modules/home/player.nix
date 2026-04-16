@@ -10,14 +10,9 @@
     setSessionVariables = false;
   };
 
-  programs.git = {
-    enable = true;
-    settings = {
-      user.name = "Elaina";
-      user.email = "48662592+oestradiol@users.noreply.github.com";
-      init.defaultBranch = "main";
-      pull.rebase = false;
-    };
+  programs.git.settings = {
+    user.name = "Elaina";
+    user.email = "48662592+oestradiol@users.noreply.github.com";
   };
 
   home.packages = with pkgs; [

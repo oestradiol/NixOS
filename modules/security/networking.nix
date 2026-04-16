@@ -1,11 +1,10 @@
 { config, lib, pkgs, ... }:
 let
-  # VPN interfaces for Mullvad app mode (deprecated for paranoid)
-  vpnIfaces = [ "wg-mullvad" "tun0" "tun1" ];
+  isDaily = config.myOS.profile == "daily";
 
-  # Determine which VPN mode is active
-  # wireguardMullvad.enable = true → staged self-owned WireGuard path
-  # wireguardMullvad.enable = false → Mullvad app mode (current default on both profiles)
+  # VPN architecture:
+  # daily/player  → Mullvad app mode (GUI + daemon)
+  # paranoid/ghost → self-owned WireGuard path (staged, wireguard.nix)
   useSelfOwnedWireGuard = config.myOS.security.wireguardMullvad.enable;
 in {
   networking.networkmanager.enable = true;
@@ -13,18 +12,20 @@ in {
   # Firewall: enable NixOS firewall in Mullvad app mode
   # Self-owned WireGuard mode uses its own nftables policy exclusively (wireguard.nix)
   networking.firewall.enable = lib.mkDefault (!useSelfOwnedWireGuard);
-  networking.firewall.allowedUDPPorts = lib.optionals (config.myOS.profile == "daily") [ 7 ];
+  networking.firewall.allowedUDPPorts = lib.optionals isDaily [ 7 ];
 
-  networking.interfaces = lib.mkIf (config.myOS.profile == "daily") {
+  networking.interfaces = lib.mkIf isDaily {
     enp5s0.wakeOnLan = {
       enable = true;
       policy = [ "magic" ];
     };
   };
 
-  # Mullvad app mode: enable daemon and resolved
-  # Self-owned WireGuard mode: handled in wireguard.nix (disables mullvad-vpn)
-  services.resolved.enable = lib.mkDefault (!useSelfOwnedWireGuard);
-  services.mullvad-vpn.enable = lib.mkDefault (!useSelfOwnedWireGuard);
-  services.mullvad-vpn.package = pkgs.mullvad-vpn;
+  # DNS resolver: needed on both profiles
+  services.resolved.enable = lib.mkDefault true;
+
+  # Mullvad app mode: daily/player only
+  # Paranoid/ghost uses the self-owned WireGuard path (wireguard.nix)
+  services.mullvad-vpn.enable = lib.mkDefault (isDaily && !useSelfOwnedWireGuard);
+  services.mullvad-vpn.package = lib.mkIf isDaily pkgs.mullvad-vpn;
 }
