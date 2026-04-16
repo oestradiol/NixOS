@@ -61,8 +61,11 @@ Post-stability work can add:
 - richer reference freshness tracking
 - launch/audit gates inspired by the stronger governance pattern you already use elsewhere
 
-## 7. PAM profile-binding
-Keep this out of baseline until:
-- the integration path is redesigned safely
-- lockout recovery is rehearsed
-- login, sudo, su, and display-manager behavior are all validated
+## 7. PAM profile-binding — RESOLVED
+Implemented via account locking in `modules/core/users.nix` instead of PAM:
+- daily profile: ghost account locked (`hashedPassword = "!"`)
+- paranoid profile: player account locked (`hashedPassword = "!"`)
+
+This blocks all auth paths (SDDM, TTY, su, sudo, SSH) without modifying
+PAM service files. Recovery: boot the other profile or use install media.
+The experimental PAM module in `user-profile-binding.nix` remains disabled.
