@@ -27,8 +27,13 @@
       # logged in and trips profile-mount-invariants. These aliases make
       # the choice explicit (see switch.log + tests/bugs/020).
       #
+      # IMPORTANT: For daily, use the two-step workflow:
+      # 1. nixos-rebuild boot - builds new generation, updates boot entries, does NOT activate
+      # 2. nixos-rebuild switch --specialisation daily - activates daily within new generation
+      # This avoids PAM breakage and ensures boot entries are updated.
+      #
       # Debug phase: --show-trace on every alias so failures are actionable.
-      flake-switch-daily    = "sudo nixos-rebuild switch --flake .#nixos --specialisation daily --show-trace";
+      flake-switch-daily    = "sudo nixos-rebuild boot --flake .#nixos --show-trace && sudo nixos-rebuild switch --flake .#nixos --specialisation daily --show-trace";
       flake-switch-paranoid = "sudo nixos-rebuild switch --flake .#nixos --show-trace";
       # Smart default: pick the specialisation that is currently booted.
       flake-switch = "if [ -e /run/current-system/specialisation/daily ]; then flake-switch-daily; else flake-switch-paranoid; fi";
@@ -45,7 +50,8 @@
       # `boot` stages the new generation for the NEXT boot only — does not activate.
       # Useful when swapping profile (paranoid <-> daily) so the profile-mount
       # invariants fire cleanly on a fresh boot with no one logged in.
-      flake-boot-daily    = "sudo nixos-rebuild boot --flake .#nixos --specialisation daily --show-trace";
+      # Note: boot already builds all specialisations, no --specialisation flag needed.
+      flake-boot-daily    = "sudo nixos-rebuild boot --flake .#nixos --show-trace";
       flake-boot-paranoid = "sudo nixos-rebuild boot --flake .#nixos --show-trace";
       flake-boot = "if [ -e /run/current-system/specialisation/daily ]; then flake-boot-daily; else flake-boot-paranoid; fi";
 
