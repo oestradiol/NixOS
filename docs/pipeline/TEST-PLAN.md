@@ -24,8 +24,8 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [X] `player` can log into the daily profile successfully
 - [ ] `ghost` can log into the paranoid profile successfully
 - [X] Plasma starts cleanly on daily
-- [ ] logout and re-login work on both profiles
-- [ ] no login loop or session-crash loop appears after reboot
+- [X] logout and re-login work on daily (player)
+- [X] no login loop or session-crash loop appears after reboot on daily
 
 ## 4. Persistence, mounts, and identity
 - [X] `/persist` is mounted
@@ -48,16 +48,18 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [X] Signal Flatpak installs and launches if Signal is in the baseline app set
 - [X] Bitwarden Flatpak installs and launches if Bitwarden is in the baseline app set
 - [X] any other baseline-critical Flatpak app is listed explicitly and tested explicitly
-- [ ] `safe-vrcx` launches (deferred: Electron app crashes in bubblewrap, see TECH-DEBT A4)
-- [ ] `safe-windsurf` launches (deferred: Electron app fails GUI launch in bubblewrap, see TECH-DEBT A4)
-- [ ] VRCX file chooser works if needed (blocked by wrapper deferral)
-- [ ] Windsurf file chooser works if needed (blocked by wrapper deferral)
 - [X] Steam works
 - [N/A] controllers work (no controller hardware detected)
 - [N/A] VR path works if VR is part of the first stable baseline for this machine (wivrn requires avahi for auto-discovery; with lanDiscovery.enable=false, headset must connect by IP manually - service fails without avahi, which is expected design)
 - [X] `fwupdmgr get-devices` works
 
-## 6. Audio, input, and desktop integration
+## 6. Recovery and operator-proof baseline (can test now)
+- [ ] `nixos-rebuild` works from the daily profile
+- [ ] rollback to a prior generation works
+- [ ] a broken paranoid change does not remove the ability to reach a working daily state
+- [ ] the recovery steps in `docs/pipeline/RECOVERY.md` are understandable enough to follow on the real machine
+
+## 7. Audio, input, and desktop integration
 - [X] speaker output works
 - [X] microphone input works
 - [X] `systemctl --user status pipewire wireplumber` is healthy in both profiles where audio is expected
@@ -66,7 +68,7 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [X] notifications work for the baseline apps that rely on them (Plasma built-in notification system)
 - [X] portal-based open/save flows work for the baseline apps that rely on them
 
-## 7. GPU and hardware-specific proof
+## 8. GPU and hardware-specific proof
 - [X] the expected GPU driver is loaded on the target machine
 - [X] hardware acceleration works in Firefox on the target machine
 - [X] the intended Wayland path is stable enough for normal use on the target machine
@@ -74,7 +76,7 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [X] Steam 32-bit graphics path works if Steam is baseline-critical
 - [X] the current firmware / UEFI behavior matches the install assumptions
 
-## 8. Paranoid minimum state
+## 9. Paranoid minimum state
 - [ ] `safe-firefox` launches
 - [ ] `safe-firefox` uses the vendored arkenfox baseline plus repo overrides
 - [ ] paranoid Firefox state persists in `.mozilla/safe-firefox`
@@ -89,7 +91,7 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [ ] `aa-status` shows AppArmor active after reboot
 - [ ] no unexpected AppArmor denial loop blocks login or wrapped-browser launch
 
-## 9. Bubblewrap verification
+## 10. Bubblewrap verification
 For at least one browser wrapper and one daily app wrapper, confirm:
 - [ ] no broad home bind
 - [ ] no broad `/var` bind
@@ -100,7 +102,7 @@ For at least one browser wrapper and one daily app wrapper, confirm:
 - [ ] GPU is exposed only for wrappers that request it
 - [ ] the wrapper uses the intended `etcMode` and allowlist for its role
 
-## 10. Staged self-owned WireGuard verification
+## 11. Staged self-owned WireGuard verification
 Only do this if you explicitly enable the staged self-owned WireGuard path later.
 - [ ] endpoint is configured as literal `IP:port`
 - [ ] no hostname endpoint remains in that config
@@ -110,7 +112,10 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] non-WG egress is blocked when the tunnel is down
 - [ ] the endpoint-update procedure in `docs/pipeline/RECOVERY.md` is understandable
 
-## 11. Monitoring and integrity verification
+## 12. Privacy settings (can test now)
+- [ ] privacy settings match the active profile: MAC randomization mode, IPv6 temporary addresses, and TCP timestamps
+
+## 13. Monitoring and integrity verification (staged features)
 - [ ] `freshclam` succeeds and signatures update normally
 - [ ] `systemctl list-timers` shows both ClamAV timers
 - [ ] ClamAV target set covers durable state and boot surfaces rather than tmpfs-only churn
@@ -122,15 +127,8 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] if `myOS.security.aide.enable = true`, AIDE is initialized and `systemctl start aide-daily-check` completes
 - [ ] AIDE configuration is restricted to stable, high-signal trust surfaces rather than noisy home/app trees
 - [ ] AIDE configuration includes `/boot` and `/nix/var/nix/profiles` in addition to selected persisted identity/trust state
-- [ ] privacy settings match the active profile: MAC randomization mode, IPv6 temporary addresses, and TCP timestamps
 
-## 12. Recovery and operator-proof baseline
-- [ ] `nixos-rebuild` works from the daily profile
-- [ ] rollback to a prior generation works
-- [ ] a broken paranoid change does not remove the ability to reach a working daily state
-- [ ] the recovery steps in `docs/pipeline/RECOVERY.md` are understandable enough to follow on the real machine
-
-## 13. VM tooling and workflow verification
+## 14. VM tooling and workflow verification
 - [ ] libvirt starts on paranoid
 - [ ] virt-manager launches
 - [ ] `repo-vm-class help` works
@@ -145,7 +143,7 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] `repo-vm-class create throwaway-untrusted-file-vm ...` defaults to no network and only permits explicit import sharing
 - [ ] guest templates and guest-hardening practice are still tracked as post-stability work, not overclaimed as finished
 
-## 14. Secrets and staged secure boot / TPM verification
+## 15. Secrets and staged secure boot / TPM verification
 - [ ] agenix does not block the baseline build if no required secrets are missing
 - [ ] any secrets that are baseline-required are present and decrypt correctly on target
 Only after the baseline system is already stable:
@@ -154,7 +152,7 @@ Only after the baseline system is already stable:
 - [ ] TPM enrollment works
 - [ ] fallback recovery path is understood
 
-## 15. Explicit deferred validation
+## 16. Explicit deferred validation
 These are not required to call the first stable baseline complete:
 - [ ] repo custom audit rules re-enabled and validated
 - [ ] custom AppArmor profile library

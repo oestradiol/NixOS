@@ -37,7 +37,7 @@ Read in this order:
 - hardening knob ledger → `docs/maps/HARDENING-TRACKER.md`
 - security boundary map → `docs/maps/SECURITY-SURFACES.md`
 - Nix import tree → `docs/maps/NIX-IMPORT-TREE.md`
-- open technical debt (commented code, staged knobs, deferred decisions) → `docs/maps/TECH-DEBT.md`
+- design notes and conventions → `docs/maps/TECH-DEBT.md`
 - governance navigation → `docs/maps/README.md`
 
 ## Repo map
@@ -76,4 +76,4 @@ After that point:
 - wrapper isolation is not VM-equivalent; same-kernel containment only
 - the desktop stack is not high assurance
 - passing static review is not runtime proof
-- staged features (see `TECH-DEBT.md` §3) are not part of the baseline until explicitly graduated
+- staged features (see `HARDENING-TRACKER.md`) are not part of the baseline until explicitly graduated

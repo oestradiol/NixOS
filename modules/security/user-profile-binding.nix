@@ -10,8 +10,7 @@
 # The current profile/user binding policy is enforced by **account locking**
 # (see modules/core/users.nix: daily locks `ghost`, paranoid locks `player`),
 # which is simpler, safer, and achieves the same effect. See
-# docs/maps/HARDENING-TRACKER.md row "PAM profile-binding" (rejected) and
-# docs/maps/TECH-DEBT.md §4.
+# docs/maps/HARDENING-TRACKER.md row "PAM profile-binding" (rejected).
 #
 # This file stays in-tree so the option cannot be flipped on by accident:
 # enabling it deliberately fires the assertion below.

@@ -20,7 +20,7 @@
   # message (failed to reach Plasma/greetd's bus before the login screen).
   # Do NOT re-enable without first validating that greetd, regreet, plasma6,
   # xdg-portal, pipewire, and the bwrap wrappers all come up cleanly on the
-  # target hardware with dbus-broker. See docs/maps/TECH-DEBT.md §1 A1.
+  # target hardware with dbus-broker. See docs/pipeline/POST-STABILITY.md §8.
   services.udisks2.enable = true;
   services.printing.enable = false;
   services.openssh.enable = false;

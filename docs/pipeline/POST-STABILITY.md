@@ -61,7 +61,48 @@ Post-stability work can add:
 - richer reference freshness tracking
 - launch/audit gates inspired by the stronger governance pattern you already use elsewhere
 
-## 7. Lanzaboote feature parity tracking
+## 7. Electron app sandboxing
+Current state:
+- VRCX and Windsurf (Electron apps) fail in bubblewrap sandbox despite --no-sandbox, /dev/shm, /tmp access
+- VRCX crashes with ThreadPoolForeg error
+- Windsurf fails to launch GUI despite process running
+- Wrappers disabled and deferred 2026-04-16
+
+Post-stability work:
+- Research specialized Electron sandbox configuration
+- Test alternative containment approaches (e.g., Flatpak, Firejail)
+- Re-enable wrappers only after reliable containerization is proven
+
+## 8. dbus-broker re-enablement
+Current state:
+- dbus-broker caused boot-time hang on D-Bus message 2026-04
+- dbus-daemon used by default with explicit comment recording the reason
+- Comment in modules/desktop/base.nix documents the validation requirement
+
+Post-stability work:
+- Re-enable dbus-broker only after validating greetd/regreet, plasma6, xdg-portal, pipewire, and bwrap wrappers under dbus-broker
+- Remove comment once validation passes
+
+## 9. age.secrets scaffolding cleanup
+Current state:
+- Example age.secrets.mullvad-account and age.secrets.ssh-private placeholders in modules/security/secrets.nix
+- Scaffolding retained while secrets are not yet populated
+
+Post-stability work:
+- Drop placeholders once secret layout is finalized AND self-owned WireGuard path graduates
+- See HARDENING-TRACKER for WireGuard graduation signal
+
+## 10. Gaming optional tools
+Current state:
+- mangohud and protontricks commented out in modules/desktop/gaming.nix
+- protonup-qt is enabled and manages Proton builds at runtime
+- Comment documents that these are enable-on-demand, not baseline
+
+Post-stability work:
+- No action required; these are intentionally deferred as on-demand tools
+- Remove comment if/when promoted to baseline
+
+## 11. Lanzaboote feature parity tracking
 Current state:
 - systemd-boot used by default with extraInstallCommands for default daily entry
 - Secure Boot path uses Lanzaboote with `settings.default = "@saved"` to preserve last-selected entry
