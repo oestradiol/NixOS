@@ -199,5 +199,4 @@ This section now tracks the Madaidan guide **section by section**, including ite
 
 | topic | repo state | where | why | source |
 |---|---|---|---|---|
-| `users.mutableUsers = true` today | baseline | `modules/core/users.nix` | current install flow still relies on mutable/imperative password handling | https://mynixos.com/nixpkgs/option/users.mutableUsers |
-| future `users.mutableUsers = false` | staged idea | `docs/maps/PROFILE-POLICY.md` | only after declarative secret-backed password rollout | https://mynixos.com/nixpkgs/option/users.mutableUsers |
+| `users.mutableUsers = false` (immutable) | baseline | `modules/core/users.nix` | declarative password management via hashedPasswordFile | https://mynixos.com/nixpkgs/option/users.mutableUsers |

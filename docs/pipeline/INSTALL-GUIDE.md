@@ -20,7 +20,8 @@ You are about to install the repo's expected layout:
 
 ### 3. Secrets and local data
 Before install or immediately after first boot, know where these will live:
-- user password setup method
+- user passwords are set declaratively via hashedPasswordFile pointing to /persist/secrets/{player,ghost}-password.hash
+- the install script will prompt for passwords and write the hashed files
 - any agenix-managed secret files you will actually use
 - Mullvad app credentials/workflow if you use the app path immediately
 - if you later enable the staged self-owned WireGuard path: private key, optional preshared key, tunnel address, server public key, and pinned literal endpoint `IP:port`

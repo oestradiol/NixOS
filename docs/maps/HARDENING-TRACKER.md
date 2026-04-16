@@ -17,8 +17,7 @@ Status values:
 | two-account split (`ghost` / `player`) | baseline | keep | `modules/core/users.nix`, `PROJECT-STATE.md` | core governance model |
 | `ghost` expected on `paranoid` | baseline | keep | `PROJECT-STATE.md`, `modules/security/governance.nix` | hardened workspace split |
 | `player` expected on `daily` | baseline | keep | `PROJECT-STATE.md` | normal desktop split |
-| `users.mutableUsers = true` | baseline | keep for now | `modules/core/users.nix` | current install path still uses imperative password setup |
-| `users.mutableUsers = false` | staged | maybe later | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | only after declarative secret-backed passwords are deployed |
+| `users.mutableUsers = false` (immutable) | baseline | keep | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | declarative password management via hashedPasswordFile |
 | root account locked | baseline | keep | `modules/security/base.nix` | reduce direct root login surface |
 | `ghost` in wheel by default | rejected | do not add | `modules/security/governance.nix` | paranoid user should not have default wheel escalation |
 | profile-user binding via account locking | baseline | keep | `modules/core/users.nix`, `docs/pipeline/POST-STABILITY.md` | daily locks ghost, paranoid locks player |

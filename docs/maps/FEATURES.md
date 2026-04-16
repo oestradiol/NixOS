@@ -23,7 +23,7 @@ This is what the repo currently contains.
 
 * `player` = daily user
 * `ghost` = hardened user
-* mutable users enabled
+* immutable users (declarative password management via hashedPasswordFile)
 * root account lock path supported
 * `sudo` wheel restriction when root is locked
 * persisted identity files via impermanence

@@ -124,7 +124,7 @@ That would likely add naming symmetry without adding real clarity.
 - staged surfaces are mostly kept out of the baseline path
 
 ### Weak parts
-- `users.mutableUsers = true` is operationally understandable but should be tracked as an explicit temporary policy decision
+- None currently identified
 
 ## 5. Decision on repo structure
 
@@ -140,15 +140,12 @@ This folder is that layer.
 ## 6. Immediate governance decisions
 
 ### `users.mutableUsers`
-Current state: keep `true` for now.
+Current state: `false` (immutable users, declarative password management).
 
 Reason:
-- current install flow still expects imperative password setting during install/first boot
-- current repo does not yet ship a finished encrypted-secret pipeline for user password material
-- switching to `false` before that exists would make user lifecycle more brittle and less recoverable
-
-Future move condition:
-- only switch after password material is delivered declaratively through `hashedPasswordFile` or equivalent secret-backed inputs and the install docs are rewritten around that model
+- install script writes hashed passwords to `/persist/secrets/{player,ghost}-password.hash`
+- users.nix reads passwords declaratively via `hashedPasswordFile`
+- this is the hardened baseline and is already implemented
 
 ### Kernel posture
 Current state: keep the stock kernel package set with an explicit hardening layer.
