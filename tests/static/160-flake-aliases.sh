@@ -35,7 +35,7 @@ for a in flake-switch-daily flake-switch-paranoid flake-switch \
 done
 
 describe "daily aliases pass --specialisation daily"
-for a in flake-switch-daily flake-test-daily flake-boot-daily; do
+for a in flake-switch-daily flake-test-daily; do
   # Extract the value of this alias from shell.nix: anything after `$alias = "` up to `";`
   line=$(grep -E "^\s*${a}\s*=" "$shell_nix" | head -1)
   if [[ -z "$line" ]]; then
@@ -48,6 +48,16 @@ for a in flake-switch-daily flake-test-daily flake-boot-daily; do
     fail "$a does NOT pass --specialisation daily" "line: $line"
   fi
 done
+
+describe "boot-daily does NOT pass --specialisation (boot builds all specialisations)"
+line=$(grep -E "^\s*flake-boot-daily\s*=" "$shell_nix" | head -1)
+if [[ -z "$line" ]]; then
+  fail "could not locate alias line for flake-boot-daily"
+elif [[ "$line" == *'--specialisation'* ]]; then
+  fail "flake-boot-daily wrongly carries --specialisation" "line: $line"
+else
+  pass "flake-boot-daily does NOT pass --specialisation (boot already builds all)"
+fi
 
 describe "paranoid aliases do NOT pass --specialisation daily"
 for a in flake-switch-paranoid flake-test-paranoid flake-boot-paranoid; do
