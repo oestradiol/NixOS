@@ -108,7 +108,42 @@ Status values:
 | explicit nftables ownership in self-owned WG mode | staged | keep | `modules/security/wireguard.nix` | avoid split authority |
 | MAC randomization on paranoid | baseline | keep | `modules/security/privacy.nix` | stronger identifier reduction |
 | stable-per-network Wi-Fi MAC on daily | daily-softened | keep | `modules/security/privacy.nix` | privacy with fewer daily breakages |
+| firewall-OR-nftables invariant | baseline | keep | `modules/security/governance.nix` | single-packet-filter always active; catches the networking.nix ↔ wireguard.nix coupling |
+| daily WoL: UDP 7 (echo) globally open | removed | keep off | `modules/security/networking.nix`, `tests/static/140-firewall-surface.sh` | layer-2 magic packets don't need a firewall port; dead surface removed 2026-04 |
+| daily WoL: UDP 9 on `enp5s0` only | baseline | keep | `modules/security/networking.nix` | WoL-over-UDP compatibility, LAN-scoped, never global |
 | OpenSnitch | absent | not baseline | none | not currently needed for repo model |
+
+## LAN discovery / mDNS
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| `services.avahi` on paranoid | baseline (off) | keep off | `modules/security/governance.nix`, `modules/desktop/vr.nix` | paranoid doesn't import VR; no mDNS use case; identity beacon |
+| `services.avahi` on daily | daily-softened (opt-in) | off unless operator enables `myOS.vr.lanDiscovery` | `modules/desktop/vr.nix`, `modules/core/options.nix` | upstream `wivrn.nix` forces avahi without mkDefault; we gate behind a knob |
+| `myOS.vr.lanDiscovery.enable` | baseline (false) | keep default off | `modules/core/options.nix`, `modules/desktop/vr.nix` | connect headset by manual IP; avoid mDNS broadcast |
+| `myOS.vr.lanInterfaces` scope | baseline | enforce non-empty when lanDiscovery on | `modules/security/governance.nix`, `tests/static/150-avahi-governance.sh` | prevents avahi broadcast on VPN/bluetooth/guest interfaces when ever enabled |
+| WiVRn `openFirewall = true` (upstream) | suppressed | keep off; per-interface rules instead | `modules/desktop/vr.nix`, `tests/static/140-firewall-surface.sh` | upstream opens TCP/UDP 9757 on every interface; we bind to `myOS.vr.lanInterfaces` only |
+| `services.geoclue2` (Plasma 6 default) | removed | keep off | `modules/desktop/base.nix`, `modules/security/governance.nix` | Wi-Fi BSSID queries to Mozilla Location Service = identity beacon; not referenced by any declared feature |
+
+## Filesystem / tmpfs capacity
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| `/` on tmpfs | baseline | keep | `hosts/nixos/fs-layout.nix`, `docs/maps/FEATURES.md` | impermanence model |
+| `/` tmpfs size | baseline (16G) | keep ≥8G | `hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | 4G was empirically too small for KDE + VR + IDE; tmpfs is RAM-backed, cap is upper bound only |
+| `/tmp` on its own tmpfs | baseline | keep | `hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | isolates /tmp spikes from /var/lib / /run / /root / home-manager profile paths |
+| `/tmp` nosuid+nodev | baseline | keep | `hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | defense-in-depth |
+| `boot.tmp.cleanOnBoot = true` | baseline | keep | `modules/security/base.nix`, `tests/static/170-fs-layout.sh` | wipes /tmp across boots |
+| `/var/lib/logrotate` persisted | baseline | keep | `modules/security/impermanence.nix` | without it `logrotate.service` fails on tmpfs-full root |
+
+## Operator ergonomics / rebuild
+
+| knob | state | current policy | code/docs | rationale |
+|---|---|---|---|---|
+| specialisation-aware `flake-switch-*` aliases | baseline | keep | `modules/desktop/shell.nix`, `tests/static/160-flake-aliases.sh`, `tests/bugs/030-flake-switch-alias.sh` | single `flake-switch` without `--specialisation` silently targeted paranoid and tripped profile-mount-invariants |
+| smart default `flake-switch` (branches on booted spec) | baseline | keep | `modules/desktop/shell.nix` | zero-surprise default that matches the booted profile |
+| `flake-rollback` (panic button) | baseline | keep | `modules/desktop/shell.nix` | re-applies `/run/current-system` when a `test` or `switch` misbehaves |
+| `flake-dry` (`dry-activate`) | baseline | keep | `modules/desktop/shell.nix` | inspect without applying |
+| `--show-trace` on every rebuild alias | baseline | keep while in test phase | `modules/desktop/shell.nix`, `tests/bugs/030-flake-switch-alias.sh` | actionable failures during the debug phase; reconsider once stability is established |
 
 ## Secrets, auditing, monitoring
 

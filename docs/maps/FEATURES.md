@@ -78,7 +78,9 @@ This is what the repo currently contains.
 
 ### Filesystem and mount model
 
-* `/` on tmpfs
+* `/` on tmpfs (capped at 16G; RAM+swap backed, only uses what is held)
+* `/tmp` on its own tmpfs (`size=50%`, `nosuid,nodev`) — isolates /tmp spikes from the root fs
+* `boot.tmp.cleanOnBoot = true` wipes `/tmp` at every boot
 * `/boot` on vfat
 * `/nix` on Btrfs `@nix`
 * `/persist` on Btrfs `@persist`
@@ -152,11 +154,15 @@ This is what the repo currently contains.
 ### Networking and privacy baseline
 
 * NetworkManager enabled
-* daily Wake-on-LAN on `enp5s0`
+* daily Wake-on-LAN on `enp5s0` (layer-2 magic packets; no global firewall port)
+* daily: UDP 9 allowed ONLY on `enp5s0` for WoL-over-UDP compatibility (LAN-scoped, never global)
 * daily: Mullvad app mode (GUI + daemon)
 * paranoid: self-owned WireGuard path (staged off by default)
 * resolved enabled system-wide
 * Mullvad daemon enabled on daily only
+* firewall: either nixpkgs firewall OR nftables is active at all times (enforced by governance assertion)
+* `services.geoclue2.enable = false` (Plasma 6 auto-enables it; we mkForce it off — MLS identity beacon)
+* `services.avahi` suppressed on both profiles by default; daily can opt in via `myOS.vr.lanDiscovery.enable`
 * privacy layer:
 
   * paranoid:
@@ -169,6 +175,17 @@ This is what the repo currently contains.
     * stable per-network MAC
     * scan randomization
     * TCP timestamps enabled
+
+### VR / LAN discovery (daily only)
+
+* `services.wivrn.enable = true` on daily
+* `services.wivrn.openFirewall` forced to `false` (upstream opens TCP/UDP 9757 on every interface)
+* WiVRn port 9757 opened ONLY on interfaces listed in `myOS.vr.lanInterfaces` (default `[ "enp5s0" ]`)
+* `myOS.vr.lanDiscovery.enable`: opt-in knob (default OFF)
+
+  * OFF: `services.avahi` disabled; connect by typing the host IP manually in the headset app
+  * ON : `services.avahi.enable = true`, advertising scoped to `myOS.vr.lanInterfaces` (never broadcasts on VPN / bluetooth / guest interfaces)
+* paranoid never imports VR, so avahi stays off unconditionally
 
 ### Browser/security sandboxing
 

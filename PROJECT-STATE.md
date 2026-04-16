@@ -121,10 +121,17 @@ Current support boundary:
 - `docs/maps/SECURITY-SURFACES.md`
 - `docs/maps/NIX-IMPORT-TREE.md`
 - `docs/maps/README.md`
+- `docs/maps/TECH-DEBT.md`
 - `scripts/README.md`
+- `tests/README.md`
 
 ### Deferred-only pipeline
 - `docs/pipeline/POST-STABILITY.md`
+
+### Operator-local (gitignored)
+- `hosts/nixos/local.nix` — per-install hardware quirks, conditionally imported by `hosts/nixos/default.nix`; never tracked
+- `LOCAL-NOTES.md` (if the operator creates it) — personal notes that must not be published; gitignored
+- `switch.log` — transient nixos-rebuild artefact; gitignored
 
 ## 6. Support boundary and non-claims
 The repo can reasonably claim:
