@@ -61,7 +61,7 @@ else
   info "current flake-switch: $alias_line"
   # Accept either form: direct --specialisation, or the smart-default branch.
   if grep -Eq 'flake-switch\s*=.*--specialisation' "$shell_nix" \
-     || grep -Eq 'flake-switch\s*=.*/run/current-system/specialisation/daily' "$shell_nix"; then
+     || grep -Eq 'flake-switch\s*=.*/nix/var/nix/profiles/system/specialisation/daily' "$shell_nix"; then
     pass "flake-switch is specialisation-aware (direct flag OR smart-default branch)"
   else
     fail "flake-switch alias does not route by specialisation" \

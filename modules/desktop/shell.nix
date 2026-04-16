@@ -27,22 +27,21 @@
       # logged in and trips profile-mount-invariants. These aliases make
       # the choice explicit (see switch.log + tests/bugs/020).
       #
-      # IMPORTANT: For daily, use the two-step workflow:
-      # 1. nixos-rebuild boot - builds new generation, updates boot entries, does NOT activate
-      # 2. nixos-rebuild switch --specialisation daily - activates daily within new generation
-      # This avoids PAM breakage and ensures boot entries are updated.
+      # IMPORTANT: For daily, use --specialisation daily to activate the daily specialisation.
+      # This avoids PAM breakage by ensuring the correct profile is activated.
       #
       # Debug phase: --show-trace on every alias so failures are actionable.
-      flake-switch-daily    = "sudo nixos-rebuild boot --flake .#nixos --show-trace && sudo nixos-rebuild switch --flake .#nixos --specialisation daily --show-trace";
+      flake-switch-daily    = "sudo nixos-rebuild switch --flake .#nixos --specialisation daily --show-trace";
       flake-switch-paranoid = "sudo nixos-rebuild switch --flake .#nixos --show-trace";
       # Smart default: pick the specialisation that is currently booted.
-      flake-switch = "if [ -e /run/current-system/specialisation/daily ]; then flake-switch-daily; else flake-switch-paranoid; fi";
+      # Check profile specialisation symlink since /run/current-system/specialisation/daily is not created by NixOS
+      flake-switch = "if [ -e /nix/var/nix/profiles/system/specialisation/daily ]; then flake-switch-daily; else flake-switch-paranoid; fi";
 
       # `test` applies the new configuration WITHOUT creating a boot entry.
       # Use this for iterative work during the debug/test phase.
       flake-test-daily    = "sudo nixos-rebuild test --flake .#nixos --specialisation daily --show-trace";
       flake-test-paranoid = "sudo nixos-rebuild test --flake .#nixos --show-trace";
-      flake-test = "if [ -e /run/current-system/specialisation/daily ]; then flake-test-daily; else flake-test-paranoid; fi";
+      flake-test = "if [ -e /nix/var/nix/profiles/system/specialisation/daily ]; then flake-test-daily; else flake-test-paranoid; fi";
 
       # `dry-activate` evaluates + builds, shows what WOULD happen, applies nothing.
       flake-dry  = "nixos-rebuild dry-activate --flake .#nixos --show-trace";
@@ -51,9 +50,7 @@
       # Useful when swapping profile (paranoid <-> daily) so the profile-mount
       # invariants fire cleanly on a fresh boot with no one logged in.
       # Note: boot already builds all specialisations, no --specialisation flag needed.
-      flake-boot-daily    = "sudo nixos-rebuild boot --flake .#nixos --show-trace";
-      flake-boot-paranoid = "sudo nixos-rebuild boot --flake .#nixos --show-trace";
-      flake-boot = "if [ -e /run/current-system/specialisation/daily ]; then flake-boot-daily; else flake-boot-paranoid; fi";
+      flake-boot    = "sudo nixos-rebuild boot --flake .#nixos --show-trace";
 
       # Panic button: re-apply the currently-booted generation. Restores the
       # live system to whatever was activated at boot time (undoes a bad `test`

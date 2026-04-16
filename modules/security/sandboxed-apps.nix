@@ -16,9 +16,11 @@ let
     network ? true,
     gpu ? true,
     sessionBusTalk ? [ ],
+    extraBwrapArgs ? [ ],
+    args ? [ ],
   }:
     core.mkSandboxWrapper {
-      inherit name package binaryName persist network;
+      inherit name package binaryName persist network extraBwrapArgs args;
       gpu = if sandbox.gpu then gpu else false;
       enableDbusProxy = sandbox.dbusFilter;
       wayland = sandbox.wayland;
@@ -35,7 +37,7 @@ let
   safeVrcxDaily = mkDailyApp {
     name = "vrcx";
     package = pkgs.vrcx;
-    binaryName = "VRCX";
+    binaryName = "vrcx";
     persist = [
       ".config/VRCX"
       ".local/share/VRCX"
@@ -47,6 +49,11 @@ let
       "org.freedesktop.portal.FileChooser"
       "org.freedesktop.portal.Settings"
     ];
+    extraBwrapArgs = [
+      "--bind" "/tmp" "/tmp"
+      "--bind" "/dev/shm" "/dev/shm"
+    ];
+    args = [ "--no-sandbox" ];
   };
 
   safeWindsurfDaily = mkDailyApp {
@@ -95,10 +102,10 @@ let
 in {
   config = lib.mkIf (sandbox.apps && profile == "daily") {
     environment.systemPackages = [
-      safeVrcxDaily
-      safeWindsurfDaily
-      safeVrcxDesktop
-      safeWindsurfDesktop
+      # safeVrcxDaily  # Deferred: Electron app crashes in bubblewrap despite --no-sandbox, /dev/shm, /tmp access
+      # safeWindsurfDaily  # Deferred: Electron app fails to launch GUI in bubblewrap despite --no-sandbox, /dev/shm, /tmp access
+      # safeVrcxDesktop
+      # safeWindsurfDesktop
     ];
   };
 }

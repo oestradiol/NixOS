@@ -88,7 +88,7 @@ assert_ne "$line_s"  '' "flake-switch (smart default) declared"
 
 describe "debug-mode ergonomics: --show-trace required everywhere during test phase"
 for a in flake-switch-daily flake-switch-paranoid flake-test-daily flake-test-paranoid \
-         flake-boot-daily flake-boot-paranoid flake-dry; do
+         flake-boot flake-dry; do
   line=$(grep -E "^\s*${a}\s*=" "$shell_nix" | head -1)
   [[ -z "$line" ]] && { fail "alias missing: $a"; continue; }
   if [[ "$line" == *'--show-trace'* ]]; then
