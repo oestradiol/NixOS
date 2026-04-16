@@ -16,6 +16,7 @@ in {
       "debugfs=off"
       "slub_debug=FZP"
       "page_poison=1"
+      "hash_pointers=always"
     ] ++ lib.optionals kh.slabNomerge       [ "slab_nomerge" ]
     ++ lib.optionals kh.initOnAlloc        [ "init_on_alloc=1" ]
     ++ lib.optionals kh.initOnFree         [ "init_on_free=1" ]

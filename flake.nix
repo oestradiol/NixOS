@@ -67,8 +67,6 @@
             useGlobalPkgs = true;
             useUserPackages = true;
             extraSpecialArgs = { inherit inputs; };
-            users.ghost = import ./modules/home/ghost.nix;
-            users.player = import ./modules/home/player.nix;
           };
         }
       ];

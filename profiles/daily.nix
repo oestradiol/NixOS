@@ -5,6 +5,8 @@
   myOS.profile = lib.mkForce "daily";
   myOS.gpu = lib.mkForce "nvidia";
 
+  home-manager.users.player = import ../modules/home/player.nix;
+
   myOS.gaming = {
     controllers.enable = lib.mkForce true;
   };

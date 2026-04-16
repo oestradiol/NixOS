@@ -1,5 +1,7 @@
 # VR option declarations and shared config
 { config, lib, pkgs, ... }: {
+  users.groups.realtime = {};
+
   security.pam.loginLimits = [
     # VR Compositor locks memory pages.
     # Without unlimited memlock, this fails with EPERM.

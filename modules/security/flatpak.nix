@@ -24,7 +24,7 @@
       PrivateDevices = true;
       ProtectSystem = "strict";
       ProtectHome = true;
-      ReadWritePaths = [ "/var/lib/flatpak" "/etc/flatpak" ];
+      ReadWritePaths = [ "/var/lib/flatpak" ];
       ProtectKernelTunables = true;
       ProtectKernelLogs = true;
       ProtectControlGroups = true;

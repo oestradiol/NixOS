@@ -6,6 +6,8 @@
   myOS.profile = "paranoid";
   myOS.gpu = "nvidia";
 
+  home-manager.users.ghost = import ../modules/home/ghost.nix;
+
   myOS.gaming = {
     controllers.enable = false;
   };

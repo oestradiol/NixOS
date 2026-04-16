@@ -18,7 +18,7 @@ in
     options = [ "mode=755" "size=4G" ];
   };
   fileSystems."/boot" = {
-    device = "/dev/disk/by-partlabel/NIXBOOT";
+    device = "/dev/disk/by-label/NIXBOOT";
     fsType = "vfat";
     options = [ "fmask=0077" "dmask=0077" ];
   };
@@ -84,6 +84,20 @@ in
     device = "/swap/swapfile";
     size = 8192;
   }];
+
+  # Harden /persist: restrict to root-only traversal.
+  # Impermanence bind mounts are set up by root during activation and do not
+  # require unprivileged access to the backing store.  Without this, any user
+  # can browse /persist and read world-readable files (NM connection names,
+  # systemd state, Bluetooth pairing dirs, Mullvad state, etc.).
+  systemd.tmpfiles.rules = [
+    "z /persist 0700 root root - -"
+    "z /persist/secrets 0700 root root - -"
+  ] ++ lib.optionals isParanoid [
+    # Defense-in-depth: lock ghost's impermanence backing store even though
+    # /persist itself is already 0700.
+    "z /persist/home/ghost 0700 ghost users - -"
+  ];
 
   systemd.services.profile-mount-invariants = {
     description = "Assert profile-specific mount isolation invariants";

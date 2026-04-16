@@ -13,7 +13,6 @@ in {
 
         directories = [
           "/var/lib/nixos"
-          # NOTE: Both profiles persist a stable unique machine-id. No rotation issues.
           "/var/lib/systemd"
           "/var/lib/aide"  # AIDE integrity database
           "/var/lib/sbctl"  # Secure Boot keys (Lanzaboote/sbctl)
@@ -32,17 +31,7 @@ in {
           "/var/lib/NetworkManager"
         ];
 
-        # CRITICAL: /etc identity files must persist with tmpfs root + mutableUsers
-        # Without these, imperative password changes are lost on reboot
-        # See: https://nixos.org/manual/nixos/stable/options#opt-users.mutableUsers
-        files = [
-          "/etc/passwd"
-          "/etc/group"
-          "/etc/shadow"
-          "/etc/gshadow"
-          "/etc/subuid"
-          "/etc/subgid"
-        ]
+        files = []
         # machine-id: persisted for both profiles; systemd generates the unique ID
         ++ lib.optionals persistMachineId [
           "/etc/machine-id"
@@ -53,7 +42,30 @@ in {
           "/etc/ssh/ssh_host_rsa_key"
           "/etc/ssh/ssh_host_rsa_key.pub"
         ];
+      };
+    })
+    
+    # Set explicit machine-id if configured (exceptional override path)
+    (lib.mkIf (impermanenceEnabled && persistMachineId && machineIdValue != null) {
+      # Use systemd tmpfiles to set the machine-id at boot
+      # This runs before systemd-machine-id-commit.service
+      systemd.tmpfiles.rules = [
+        "f /etc/machine-id 0444 root root - ${machineIdValue}"
+      ];
 
+      # Ensure the file is writable during early boot so tmpfiles can set it
+      boot.initrd.systemd.tmpfiles.settings = {
+        "10-machine-id"."/etc/machine-id"."f" = {
+          mode = "0444";
+          user = "root";
+          group = "root";
+          argument = machineIdValue;
+        };
+      };
+    })
+
+    (lib.mkIf (impermanenceEnabled && profile == "paranoid") {
+      environment.persistence.${persistRoot} = {
         # NOTE: Daily profile (/home/player): fully persistent Btrfs subvolume (@home-daily).
         # Do not duplicate that persistence through impermanence allowlists here.
         #
@@ -78,25 +90,6 @@ in {
             ".mozilla/safe-firefox"
           ];
           files = [ ".zsh_history" ];
-        };
-      };
-    })
-    
-    # Set explicit machine-id if configured (exceptional override path)
-    (lib.mkIf (impermanenceEnabled && persistMachineId && machineIdValue != null) {
-      # Use systemd tmpfiles to set the machine-id at boot
-      # This runs before systemd-machine-id-commit.service
-      systemd.tmpfiles.rules = [
-        "f /etc/machine-id 0444 root root - ${machineIdValue}"
-      ];
-
-      # Ensure the file is writable during early boot so tmpfiles can set it
-      boot.initrd.systemd.tmpfiles.settings = {
-        "10-machine-id"."/etc/machine-id"."f" = {
-          mode = "0444";
-          user = "root";
-          group = "root";
-          argument = machineIdValue;
         };
       };
     })

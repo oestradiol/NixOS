@@ -13,7 +13,7 @@
   services.displayManager.defaultSession = "plasma";
 
   security.polkit.enable = true;
-  services.dbus.implementation = "broker";
+  #services.dbus.implementation = "broker";
   services.udisks2.enable = true;
   services.printing.enable = false;
   services.openssh.enable = false;

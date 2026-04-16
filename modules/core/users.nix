@@ -2,20 +2,14 @@
 let
   lockRoot = config.myOS.security.lockRoot;
 in {
-  # NOTE: mutableUsers=true with tmpfs root requires /etc/{passwd,group,shadow,
-  # gshadow,subuid,subgid} to be persisted. These are now in impermanence.nix.
+  # NOTE: mutableUsers=false means /etc/{passwd,group,shadow,gshadow,subuid,subgid}
+  # are regenerated from NixOS config on every activation — no persistence needed.
+  # Passwords are read declaratively from hashedPasswordFile on the persist volume.
   #
-  # FIRST BOOT PASSWORD SETUP (before first boot):
-  # You must set an initial password via configuration before first boot:
-  #   users.users.player.initialPassword = "temp123";
-  # Or use a hashed password:
-  #   users.users.player.hashedPassword = "...";
-  # Or set interactively during install:
-  #   sudo nixos-install --flake ... && sudo passwd player (in chroot)
-  #
-  # CRITICAL: NixOS users WITHOUT a password CANNOT log in via password-based
-  # mechanisms (including TTY). See: https://nixos.org/manual/nixos/stable/options#opt-users.mutableUsers
-  users.mutableUsers = true;
+  # FIRST BOOT PASSWORD SETUP:
+  # The install script (scripts/rebuild-install.sh) writes hashed passwords to
+  # /persist/secrets/{player,ghost}-password.hash before nixos-install.
+  users.mutableUsers = false;
 
   users.users.player = {
     isNormalUser = true;
@@ -35,7 +29,7 @@ in {
       "libvirtd"
       "kvm"
     ];
-    # No initial password - must be set before first boot via initialPassword, hashedPassword, or chroot
+    hashedPasswordFile = "/persist/secrets/player-password.hash";
   };
 
   users.users."ghost" = {
@@ -52,7 +46,7 @@ in {
       "input"
       "render"
     ];
-    # No initial password - must be set before first boot via initialPassword, hashedPassword, or chroot
+    hashedPasswordFile = "/persist/secrets/ghost-password.hash";
   };
 
   security.sudo = lib.mkIf lockRoot {

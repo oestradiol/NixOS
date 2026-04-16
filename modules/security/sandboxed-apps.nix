@@ -95,10 +95,10 @@ let
 in {
   config = lib.mkIf (sandbox.apps && profile == "daily") {
     environment.systemPackages = [
-      safeVrcxDaily
-      safeWindsurfDaily
-      safeVrcxDesktop
-      safeWindsurfDesktop
+     # safeVrcxDaily
+     # safeWindsurfDaily
+     # safeVrcxDesktop
+     # safeWindsurfDesktop
     ];
   };
 }

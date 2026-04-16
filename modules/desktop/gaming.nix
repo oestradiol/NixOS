@@ -9,7 +9,7 @@
       # Fix Ubisoft Connect and similar services
       "net.ipv4.tcp_mtu_probing" = 1;
       # Gaming scheduler tuning (from steamos-customizations-jupiter)
-      "kernel.sched_cfs_bandwidth_slice_u" = 3000;
+      "kernel.sched_cfs_bandwidth_slice_us" = 3000;
       "kernel.sched_latency_ns" = 3000000;
       "kernel.sched_min_granularity_ns" = 300000;
       "kernel.sched_wakeup_granularity_ns" = 500000;
@@ -65,12 +65,6 @@
     environment.sessionVariables = {
       PROTON_USE_NTSYNC = "1";
       ENABLE_GAMESCOPE_WSI = "1";
-    };
-
-    # xdg portal
-    xdg.portal = {
-      enable = true;
-      extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
     };
   };
 }

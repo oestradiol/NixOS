@@ -10,6 +10,16 @@
     setSessionVariables = false;
   };
 
+  programs.git = {
+    enable = true;
+    settings = {
+      user.name = "Elaina";
+      user.email = "48662592+oestradiol@users.noreply.github.com";
+      init.defaultBranch = "main";
+      pull.rebase = false;
+    };
+  };
+
   home.packages = with pkgs; [
     eza
     bat
@@ -23,5 +33,7 @@
     # obsidian → md.obsidian.Obsidian
     # Bubblewrapped apps (not available on Flathub)
     # vrcx and windsurf are pulled in as dependencies of the wrappers
+    windsurf
+    vrcx
   ];
 }
