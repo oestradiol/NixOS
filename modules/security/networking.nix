@@ -12,13 +12,20 @@ in {
   # Firewall: enable NixOS firewall in Mullvad app mode
   # Self-owned WireGuard mode uses its own nftables policy exclusively (wireguard.nix)
   networking.firewall.enable = lib.mkDefault (!useSelfOwnedWireGuard);
-  networking.firewall.allowedUDPPorts = lib.optionals isDaily [ 7 ];
 
+  # Wake-on-LAN: magic packets are matched by the NIC at layer-2 and DO NOT require
+  # any firewall port to be open (the matcher runs before netfilter). Some WoL
+  # proxies / routers re-encapsulate magic packets as UDP-9 (discard) payloads,
+  # so we open UDP 9 on the LAN interface only, not globally. UDP 7 (echo) was
+  # never needed and has been removed (attack-surface minimisation).
   networking.interfaces = lib.mkIf isDaily {
     enp5s0.wakeOnLan = {
       enable = true;
       policy = [ "magic" ];
     };
+  };
+  networking.firewall.interfaces = lib.mkIf isDaily {
+    enp5s0.allowedUDPPorts = [ 9 ];  # WoL-over-UDP compatibility (LAN only)
   };
 
   # DNS resolver: needed on both profiles

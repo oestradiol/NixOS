@@ -137,5 +137,47 @@ in {
       assertion = !isDaily || config.myOS.security.sandbox.x11;
       message = "Daily profile must make the X11 compatibility relaxation explicit.";
     }
+    # ── Network-surface invariants (pen-test pass 2026-04) ────────
+    {
+      # One of the two packet filters must be active at all times. wireguard.nix
+      # hard-sets networking.firewall.enable = false when using the self-owned
+      # tunnel and drives nftables instead; networking.nix enables the nixpkgs
+      # firewall otherwise. This assertion catches any future edit that leaves
+      # the box with BOTH off.
+      assertion = config.networking.firewall.enable || config.networking.nftables.enable;
+      message = ''
+        Governance invariant: either networking.firewall.enable OR
+        networking.nftables.enable must be true. Check the coupling between
+        modules/security/networking.nix and modules/security/wireguard.nix.
+      '';
+    }
+    {
+      # WiVRn advertises via mDNS/avahi when enabled. Paranoid profile does not
+      # import desktop/vr.nix, but the daily profile must never broadcast
+      # unless the operator explicitly opted in.
+      assertion = !isDaily || config.myOS.vr.lanDiscovery.enable || !config.services.avahi.enable;
+      message = ''
+        Governance invariant: daily profile must not enable avahi unless
+        myOS.vr.lanDiscovery.enable = true. Upstream nixpkgs wivrn.nix hard-sets
+        services.avahi.enable; the override in modules/desktop/vr.nix depends on
+        myOS.vr.lanDiscovery — if you ever see this message, a new module is
+        forcing avahi on without going through the knob.
+      '';
+    }
+    {
+      # Paranoid profile has no VR stack and therefore no reason to run avahi.
+      assertion = !isParanoid || !config.services.avahi.enable;
+      message = "Paranoid profile must not enable avahi (no VR/mDNS use case).";
+    }
+    {
+      # Daily LAN discovery (if enabled) must be scoped to declared interfaces.
+      # This prevents someone flipping lanDiscovery.enable without also declaring
+      # lanInterfaces, which would let avahi pick an interface on its own.
+      assertion = !config.myOS.vr.lanDiscovery.enable || (config.myOS.vr.lanInterfaces != [ ]);
+      message = ''
+        Governance invariant: myOS.vr.lanDiscovery.enable requires at least one
+        interface in myOS.vr.lanInterfaces (avahi broadcast must be scoped).
+      '';
+    }
   ];
 }

@@ -16,6 +16,16 @@ in {
           "/var/lib/systemd"
           "/var/lib/aide"  # AIDE integrity database
           "/var/lib/sbctl"  # Secure Boot keys (Lanzaboote/sbctl)
+          "/var/lib/logrotate"  # logrotate.status: without this, /var/lib/logrotate.status.tmp
+                                # lands on the tmpfs root and logrotate.service fails the
+                                # first time it tries to write state.
+          "/var/lib/clamav"  # CVD virus database (freshclam downloads here). Without
+                             # persistence, clamav-impermanence-scan fails with
+                             # "cl_load(): No such file or directory" until freshclam
+                             # has populated the dir after each boot.
+          "/var/lib/fwupd"   # Firmware metadata cache; without persistence fwupd
+                             # re-downloads every boot AND is the first casualty when
+                             # / is tmpfs-exhausted (seen 2026-04).
           "/etc/NetworkManager/system-connections"
           "/var/lib/flatpak"
         ]
@@ -36,7 +46,13 @@ in {
         ++ lib.optionals persistMachineId [
           "/etc/machine-id"
         ]
-        ++ [
+        # SSH host keys: persisted only when the SSH server is actually running.
+        # With services.openssh.enable = false (current baseline in desktop/base.nix),
+        # sshd never runs and therefore never generates /etc/ssh/ssh_host_*_key.
+        # Persisting them anyway produced dangling symlinks (target missing) that
+        # `tests/runtime/200-persistence.sh` rightly flagged. When openssh is
+        # enabled in the future, drop this guard and unconditionally persist.
+        ++ lib.optionals config.services.openssh.enable [
           "/etc/ssh/ssh_host_ed25519_key"
           "/etc/ssh/ssh_host_ed25519_key.pub"
           "/etc/ssh/ssh_host_rsa_key"

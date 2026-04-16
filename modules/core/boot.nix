@@ -6,18 +6,18 @@ in {
   boot.loader = {
     systemd-boot = {
       enable = lib.mkDefault true;
-      extraInstallCommands = ''
-        DAILY_FILE=$(ls -t /boot/loader/entries/nixos-*-daily.conf 2>/dev/null | (read -r first; echo "$first"))
-        if [[ -n "$DAILY_FILE" ]]; then
-          DAILY_ENTRY=''${DAILY_FILE##*/}
-          DAILY_ENTRY=''${DAILY_ENTRY%.conf}
-          if grep -q "^default " /boot/loader/loader.conf; then
-            sed -i "s/^default .*/default $DAILY_ENTRY/" /boot/loader/loader.conf
-          else
-            echo "default $DAILY_ENTRY" >> /boot/loader/loader.conf
-          fi
-        fi
-      '';
+      # extraInstallCommands = ''
+      #   DAILY_FILE=$(ls -t /boot/loader/entries/nixos-*-daily.conf 2>/dev/null | (read -r first; echo "$first"))
+      #   if [[ -n "$DAILY_FILE" ]]; then
+      #     DAILY_ENTRY=''${DAILY_FILE##*/}
+      #     DAILY_ENTRY=''${DAILY_ENTRY%.conf}
+      #     if grep -q "^default " /boot/loader/loader.conf; then
+      #       sed -i "s/^default .*/default $DAILY_ENTRY/" /boot/loader/loader.conf
+      #     else
+      #       echo "default $DAILY_ENTRY" >> /boot/loader/loader.conf
+      #     fi
+      #   fi
+      # '';
     };
     efi.canTouchEfiVariables = true;
     timeout = 2;

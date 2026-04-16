@@ -27,6 +27,34 @@
       };
     };
 
+    vr = {
+      # WiVRn's upstream nixpkgs module hard-enables services.avahi + publish.userServices
+      # without mkDefault, which would broadcast mDNS service records on every reachable
+      # LAN. This knob gates that behaviour so the daily profile only broadcasts when
+      # explicitly opted in. When OFF (default): connect the headset by typing the host's
+      # IP manually in WiVRn's headset app. When ON: avahi advertises on the declared
+      # LAN interfaces only (not everywhere).
+      lanDiscovery.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Allow WiVRn to advertise itself via mDNS/avahi on the LAN so VR headsets
+          auto-discover the host. Default: OFF. When OFF, the headset connects by
+          entering the host IP manually. When ON, advertising is scoped to
+          `myOS.vr.lanInterfaces` only (not all interfaces).
+        '';
+      };
+      lanInterfaces = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ "enp5s0" ];
+        description = ''
+          LAN interfaces where WiVRn (TCP/UDP 9757) is reachable. The firewall opens
+          9757 ONLY on these interfaces, and if `lanDiscovery.enable = true` avahi
+          advertises on these interfaces only.
+        '';
+      };
+    };
+
     security = {
       secureBoot.enable = lib.mkEnableOption "Secure Boot via Lanzaboote";
       tpm.enable = lib.mkEnableOption "TPM-backed LUKS enrollment workflow";
