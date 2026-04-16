@@ -33,6 +33,9 @@ in {
       };
     };
 
+    # Load bluetooth module even without hardware (for testing and controller support)
+    boot.kernelModules = [ "bluetooth" ];
+
     # Disable Bluetooth ERTM — fixes pairing issues with Xbox controllers
     # and many other Bluetooth gamepads (8BitDo, PS4/PS5 controllers)
     boot.extraModprobeConfig = ''

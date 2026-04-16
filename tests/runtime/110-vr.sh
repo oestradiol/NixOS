@@ -5,11 +5,11 @@ source "${BASH_SOURCE%/*}/../lib/common.sh"
 needs_profile daily
 
 describe "wivrn service declared + state"
-# services.wivrn enables a system unit; it may be inactive until a VR client
+# services.wivrn enables a user unit; it may be inactive until a VR client
 # connects. Accept active OR loaded-but-inactive as long as the unit exists.
-if systemctl cat wivrn.service >/dev/null 2>&1; then
-  pass "wivrn.service unit is defined"
-  state=$(systemctl is-active wivrn.service 2>&1 || true)
+if systemctl --user cat wivrn.service >/dev/null 2>&1; then
+  pass "wivrn.service unit is defined (user scope)"
+  state=$(systemctl --user is-active wivrn.service 2>&1 || true)
   case "$state" in
     active) pass "wivrn.service active" ;;
     inactive|failed) warn "wivrn.service state: $state (may be on-demand)" ;;

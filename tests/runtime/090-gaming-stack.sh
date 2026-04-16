@@ -40,11 +40,10 @@ fi
 describe "gaming sysctls applied"
 assert_sysctl "net.ipv4.tcp_mtu_probing"              "1"
 assert_sysctl "kernel.sched_cfs_bandwidth_slice_us"   "3000"
-assert_sysctl "kernel.sched_latency_ns"               "3000000"
-assert_sysctl "kernel.sched_min_granularity_ns"       "300000"
-assert_sysctl "kernel.sched_wakeup_granularity_ns"    "500000"
-assert_sysctl "kernel.sched_migration_cost_ns"        "50000"
-assert_sysctl "kernel.sched_nr_migrate"               "128"
+# The following CFS scheduler tunables were removed from sysctl in kernel 5.13+
+# and moved to debugfs (/sys/kernel/debug/sched/). They have no sysctl equivalents:
+# sched_latency_ns, sched_min_granularity_ns, sched_wakeup_granularity_ns,
+# sched_migration_cost_ns, sched_nr_migrate, sched_tunable_scaling
 assert_sysctl "kernel.split_lock_mitigate"            "0"
 assert_sysctl "kernel.sched_rt_runtime_us"            "-1"
 

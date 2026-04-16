@@ -166,6 +166,7 @@ for f in "${files[@]}"; do
   if [[ -n "$declares_profile" ]]; then
     cur=$(TEST_PROFILE="${TEST_PROFILE:-}" bash -c "
       source '$SCRIPT_DIR/lib/common.sh' >/dev/null 2>&1
+      trap - EXIT  # Disable common.sh's finalise trap to prevent summary output
       detect_profile
     " 2>/dev/null || echo unknown)
     if [[ "$cur" != "$declares_profile" ]]; then

@@ -28,25 +28,25 @@
       # the choice explicit (see switch.log + tests/bugs/020).
       #
       # Debug phase: --show-trace on every alias so failures are actionable.
-      flake-switch-daily    = "sudo nixos-rebuild switch --flake /etc/nixos#nixos --specialisation daily --show-trace";
-      flake-switch-paranoid = "sudo nixos-rebuild switch --flake /etc/nixos#nixos --show-trace";
+      flake-switch-daily    = "sudo nixos-rebuild switch --flake .#nixos --specialisation daily --show-trace";
+      flake-switch-paranoid = "sudo nixos-rebuild switch --flake .#nixos --show-trace";
       # Smart default: pick the specialisation that is currently booted.
       flake-switch = "if [ -e /run/current-system/specialisation/daily ]; then flake-switch-daily; else flake-switch-paranoid; fi";
 
       # `test` applies the new configuration WITHOUT creating a boot entry.
       # Use this for iterative work during the debug/test phase.
-      flake-test-daily    = "sudo nixos-rebuild test --flake /etc/nixos#nixos --specialisation daily --show-trace";
-      flake-test-paranoid = "sudo nixos-rebuild test --flake /etc/nixos#nixos --show-trace";
+      flake-test-daily    = "sudo nixos-rebuild test --flake .#nixos --specialisation daily --show-trace";
+      flake-test-paranoid = "sudo nixos-rebuild test --flake .#nixos --show-trace";
       flake-test = "if [ -e /run/current-system/specialisation/daily ]; then flake-test-daily; else flake-test-paranoid; fi";
 
       # `dry-activate` evaluates + builds, shows what WOULD happen, applies nothing.
-      flake-dry  = "nixos-rebuild dry-activate --flake /etc/nixos#nixos --show-trace";
+      flake-dry  = "nixos-rebuild dry-activate --flake .#nixos --show-trace";
 
       # `boot` stages the new generation for the NEXT boot only — does not activate.
       # Useful when swapping profile (paranoid <-> daily) so the profile-mount
       # invariants fire cleanly on a fresh boot with no one logged in.
-      flake-boot-daily    = "sudo nixos-rebuild boot --flake /etc/nixos#nixos --specialisation daily --show-trace";
-      flake-boot-paranoid = "sudo nixos-rebuild boot --flake /etc/nixos#nixos --show-trace";
+      flake-boot-daily    = "sudo nixos-rebuild boot --flake .#nixos --specialisation daily --show-trace";
+      flake-boot-paranoid = "sudo nixos-rebuild boot --flake .#nixos --show-trace";
       flake-boot = "if [ -e /run/current-system/specialisation/daily ]; then flake-boot-daily; else flake-boot-paranoid; fi";
 
       # Panic button: re-apply the currently-booted generation. Restores the
@@ -54,7 +54,7 @@
       # or `switch`). Does not touch /boot.
       flake-rollback = "sudo /run/current-system/bin/switch-to-configuration switch";
 
-      flake-update = "sudo nix flake update /etc/nixos";
+      flake-update = "sudo nix flake update .";
       nix-update   = "flake-update && flake-switch";
 
       ls = "eza";

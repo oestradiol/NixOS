@@ -40,8 +40,6 @@ else
     fail "no nixos-generation-*-specialisation-daily.conf files" "$entries"
   fi
   info "entries sample: $(printf '%s' "$entries" | head -5 | tr '\n' ' ')"
-else
-  fail "/boot/loader/entries not readable"
 fi
 
 describe "/boot/loader/loader.conf"

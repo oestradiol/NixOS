@@ -37,12 +37,7 @@ describe "core persisted system files"
 # Files are bind-mounted from /persist by impermanence. /persist is 0700
 # root-only, so `-e` fails as a normal user (can't stat the target). Accept
 # the symlink existence (-L) and defer -e to the sudo branch.
-for p in \
-  /etc/machine-id \
-  /etc/ssh/ssh_host_ed25519_key \
-  /etc/ssh/ssh_host_ed25519_key.pub \
-  /etc/ssh/ssh_host_rsa_key \
-  /etc/ssh/ssh_host_rsa_key.pub; do
+for p in /etc/machine-id; do
   if [[ -L "$p" ]]; then
     tgt=$(readlink "$p" 2>/dev/null)
     pass "$p is a symlink (-> $tgt)"
@@ -60,6 +55,33 @@ for p in \
     fail "$p missing"
   fi
 done
+
+describe "SSH host keys (only if openssh enabled)"
+if systemctl is-enabled --quiet sshd.service 2>/dev/null || systemctl is-enabled --quiet sshd.socket 2>/dev/null; then
+  for p in \
+    /etc/ssh/ssh_host_ed25519_key \
+    /etc/ssh/ssh_host_ed25519_key.pub \
+    /etc/ssh/ssh_host_rsa_key \
+    /etc/ssh/ssh_host_rsa_key.pub; do
+    if [[ -L "$p" ]]; then
+      tgt=$(readlink "$p" 2>/dev/null)
+      pass "$p is a symlink (-> $tgt)"
+      if sudo -n true 2>/dev/null; then
+        if sudo -n test -e "$p"; then
+          pass "$p target exists under /persist"
+        else
+          fail "$p symlink is dangling (target missing)"
+        fi
+      fi
+    elif [[ -e "$p" ]]; then
+      pass "$p exists (plain file)"
+    else
+      fail "$p missing"
+    fi
+  done
+else
+  pass "SSH disabled - host key checks skipped (services.openssh.enable = false)"
+fi
 # machine-id must be non-empty and match /persist
 if sudo -n test -r /persist/etc/machine-id 2>/dev/null; then
   mid=$(cat /etc/machine-id)
