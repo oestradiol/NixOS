@@ -42,8 +42,8 @@ in {
       message = "TPM-bound unlock requires systemd in the initrd.";
     }
     {
-      assertion = !isDaily || config.services.displayManager.sddm.enable;
-      message = "This design assumes SDDM is enabled for explicit user-choice login.";
+      assertion = config.services.greetd.enable;
+      message = "This design assumes greetd is enabled as the Wayland-native display manager.";
     }
     {
       assertion = !isParanoid || !(builtins.elem "wheel" config.users.users."ghost".extraGroups);

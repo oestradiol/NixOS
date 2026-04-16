@@ -95,7 +95,7 @@ Current support boundary:
 - they do not prove safety against an already-compromised live kernel; they are file/persistence integrity layers, not a runtime kernel attestation system
 
 ## 4. Frozen current-stage decisions
-- KDE Plasma 6 + SDDM remain the desktop target
+- KDE Plasma 6 + greetd/regreet (Wayland-native) remain the desktop target
 - NVIDIA remains enabled initially for target-hardware reliability
 - Windows is not part of the steady-state design
 - swap remains zram plus an 8 GiB Btrfs swapfile on the daily profile

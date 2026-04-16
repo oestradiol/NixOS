@@ -6,11 +6,10 @@
 
   # ── Desktop environment ────────────────────────────────────────
   console.keyMap = "br-abnt2";
+  services.xserver.enable = false;
   services.xserver.xkb.layout = "br";
-  services.xserver.enable = true;
-  services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
-  services.displayManager.defaultSession = "plasma";
+  programs.regreet.enable = true;  # Wayland-native greeter (greetd + cage + regreet)
 
   security.polkit.enable = true;
   #services.dbus.implementation = "broker";
