@@ -106,7 +106,7 @@ Current support boundary:
 - `nosmt=force` stays paranoid-only
 - `init_on_free=1` stays paranoid-only
 - wrapped daily apps remain same-kernel containment only
-- PAM profile-binding remains intentionally blocked and out of baseline scope
+- profile-user binding is enforced via account locking (daily locks ghost, paranoid locks player); the experimental PAM approach remains disabled
 
 ## 5. Current pipeline
 
@@ -145,7 +145,7 @@ These are not current policy:
 - shared Whonix-style machine-id on the host
 - describing Tor Browser or Mullvad Browser as arkenfox-managed
 - describing daily Firefox as arkenfox-managed
-- enabling PAM profile-binding in the current baseline
+- enabling PAM-based profile-binding (superseded by account locking in `users.nix`)
 - treating repo custom audit rules as baseline when they are still staged off
 
 ## 8. What counts as post-stability work
