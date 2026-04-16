@@ -4,10 +4,33 @@ let
   kh = sec.kernelHardening;
 in {
   boot.loader = {
-    systemd-boot.enable = lib.mkDefault true;
+    systemd-boot = {
+      enable = lib.mkDefault true;
+      extraInstallCommands = ''
+        DAILY_FILE=$(ls -t /boot/loader/entries/nixos-*-daily.conf 2>/dev/null | (read -r first; echo "$first"))
+        if [[ -n "$DAILY_FILE" ]]; then
+          DAILY_ENTRY=''${DAILY_FILE##*/}
+          DAILY_ENTRY=''${DAILY_ENTRY%.conf}
+          if grep -q "^default " /boot/loader/loader.conf; then
+            sed -i "s/^default .*/default $DAILY_ENTRY/" /boot/loader/loader.conf
+          else
+            echo "default $DAILY_ENTRY" >> /boot/loader/loader.conf
+          fi
+        fi
+      '';
+    };
     efi.canTouchEfiVariables = true;
     timeout = 2;
   };
+
+  # NOTE: Lanzaboote does not support boot.loader.systemd-boot.extraInstallCommands
+  # When Secure Boot is enabled, lanzaboote removes specialization names from boot entries
+  # making it impossible to distinguish daily vs paranoid in the boot menu via patterns.
+  # Workaround: lanzaboote.nix uses settings.default = "@saved" to preserve last-selected entry
+  # References:
+  # - https://github.com/nix-community/lanzaboote/issues/375 (extraInstallCommands)
+  # - https://github.com/nix-community/lanzaboote/issues/394 (specialization naming)
+  # Tracking: docs/pipeline/POST-STABILITY.md section 9
 
   boot.kernelPackages = lib.mkDefault pkgs.linuxPackages;
 

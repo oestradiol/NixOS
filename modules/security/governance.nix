@@ -14,6 +14,10 @@ in {
       message = "Governance invariant: paranoid user 'ghost' must exist.";
     }
     {
+      assertion = !config.services.xserver.enable;
+      message = "X server must be disabled system-wide (Wayland-only stack).";
+    }
+    {
       assertion = !isParanoid || config.myOS.security.sandbox.browsers;
       message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox).";
     }

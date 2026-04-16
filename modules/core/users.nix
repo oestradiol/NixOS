@@ -35,6 +35,7 @@ in {
     hashedPassword = lib.mkIf isParanoid "!";
   };
 
+  users.allowNoPasswordLogin = isParanoid;
   users.users."ghost" = {
     isNormalUser = true;
     uid = 1001;  # Explicit for hardware-target.nix tmpfs mount

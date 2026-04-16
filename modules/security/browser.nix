@@ -181,7 +181,7 @@ in {
     policies = {
       # Daily Firefox uses enterprise policies; paranoid Firefox uses the arkenfox-based user.js above.
       Preferences = {
-        "browser.startup.page" = 0;
+        "browser.startup.page" = 3;
         "browser.startup.homepage" = "about:blank";
         "browser.newtabpage.enabled" = false;
         "browser.newtabpage.activity-stream.showSponsored" = false;

@@ -69,3 +69,36 @@ Implemented via account locking in `modules/core/users.nix` instead of PAM:
 This blocks all auth paths (greetd, TTY, su, sudo, SSH) without modifying
 PAM service files. Recovery: boot the other profile or use install media.
 The experimental PAM module in `user-profile-binding.nix` remains disabled.
+
+## 8. Separate ghost and player machine-id
+Current state:
+- Both profiles share a persistent machine-id
+- Journal logs are persistent across profiles
+- Systemd state is persistent
+
+Post-stability work:
+- Make journalctl, systemd state, and machine-id entirely impermanent on ghost
+- Generate random machine-id on each ghost boot
+- Ensure player's machine-id remains persistent and unique
+- Validate that this separation doesn't break systemd services or logging
+- Test cross-profile isolation of system identifiers
+
+## 9. Lanzaboote feature parity tracking
+Current state:
+- systemd-boot used by default with extraInstallCommands for default daily entry
+- Secure Boot path uses Lanzaboote with `settings.default = "@saved"` to preserve last-selected entry
+- Lanzaboote does not support boot.loader.systemd-boot.extraInstallCommands
+- Lanzaboote removes specialization names from boot entries (cannot distinguish daily vs paranoid in boot menu)
+- Workaround: @saved preserves user's last boot selection as reasonable compromise
+
+Track upstream issues:
+- https://github.com/nix-community/lanzaboote/issues/375 - Extending bootloader installation (extraInstallCommands support)
+- https://github.com/nix-community/lanzaboote/issues/393 - Setting specialisation as default boot entry
+- https://github.com/nix-community/lanzaboote/issues/394 - Specialisations not identifiable in boot menu
+- https://github.com/nix-community/lanzaboote/issues/94 - Feature parity with systemd-stub
+
+Post-stability work:
+- Monitor for extraInstallCommands support in Lanzaboote
+- Monitor for specialization naming fix in boot entries
+- Test Lanzaboote's default boot entry behavior when specialization identification is fixed
+- Consider switching to Lanzaboote as default if feature parity is achieved

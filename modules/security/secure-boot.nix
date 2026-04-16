@@ -9,6 +9,15 @@
         # NOTE: sbctl create-keys places keys in /var/lib/sbctl by default.
         # This MUST match the path used in scripts/post-install-secureboot-tpm.sh
         pkiBundle = "/var/lib/sbctl";
+
+        # Preserve last-selected boot entry
+        # Lanzaboote strips specialization names from boot entries (issue #394),
+        # making specialization-specific defaults impossible. @saved preserves
+        # the user's last selection as a reasonable compromise.
+        settings = {
+          default = "@saved";
+          timeout = config.boot.loader.timeout;
+        };
       };
     })
 

@@ -22,7 +22,7 @@ if [[ -z "${BASH_SOURCE[0]:-}" ]] || [[ "${BASH_SOURCE[0]}" == "bash" ]]; then
   echo "Cloning $REPO_URL (branch: $REPO_BRANCH) into $CLONE_DIR ..."
   git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$CLONE_DIR"
   echo "Re-executing from cloned repo..."
-  exec bash "$CLONE_DIR/scripts/rebuild-install.sh" "$@"
+  exec bash "$CLONE_DIR/scripts/rebuild-install.sh" "$@" < /dev/tty
 fi
 
 # ── Paths ───────────────────────────────────────────────────────────────
@@ -74,14 +74,14 @@ write_password_hash() {
   info "Wrote: $target"
 }
 
-# Strip fileSystems."..." and swapDevices blocks from nixos-generate-config output.
+# Strip fileSystems."...", swapDevices, and boot.initrd.luks blocks from nixos-generate-config output.
 # Tracks brace/bracket depth so arbitrarily nested blocks are handled correctly.
 strip_fs_and_swap() {
   awk '
     BEGIN { skip = 0; depth = 0; saw_open = 0 }
 
-    # Detect the start of a fileSystems or swapDevices declaration
-    !skip && (/^[[:space:]]*fileSystems\./ || /^[[:space:]]*swapDevices/) {
+    # Detect the start of a fileSystems, swapDevices, or boot.initrd.luks declaration
+    !skip && (/^[[:space:]]*fileSystems\./ || /^[[:space:]]*swapDevices/ || /^[[:space:]]*boot\.initrd\.luks/) {
       skip = 1; depth = 0; saw_open = 0
       for (i = 1; i <= length($0); i++) {
         c = substr($0, i, 1)
@@ -238,37 +238,36 @@ else
   rm -f "$TARGET_REPO/configuration.nix" 2>/dev/null || true
 fi
 
-# Strip fileSystems and swapDevices — the repo defines its own in fs-layout.nix
+# Strip fileSystems, swapDevices, and boot.initrd.luks — the repo defines its own in fs-layout.nix
 strip_fs_and_swap < "$HW_RAW" > "$TARGET_REPO/hosts/nixos/hardware-target.nix"
-info "Wrote hardware-target.nix (fileSystems + swapDevices stripped)"
+info "Wrote hardware-target.nix (fileSystems + swapDevices + boot.initrd.luks stripped)"
 
 echo
 if confirm_yes "Review hardware-target.nix before continuing?"; then
   echo "──────────────────────────────────────────────────"
-  cat "$TARGET_REPO/hosts/nixos/hardware-target.nix"
+  nano "$TARGET_REPO/hosts/nixos/hardware-target.nix"
   echo "──────────────────────────────────────────────────"
   echo
   confirm_yes "Does this look correct? Continue?" || { echo "Aborted. Fix manually at: $TARGET_REPO/hosts/nixos/hardware-target.nix"; exit 1; }
 fi
 
-# ── Phase 5: Flake check ───────────────────────────────────────────────
-if confirm_yes "Run 'nix flake check' on the staged repo?"; then
-  phase "Phase 5 — Flake check"
-  (cd "$TARGET_REPO" && nix --extra-experimental-features 'nix-command flakes' flake check)
-fi
+# ── Phase 5: User passwords ────────────────────────────────────────────
+phase "Phase 5 — Setting user passwords"
 
-# ── Phase 6: User passwords ────────────────────────────────────────────
-phase "Phase 6 — Setting user passwords"
-
-write_password_hash "player" "$MNT/persist/secrets/player-password.hash"
 write_password_hash "ghost"  "$MNT/persist/secrets/ghost-password.hash"
-
+write_password_hash "player" "$MNT/persist/secrets/player-password.hash"
 # Verify hashes were actually written
 for f in "$MNT/persist/secrets/player-password.hash" \
          "$MNT/persist/secrets/ghost-password.hash"; do
   [[ -s "$f" ]] || fail "Password hash file is empty or missing: $f"
 done
 info "Password hashes verified"
+
+# ── Phase 6: Flake check ───────────────────────────────────────────────
+if confirm_yes "Run 'nix flake check' on the staged repo?"; then
+  phase "Phase 6 — Flake check"
+  (cd "$TARGET_REPO" && nix --extra-experimental-features 'nix-command flakes' flake check)
+fi
 
 # ── Phase 7: Install ───────────────────────────────────────────────────
 phase "Phase 7 — nixos-install"
@@ -283,7 +282,6 @@ nixos-install --flake "$TARGET_REPO#nixos" --no-root-passwd
 phase "Install complete"
 cat <<'EOF'
 Before rebooting, review:
-  /mnt/etc/nixos/hosts/nixos/hardware-target.nix
   /mnt/etc/nixos/docs/pipeline/INSTALL-GUIDE.md
   /mnt/etc/nixos/docs/pipeline/TEST-PLAN.md
 

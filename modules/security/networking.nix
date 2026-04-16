@@ -24,6 +24,9 @@ in {
   # DNS resolver: needed on both profiles
   services.resolved.enable = lib.mkDefault true;
 
+  # Configure NetworkManager to use systemd-resolved for DNS
+  networking.networkmanager.dns = lib.mkIf isDaily "systemd-resolved";
+
   # Mullvad app mode: daily/player only
   # Paranoid/ghost uses the self-owned WireGuard path (wireguard.nix)
   services.mullvad-vpn.enable = lib.mkDefault (isDaily && !useSelfOwnedWireGuard);

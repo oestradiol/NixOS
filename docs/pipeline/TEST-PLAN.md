@@ -4,75 +4,75 @@ Exactly what must be tested to call the repo stable on the target machine.
 These checks are the runtime proof layer for this specific hardware, not just a static repo review.
 
 ## 1. Stage order
-- [ ] daily is operable first
-- [ ] daily is recoverable first
+- [X] daily is operable first
+- [X] daily is recoverable first
 - [ ] paranoid validation does not block the first recovery-capable daily baseline
 - [ ] after daily passes its sections, continue to paranoid minimum state
 
 ## 2. Build and boot
-- [ ] `nix flake check` passes
-- [ ] default system builds on the target machine
-- [ ] daily specialization builds on the target machine
-- [ ] the expected host hardware target file still matches the actual machine
-- [ ] encrypted boot works on the target machine
-- [ ] daily boots
+- [X] `nix flake check` passes
+- [X] default system builds on the target machine
+- [X] daily specialization builds on the target machine
+- [X] the expected host hardware target file still matches the actual machine
+- [X] encrypted boot works on the target machine
+- [X] daily boots
 - [ ] paranoid boots
-- [ ] at least one rollback generation is available after first successful activation
+- [X] at least one rollback generation is available after first successful activation
 
 ## 3. Login, desktop, and session baseline
-- [ ] greetd/regreet greeter appears reliably after boot
-- [ ] `player` can log into the daily profile successfully
+- [X] greetd/regreet greeter appears reliably after boot
+- [X] `player` can log into the daily profile successfully
 - [ ] `ghost` can log into the paranoid profile successfully
 - [ ] Plasma starts cleanly on both profiles
 - [ ] logout and re-login work on both profiles
 - [ ] no login loop or session-crash loop appears after reboot
 
 ## 4. Persistence, mounts, and identity
-- [ ] `/persist` is mounted
+- [X] `/persist` is mounted
 - [ ] `/etc/machine-id` persists across reboot
 - [ ] daily machine-id is unique and stable across reboot
 - [ ] paranoid machine-id is unique and stable across reboot
-- [ ] `/home/player` is the persistent daily home
+- [X] `/home/player` is the persistent daily home
 - [ ] `/home/ghost` is tmpfs on paranoid and allowlisted persistence appears under `/persist/home/ghost`
-- [ ] daily does not mount `/home/ghost` or `/persist/home/ghost`
+- [X] daily does not mount `/home/ghost` or `/persist/home/ghost`
 - [ ] paranoid does not mount `/home/player`
-- [ ] the opposite profile home paths are absent from `/proc/mounts`
+- [X] the opposite profile home paths are absent from `/proc/mounts`
 - [ ] `systemctl status profile-mount-invariants` succeeds on both profiles
 
 ## 5. Daily profile baseline
-- [ ] Firefox launches normally
+- [X] Firefox launches normally
 - [ ] `about:policies` reflects the repo-managed daily Firefox policy set
 - [ ] Mullvad app mode connects and stays usable for ordinary browsing
-- [ ] `services.resolved` is active and normal DNS resolution works
-- [ ] Flathub remote exists and Flatpak portals work
-- [ ] Signal Flatpak installs and launches if Signal is in the baseline app set
-- [ ] Bitwarden Flatpak installs and launches if Bitwarden is in the baseline app set
-- [ ] any other baseline-critical Flatpak app is listed explicitly and tested explicitly
+- [X] `services.resolved` is active and normal DNS resolution works
+- [X] Flathub remote exists and Flatpak portals work
+- [X] Signal Flatpak installs and launches if Signal is in the baseline app set
+- [X] Bitwarden Flatpak installs and launches if Bitwarden is in the baseline app set
+- [X] any other baseline-critical Flatpak app is listed explicitly and tested explicitly
 - [ ] `safe-vrcx` launches
 - [ ] `safe-windsurf` launches
 - [ ] VRCX file chooser works if needed
 - [ ] Windsurf file chooser works if needed
-- [ ] Steam works
+- [X] Steam works
 - [ ] controllers work
 - [ ] VR path works if VR is part of the first stable baseline for this machine
 - [ ] `fwupdmgr get-devices` works
 
 ## 6. Audio, input, and desktop integration
-- [ ] speaker output works
-- [ ] microphone input works
+- [X] speaker output works
+- [X] microphone input works
 - [ ] `systemctl --user status pipewire wireplumber` is healthy in both profiles where audio is expected
-- [ ] fcitx5 starts correctly where expected
-- [ ] Japanese input works in at least one app where expected
+- [X] fcitx5 starts correctly where expected
+- [X] Japanese input works in at least one app where expected
 - [ ] notifications work for the baseline apps that rely on them
 - [ ] portal-based open/save flows work for the baseline apps that rely on them
 
 ## 7. GPU and hardware-specific proof
-- [ ] the expected GPU driver is loaded on the target machine
-- [ ] hardware acceleration works in Firefox on the target machine
-- [ ] the intended Wayland path is stable enough for normal use on the target machine
-- [ ] gamescope works on the target machine if daily gaming is baseline-critical
-- [ ] Steam 32-bit graphics path works if Steam is baseline-critical
-- [ ] the current firmware / UEFI behavior matches the install assumptions
+- [X] the expected GPU driver is loaded on the target machine
+- [X] hardware acceleration works in Firefox on the target machine
+- [X] the intended Wayland path is stable enough for normal use on the target machine
+- [X] gamescope works on the target machine if daily gaming is baseline-critical
+- [X] Steam 32-bit graphics path works if Steam is baseline-critical
+- [X] the current firmware / UEFI behavior matches the install assumptions
 
 ## 8. Paranoid minimum state
 - [ ] `safe-firefox` launches
