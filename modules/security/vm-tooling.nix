@@ -6,6 +6,7 @@
 { config, lib, pkgs, ... }:
 let
   inherit (lib) mkIf mkDefault optionalString escapeShellArg concatStringsSep;
+  profile = config.myOS.profile;
   vmsEnabled = config.myOS.security.sandbox.vms;
   vmCfg = config.myOS.security.vm;
   kvmModule =
@@ -392,8 +393,8 @@ in {
        then [ "amd_iommu=on" ]
        else [ ]);
 
-    users.users.player.extraGroups = [ "libvirtd" ];
-    users.users.ghost.extraGroups = [ "libvirtd" ];
+    users.users.player.extraGroups = lib.mkIf (profile == "daily") [ "libvirtd" "kvm" ];
+    users.users.ghost.extraGroups = lib.mkIf (profile == "paranoid") [ "libvirtd" "kvm" ];
 
     environment.systemPackages = with pkgs; [
       virt-viewer

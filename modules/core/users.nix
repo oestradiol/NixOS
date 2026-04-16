@@ -1,6 +1,8 @@
 { pkgs, config, lib, ... }:
 let
   lockRoot = config.myOS.security.lockRoot;
+  isDaily = config.myOS.profile == "daily";
+  isParanoid = config.myOS.profile == "paranoid";
 in {
   # NOTE: mutableUsers=false means /etc/{passwd,group,shadow,gshadow,subuid,subgid}
   # are regenerated from NixOS config on every activation — no persistence needed.
@@ -26,10 +28,11 @@ in {
       "render"
       "realtime"
       "gamemode"
-      "libvirtd"
-      "kvm"
     ];
-    hashedPasswordFile = "/persist/secrets/player-password.hash";
+    # Profile binding: player authenticates on daily, locked on paranoid.
+    # Same mechanism as root locking in base.nix.  Recovery: boot the other profile.
+    hashedPasswordFile = lib.mkIf isDaily "/persist/secrets/player-password.hash";
+    hashedPassword = lib.mkIf isParanoid "!";
   };
 
   users.users."ghost" = {
@@ -46,7 +49,9 @@ in {
       "input"
       "render"
     ];
-    hashedPasswordFile = "/persist/secrets/ghost-password.hash";
+    # Profile binding: ghost authenticates on paranoid, locked on daily.
+    hashedPasswordFile = lib.mkIf isParanoid "/persist/secrets/ghost-password.hash";
+    hashedPassword = lib.mkIf isDaily "!";
   };
 
   security.sudo = lib.mkIf lockRoot {
