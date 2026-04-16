@@ -11,3 +11,10 @@ secrets/*.pem
 secrets/*.pub
 *.qcow2
 *.img
+
+# Operator-local, per-install overrides (hardware UUIDs, experimental tweaks,
+# personal notes). Imported conditionally by hosts/nixos/default.nix when
+# present; intentionally never published.
+hosts/nixos/local.nix
+LOCAL-NOTES.md
+switch.log

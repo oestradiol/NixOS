@@ -12,10 +12,25 @@ in
 
   # Shared install assumptions for the fresh reinstall target.
   # Root is tmpfs. Persisted state lives on Btrfs subvolumes inside LUKS.
+  #
+  # Why 16G: tmpfs is RAM+swap backed and only uses what it HOLDS (size is a cap,
+  # not a reservation). 4G was empirically too small once KDE Plasma 6 + Windsurf
+  # + VR + Spotify held session-scoped deleted-but-open files in /tmp, which
+  # cascaded into logrotate.service failure, home-manager profile activation
+  # dangling, and nix repl OOM. 16G gives headroom without meaningful RAM cost.
   fileSystems."/" = {
     device = "none";
     fsType = "tmpfs";
-    options = [ "mode=755" "size=4G" ];
+    options = [ "mode=755" "size=16G" ];
+  };
+
+  # /tmp on its own tmpfs so a /tmp spike can never starve /var/lib, /root, /run,
+  # or the home-manager profile path. `boot.tmp.cleanOnBoot = true` (base.nix)
+  # still wipes this on reboot. `nosuid,nodev` is defense-in-depth.
+  fileSystems."/tmp" = {
+    device = "tmpfs";
+    fsType = "tmpfs";
+    options = [ "mode=1777" "size=50%" "nosuid" "nodev" "strictatime" ];
   };
   fileSystems."/boot" = {
     device = "/dev/disk/by-label/NIXBOOT";
@@ -84,6 +99,9 @@ in
     device = "/swap/swapfile";
     size = 8192;
   }];
+
+  # Per-install hardware quirks (external drives, etc.) live in the gitignored
+  # hosts/nixos/local.nix. See hosts/nixos/default.nix for the conditional import.
 
   # Harden /persist: restrict to root-only traversal.
   # Impermanence bind mounts are set up by root during activation and do not
