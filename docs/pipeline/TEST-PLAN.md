@@ -48,10 +48,10 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [X] Signal Flatpak installs and launches if Signal is in the baseline app set
 - [X] Bitwarden Flatpak installs and launches if Bitwarden is in the baseline app set
 - [X] any other baseline-critical Flatpak app is listed explicitly and tested explicitly
-- [ ] `safe-vrcx` launches
-- [ ] `safe-windsurf` launches
-- [ ] VRCX file chooser works if needed
-- [ ] Windsurf file chooser works if needed
+- [X] `safe-vrcx` launches
+- [X] `safe-windsurf` launches
+- [X] VRCX file chooser works if needed
+- [X] Windsurf file chooser works if needed
 - [X] Steam works
 - [N/A] controllers work (no controller hardware detected)
 - [N/A] VR path works if VR is part of the first stable baseline for this machine (wivrn requires avahi for auto-discovery; with lanDiscovery.enable=false, headset must connect by IP manually - service fails without avahi, which is expected design)
