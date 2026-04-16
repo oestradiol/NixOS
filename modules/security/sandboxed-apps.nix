@@ -93,6 +93,16 @@ let
     genericName = "Code Editor";
   };
 in {
+  # NOTE (deferred): the bwrap-wrapped daily apps below are intentionally NOT
+  # exported yet. VRCX and Windsurf currently ship as plain packages via
+  # home-manager/player, which was the faster path while other bugs were
+  # pressing. Swap the commented list for the live one once:
+  #   1. the ProtonUp-Qt / Steam / gamescope chain is stable,
+  #   2. the wrapper's portal/file-chooser passthrough has been validated
+  #      against both apps end-to-end,
+  #   3. the operator is ready to redirect their desktop shortcuts.
+  # Keep the let-bindings above — they are the shipping implementation and
+  # must not be deleted. See docs/maps/TECH-DEBT.md §1 A4.
   config = lib.mkIf (sandbox.apps && profile == "daily") {
     environment.systemPackages = [
      # safeVrcxDaily

@@ -15,11 +15,24 @@
   programs.regreet.enable = true;  # Wayland-native greeter (greetd + cage + regreet)
 
   security.polkit.enable = true;
-  #services.dbus.implementation = "broker";
+  # services.dbus.implementation = "broker";
+  # ^ deliberately disabled 2026-04 after it caused a boot-time hang on a D-Bus
+  # message (failed to reach Plasma/greetd's bus before the login screen).
+  # Do NOT re-enable without first validating that greetd, regreet, plasma6,
+  # xdg-portal, pipewire, and the bwrap wrappers all come up cleanly on the
+  # target hardware with dbus-broker. See docs/maps/TECH-DEBT.md §1 A1.
   services.udisks2.enable = true;
   services.printing.enable = false;
   services.openssh.enable = false;
   services.fwupd.enable = true;
+
+  # Plasma 6 (and xdg.portal's location backend) auto-enables geoclue2 via
+  # mkDefault. geoclue queries Wi-Fi BSSIDs against the Mozilla Location
+  # Service — an identity beacon that none of our declared features use.
+  # Disable explicitly (mkForce) and document: re-enable via lib.mkOverride
+  # 40 or a dedicated myOS.desktop.geolocation knob if redshift/gammastep
+  # with automatic location ever becomes a requirement.
+  services.geoclue2.enable = lib.mkForce false;
 
   programs = {
     zsh.enable = true;

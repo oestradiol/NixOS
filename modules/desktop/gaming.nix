@@ -32,9 +32,11 @@
           PRESSURE_VESSEL_FILESYSTEMS_RW = "$XDG_RUNTIME_DIR/wivrn/comp_ipc";
         };
       };
-      extraCompatPackages = with pkgs; [
-        #proton-ge-bin
-      ];
+      # Proton builds are managed via protonup-qt (see environment.systemPackages
+      # below) rather than pinned in extraCompatPackages. This keeps the choice
+      # of GE / Luxtorpeda / SteamTinkerLaunch / etc. a runtime decision owned
+      # by the operator, not a rebuild.
+      extraCompatPackages = [ ];
     };
 
     # Graphics
@@ -58,9 +60,9 @@
 
     # Environment
     environment.systemPackages = with pkgs; [
-      #mangohud
-      #protonup-qt
-      #protontricks
+      protonup-qt  # GUI manager for custom Proton builds (GE, Luxtorpeda, …)
+      # mangohud     # FPS/temps overlay. Deferred — enable when actually needed.
+      # protontricks # Wine-tricks wrapper for Proton prefixes. Deferred.
     ];
     environment.sessionVariables = {
       PROTON_USE_NTSYNC = "1";
