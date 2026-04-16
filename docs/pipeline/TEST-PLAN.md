@@ -20,7 +20,7 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [ ] at least one rollback generation is available after first successful activation
 
 ## 3. Login, desktop, and session baseline
-- [ ] SDDM appears reliably after boot
+- [ ] greetd/regreet greeter appears reliably after boot
 - [ ] `player` can log into the daily profile successfully
 - [ ] `ghost` can log into the paranoid profile successfully
 - [ ] Plasma starts cleanly on both profiles

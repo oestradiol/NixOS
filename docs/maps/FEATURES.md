@@ -100,9 +100,9 @@ This is what the repo currently contains.
 ### Desktop and session
 
 * Plasma 6
-* SDDM
-* X server enabled
-* default session `plasma`
+* greetd + regreet (Wayland-native greeter)
+* X server explicitly disabled
+* default session `plasma` (Wayland)
 * Polkit
 * D-Bus broker
 * udisks2

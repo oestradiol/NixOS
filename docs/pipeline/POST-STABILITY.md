@@ -66,6 +66,6 @@ Implemented via account locking in `modules/core/users.nix` instead of PAM:
 - daily profile: ghost account locked (`hashedPassword = "!"`)
 - paranoid profile: player account locked (`hashedPassword = "!"`)
 
-This blocks all auth paths (SDDM, TTY, su, sudo, SSH) without modifying
+This blocks all auth paths (greetd, TTY, su, sudo, SSH) without modifying
 PAM service files. Recovery: boot the other profile or use install media.
 The experimental PAM module in `user-profile-binding.nix` remains disabled.
