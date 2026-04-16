@@ -119,6 +119,12 @@
   # SSD TRIM: periodic fstrim (safer than real-time discard for LUKS)
   services.fstrim.enable = true;
 
+  # Disable drkonqi coredump processor - coredumps are already disabled via systemd.coredump.extraConfig
+  # in modules/security/base.nix (Storage=none, ProcessSizeMax=0). The drkonqi service
+  # tries to process stale journal entries from before that config was applied and times out.
+  systemd.user.services.drkonqi-coredump-pickup.enable = false;
+  systemd.user.services.drkonqi-coredump-launcher.enable = false;
+
   # Sleep states (suspend/hibernate) controlled by security option (disabled by default)
   # Rationale: 16GB RAM + 8GB swap insufficient; NVIDIA suspend issues; tmpfs+LUKS complexity
   powerManagement.enable = config.myOS.security.allowSleep;

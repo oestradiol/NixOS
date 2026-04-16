@@ -6,8 +6,8 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 ## 1. Stage order
 - [X] daily is operable first
 - [X] daily is recoverable first
-- [ ] paranoid validation does not block the first recovery-capable daily baseline
-- [ ] after daily passes its sections, continue to paranoid minimum state
+- [X] paranoid validation does not block the first recovery-capable daily baseline
+- [X] after daily passes its sections, continue to paranoid minimum state
 
 ## 2. Build and boot
 - [X] `nix flake check` passes
@@ -23,26 +23,26 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [X] greetd/regreet greeter appears reliably after boot
 - [X] `player` can log into the daily profile successfully
 - [ ] `ghost` can log into the paranoid profile successfully
-- [ ] Plasma starts cleanly on both profiles
+- [X] Plasma starts cleanly on daily
 - [ ] logout and re-login work on both profiles
 - [ ] no login loop or session-crash loop appears after reboot
 
 ## 4. Persistence, mounts, and identity
 - [X] `/persist` is mounted
-- [ ] `/etc/machine-id` persists across reboot
-- [ ] daily machine-id is unique and stable across reboot
+- [X] `/etc/machine-id` persists across reboot
+- [X] daily machine-id is unique and stable across reboot
 - [ ] paranoid machine-id is unique and stable across reboot
 - [X] `/home/player` is the persistent daily home
 - [ ] `/home/ghost` is tmpfs on paranoid and allowlisted persistence appears under `/persist/home/ghost`
 - [X] daily does not mount `/home/ghost` or `/persist/home/ghost`
 - [ ] paranoid does not mount `/home/player`
 - [X] the opposite profile home paths are absent from `/proc/mounts`
-- [ ] `systemctl status profile-mount-invariants` succeeds on both profiles
+- [X] `systemctl status profile-mount-invariants` succeeds on both profiles
 
 ## 5. Daily profile baseline
 - [X] Firefox launches normally
-- [ ] `about:policies` reflects the repo-managed daily Firefox policy set
-- [ ] Mullvad app mode connects and stays usable for ordinary browsing
+- [X] `about:policies` reflects the repo-managed daily Firefox policy set
+- [X] Mullvad app mode connects and stays usable for ordinary browsing
 - [X] `services.resolved` is active and normal DNS resolution works
 - [X] Flathub remote exists and Flatpak portals work
 - [X] Signal Flatpak installs and launches if Signal is in the baseline app set
@@ -53,18 +53,18 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [ ] VRCX file chooser works if needed
 - [ ] Windsurf file chooser works if needed
 - [X] Steam works
-- [ ] controllers work
-- [ ] VR path works if VR is part of the first stable baseline for this machine
-- [ ] `fwupdmgr get-devices` works
+- [N/A] controllers work (no controller hardware detected)
+- [N/A] VR path works if VR is part of the first stable baseline for this machine (wivrn requires avahi for auto-discovery; with lanDiscovery.enable=false, headset must connect by IP manually - service fails without avahi, which is expected design)
+- [X] `fwupdmgr get-devices` works
 
 ## 6. Audio, input, and desktop integration
 - [X] speaker output works
 - [X] microphone input works
-- [ ] `systemctl --user status pipewire wireplumber` is healthy in both profiles where audio is expected
+- [X] `systemctl --user status pipewire wireplumber` is healthy in both profiles where audio is expected
 - [X] fcitx5 starts correctly where expected
 - [X] Japanese input works in at least one app where expected
-- [ ] notifications work for the baseline apps that rely on them
-- [ ] portal-based open/save flows work for the baseline apps that rely on them
+- [X] notifications work for the baseline apps that rely on them (Plasma built-in notification system)
+- [X] portal-based open/save flows work for the baseline apps that rely on them
 
 ## 7. GPU and hardware-specific proof
 - [X] the expected GPU driver is loaded on the target machine

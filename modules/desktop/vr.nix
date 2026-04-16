@@ -46,7 +46,6 @@ in {
       Nice = -10;
       LimitRTPRIO = 99;
       LimitMEMLOCK = "infinity";
-      Group = "realtime";
     };
   };
 
