@@ -106,4 +106,11 @@
   # Sleep states (suspend/hibernate) controlled by security option (disabled by default)
   # Rationale: 16GB RAM + 8GB swap insufficient; NVIDIA suspend issues; tmpfs+LUKS complexity
   powerManagement.enable = config.myOS.security.allowSleep;
+
+  # Actually block sleep: mask systemd sleep targets when allowSleep is false.
+  # powerManagement.enable alone only controls CPU power-management helpers, not sleep.
+  systemd.targets.sleep.enable = config.myOS.security.allowSleep;
+  systemd.targets.suspend.enable = config.myOS.security.allowSleep;
+  systemd.targets.hibernate.enable = config.myOS.security.allowSleep;
+  systemd.targets.hybrid-sleep.enable = config.myOS.security.allowSleep;
 }
