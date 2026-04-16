@@ -1,8 +1,60 @@
 # INSTALL GUIDE
 
-Only installation steps.
+## Prerequisites
 
-## 1. Prepare the disk
+Confirm the following before starting:
+
+### 1. Target model
+- one installation
+- default profile = `paranoid`
+- boot specialization = `daily`
+- `player` = normal daily account
+- `ghost` = hardened workspace account
+
+### 2. Storage plan
+You are about to install the repo's expected layout:
+- EFI partition labeled `NIXBOOT`
+- LUKS2 partition labeled `NIXCRYPT`
+- Btrfs subvolumes for `@nix`, `@persist`, `@log`, `@swap`, `@home-daily`, `@home-paranoid`
+- tmpfs root
+
+### 3. Secrets and local data
+Before install or immediately after first boot, know where these will live:
+- user password setup method
+- any agenix-managed secret files you will actually use
+- Mullvad app credentials/workflow if you use the app path immediately
+- if you later enable the staged self-owned WireGuard path: private key, optional preshared key, tunnel address, server public key, and pinned literal endpoint `IP:port`
+
+### 4. Current baseline profile split
+Current repo state:
+- daily: `sandbox.apps = true`, `sandbox.browsers = false`, `sandbox.vms = false`, `wireguardMullvad.enable = false`
+- paranoid: `sandbox.apps = false`, `sandbox.browsers = true`, `sandbox.vms = true`, `wireguardMullvad.enable = false`
+- both profiles currently use Mullvad app mode by default
+
+Browser split:
+- daily Firefox = enterprise-policy-managed normal Firefox
+- paranoid Firefox = `safe-firefox` wrapper with vendored arkenfox baseline + repo overrides
+- Tor Browser / Mullvad Browser = upstream browser model + local wrapper containment only
+
+### 5. Staged features (not baseline yet)
+These are not part of the first stable install target:
+- Secure Boot rollout
+- TPM-bound unlock rollout
+- self-owned WireGuard host path
+- repo custom audit rules
+- custom AppArmor profile library
+
+### 6. Red flags before starting
+Stop and fix these before running the install script:
+- you have not backed up the target disk
+- you are not willing to wipe the target disk completely
+- you have not decided how user passwords will be set before first real boot
+- you intend to enable the staged self-owned WireGuard path soon but do not have a pinned literal endpoint `IP:port`
+- you are planning to treat post-stability items as blocking for the first machine-usable baseline
+
+## Installation steps
+
+### 1. Prepare the disk
 - boot the NixOS installer
 - run `scripts/rebuild-install.sh` from the installer ISO
 - it will prompt for destructive confirmation, the LUKS passphrase, run the filesystem setup, copy the repo into `/mnt/etc/nixos`, generate a hardware scan, optionally run `nix flake check`, run `nixos-install`, and offer to set `player`/`ghost` passwords in the installed system

@@ -77,7 +77,6 @@ assert_file "$REPO_ROOT/modules/security/arkenfox/user.js"
 
 describe "docs: pipeline"
 for f in \
-    "$REPO_ROOT/docs/pipeline/PRE-INSTALL.md" \
     "$REPO_ROOT/docs/pipeline/INSTALL-GUIDE.md" \
     "$REPO_ROOT/docs/pipeline/TEST-PLAN.md" \
     "$REPO_ROOT/docs/pipeline/RECOVERY.md" \
@@ -87,12 +86,9 @@ done
 
 describe "docs: maps"
 for f in \
-    "$REPO_ROOT/docs/maps/README.md" \
     "$REPO_ROOT/docs/maps/AUDIT-STATUS.md" \
     "$REPO_ROOT/docs/maps/FEATURES.md" \
     "$REPO_ROOT/docs/maps/HARDENING-TRACKER.md" \
-    "$REPO_ROOT/docs/maps/NIX-IMPORT-TREE.md" \
-    "$REPO_ROOT/docs/maps/PERFORMANCE-NOTES.md" \
     "$REPO_ROOT/docs/maps/PROFILE-POLICY.md" \
     "$REPO_ROOT/docs/maps/SECURITY-SURFACES.md" \
     "$REPO_ROOT/docs/maps/SOURCE-COVERAGE.md"; do

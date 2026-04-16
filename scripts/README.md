@@ -18,7 +18,6 @@ All scripts use `set -euo pipefail`. Review them before running.
 | `audit-tutorial.sh` | Read-only static repo checks plus a runtime-check handoff | Any time | Low |
 
 ## What scripts do not do
-- they do not replace `docs/pipeline/PRE-INSTALL.md`
 - they do not replace `docs/pipeline/INSTALL-GUIDE.md`
 - they still expect you to review the updated `hardware-target.nix`, secret-file paths, and runtime test-plan surfaces before treating the machine as stable
 - they do not replace `docs/pipeline/TEST-PLAN.md`

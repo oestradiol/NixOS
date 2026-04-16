@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Static governance: PROJECT-STATE.md + PRE-INSTALL.md baseline claims must
-# still match the live Nix configuration.
+# Static governance: PROJECT-STATE.md baseline claims must match the live Nix configuration.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
 require_cmd nix || exit 0
 _tc_ensure_jq || { skip "jq unavailable"; exit 0; }
 
 ps="$REPO_ROOT/PROJECT-STATE.md"
-pre="$REPO_ROOT/docs/pipeline/PRE-INSTALL.md"
 assert_file "$ps"
-assert_file "$pre"
 
 describe "PROJECT-STATE baseline split"
 for claim in \
@@ -29,24 +26,12 @@ for claim in \
   fi
 done
 
-describe "PRE-INSTALL explicit baseline profile split"
-for claim in \
-    "daily: \`sandbox.apps = true\`, \`sandbox.browsers = false\`" \
-    "paranoid: \`sandbox.apps = false\`, \`sandbox.browsers = true\`" \
-    "both profiles currently use Mullvad app mode by default"; do
-  if grep -Fq "$claim" "$pre"; then
-    pass "PRE-INSTALL claim: ${claim:0:80}"
-  else
-    fail "PRE-INSTALL drift" "$claim"
-  fi
-done
-
 describe "flake.nix: required-files check covers the governance truth surfaces"
 # flake.nix has an inline `required-files` check. Make sure it still lists
 # the files PROJECT-STATE says are canonical.
 flake="$REPO_ROOT/flake.nix"
 for f in PROJECT-STATE.md flake.nix hosts/nixos/default.nix \
-         docs/maps/NIX-IMPORT-TREE.md docs/maps/SECURITY-SURFACES.md; do
+         docs/maps/SECURITY-SURFACES.md; do
   if grep -Fq "$f" "$flake"; then
     pass "flake required-files includes $f"
   else

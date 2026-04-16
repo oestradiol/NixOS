@@ -12,7 +12,7 @@ else
 fi
 
 echo "== 2. Canonical surface review =="
-for f in README.md PROJECT-STATE.md REFERENCES.md docs/maps/AUDIT-STATUS.md docs/pipeline/PRE-INSTALL.md docs/pipeline/INSTALL-GUIDE.md docs/pipeline/TEST-PLAN.md docs/pipeline/POST-STABILITY.md docs/pipeline/RECOVERY.md docs/maps/PERFORMANCE-NOTES.md docs/maps/SECURITY-SURFACES.md docs/maps/NIX-IMPORT-TREE.md; do
+for f in README.md PROJECT-STATE.md REFERENCES.md docs/maps/AUDIT-STATUS.md docs/pipeline/INSTALL-GUIDE.md docs/pipeline/TEST-PLAN.md docs/pipeline/POST-STABILITY.md docs/pipeline/RECOVERY.md docs/maps/SECURITY-SURFACES.md; do
   test -f "$f" && echo "present: $f" || echo "missing: $f"
 done
 

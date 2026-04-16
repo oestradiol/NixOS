@@ -17,10 +17,9 @@ This repo is not trying to be a high-assurance appliance.
 It is a hardened desktop/workstation with explicit same-kernel, desktop-integration, and usability limits.
 
 ## 2. Current stable-baseline definition
-The repo reaches its first stable machine-usable state when all three are complete on target hardware and `docs/pipeline/TEST-PLAN.md` has been used as the runtime-proof checklist:
-1. `docs/pipeline/PRE-INSTALL.md`
-2. `docs/pipeline/INSTALL-GUIDE.md`
-3. `docs/pipeline/TEST-PLAN.md`
+The repo reaches its first stable machine-usable state when both are complete on target hardware and `docs/pipeline/TEST-PLAN.md` has been used as the runtime-proof checklist:
+1. `docs/pipeline/INSTALL-GUIDE.md`
+2. `docs/pipeline/TEST-PLAN.md`
 
 Anything in `docs/pipeline/POST-STABILITY.md` is intentionally non-blocking for that first stable version.
 
@@ -48,7 +47,46 @@ Anything in `docs/pipeline/POST-STABILITY.md` is intentionally non-blocking for 
 - Tor Browser and Mullvad Browser keep their upstream browser privacy model; the repo adds local wrapper containment only
 - browser wrappers are local host containment, not VM-equivalent isolation
 - the paranoid browser wrappers now use a tighter minimal `/etc` allowlist rather than broad `/etc`
-- paranoid Firefox state persists in `.mozilla/safe-firefox`
+
+### Module structure
+```
+flake.nix
+├── hosts/nixos/default.nix
+│   ├── hosts/nixos/fs-layout.nix
+│   ├── hosts/nixos/hardware-target.nix
+│   ├── modules/core/options.nix
+│   ├── modules/core/boot.nix
+│   ├── modules/core/users.nix
+│   ├── modules/desktop/base.nix
+│   │   └── modules/desktop/theme.nix
+│   ├── modules/security/base.nix
+│   │   ├── modules/security/governance.nix
+│   │   ├── modules/security/networking.nix
+│   │   ├── modules/security/wireguard.nix
+│   │   ├── modules/security/browser.nix
+│   │   │   └── modules/security/sandbox-core.nix
+│   │   ├── modules/security/impermanence.nix
+│   │   ├── modules/security/secrets.nix
+│   │   ├── modules/security/secure-boot.nix
+│   │   ├── modules/security/flatpak.nix
+│   │   ├── modules/security/scanners.nix
+│   │   ├── modules/security/vm-tooling.nix
+│   │   ├── modules/security/sandboxed-apps.nix
+│   │   │   └── modules/security/sandbox-core.nix
+│   │   ├── modules/security/privacy.nix
+│   │   └── modules/security/user-profile-binding.nix
+│   ├── modules/gpu/nvidia.nix
+│   ├── modules/gpu/amd.nix
+│   ├── profiles/paranoid.nix
+│   └── profiles/daily.nix (specialisation)
+│       ├── modules/desktop/gaming.nix
+│       │   ├── modules/desktop/vr.nix
+│       │   └── modules/desktop/controllers.nix
+├── home-manager modules (ghost.nix, player.nix)
+│   └── modules/home/common.nix
+│       └── modules/desktop/shell.nix
+└── flake inputs (home-manager, stylix, impermanence, lanzaboote, agenix)
+```
 
 ### Sandbox model
 - `modules/security/sandbox-core.nix` is the shared bubblewrap constructor
@@ -111,17 +149,11 @@ Current support boundary:
 ## 5. Current pipeline
 
 ### Current-stage blocking pipeline
-- `docs/pipeline/PRE-INSTALL.md`
 - `docs/pipeline/INSTALL-GUIDE.md`
 - `docs/pipeline/TEST-PLAN.md`
 
 ### Current-stage support docs
-- `docs/pipeline/RECOVERY.md`
-- `docs/maps/PERFORMANCE-NOTES.md`
 - `docs/maps/SECURITY-SURFACES.md`
-- `docs/maps/NIX-IMPORT-TREE.md`
-- `docs/maps/README.md`
-- `docs/maps/TECH-DEBT.md`
 - `scripts/README.md`
 - `tests/README.md`
 

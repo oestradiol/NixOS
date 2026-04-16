@@ -38,7 +38,7 @@
     checks.${system} = {
       required-files = pkgs.runCommand "required-files-check" {} ''
         echo "Checking required files..."
-        for f in ${./.}/PROJECT-STATE.md ${./.}/flake.nix ${./.}/hosts/nixos/default.nix ${./.}/docs/maps/NIX-IMPORT-TREE.md ${./.}/docs/maps/SECURITY-SURFACES.md; do
+        for f in ${./.}/PROJECT-STATE.md ${./.}/flake.nix ${./.}/hosts/nixos/default.nix ${./.}/docs/maps/SECURITY-SURFACES.md; do
           test -f "$f" || { echo "Missing: $f" > $out; exit 1; }
         done
         echo "All required files present" > $out

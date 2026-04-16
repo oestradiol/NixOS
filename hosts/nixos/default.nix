@@ -4,7 +4,7 @@ let
   # Conditionally pull in operator-local overrides (per-install hardware
   # quirks, experimental toggles). The file is gitignored; when it is
   # missing, the import list simply drops the entry. See hosts/nixos/local.nix
-  # (if present) and docs/maps/TECH-DEBT.md for the policy.
+  # (if present) and README.md for the policy.
   localOverride = ./local.nix;
 in {
   imports = [

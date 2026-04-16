@@ -33,7 +33,7 @@ Static layer (no root needed):
 - profile deltas (the 20+ explicit daily softenings) match documented policy
 - kernel params, sysctl policy, module blacklist are consistent with profile
 - documentation ↔ code drift across `FEATURES.md`, `HARDENING-TRACKER.md`,
-  `AUDIT-STATUS.md`, `PROFILE-POLICY.md`, `NIX-IMPORT-TREE.md`
+  `AUDIT-STATUS.md`, `PROFILE-POLICY.md`
 
 Runtime layer (booted system required, some tests need sudo):
 - system health: failed units, journal warnings, boot-time fsck

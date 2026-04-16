@@ -9,7 +9,7 @@ This is a personal hardened-desktop configuration, not a distribution and not a 
 - `daily`: boot specialization for gaming, social, and recovery-friendly use
 - one installation, two users, one encrypted Btrfs/tmpfs-root system
 - inactive profile home filesystems are not mounted; a boot-time invariant check verifies that the other profile's home mount is absent
-- current stable target = complete `docs/pipeline/PRE-INSTALL.md` + `docs/pipeline/INSTALL-GUIDE.md` + `docs/pipeline/TEST-PLAN.md` on the real target machine
+- current stable target = complete `docs/pipeline/INSTALL-GUIDE.md` + `docs/pipeline/TEST-PLAN.md` on the real target machine
 - `docs/pipeline/POST-STABILITY.md` is non-blocking follow-up work after the stable baseline is already usable on the machine
 
 ## Canonical profile policy
@@ -17,28 +17,35 @@ This is a personal hardened-desktop configuration, not a distribution and not a 
 - `paranoid`: instantiates `base` for the `ghost` workstation with the strongest current workstation-safe hardening/privacy posture
 - `daily`: instantiates `base` for the `player` workstation and softens only the controls needed for socialization, gaming, and recovery-friendly daily use
 - `ghost` and `player`: the respective hardened and daily accounts
-- governance map for every major knob and source influence → `docs/maps/README.md`
+
+## Governance maps
+
+Read in this order for policy model:
+1. `docs/maps/PROFILE-POLICY.md`
+2. `docs/maps/HARDENING-TRACKER.md`
+3. `docs/maps/SOURCE-COVERAGE.md`
+
+Use these files for:
+- what `base`, `paranoid`, `daily`, `ghost`, and `player` mean
+- which knobs are baseline, relaxed, staged, deferred, or rejected
+- where each decision lives in code
+- which external sources influenced the decision
 
 ## Truth surfaces
 Read in this order:
 1. `PROJECT-STATE.md`
 2. `REFERENCES.md`
 3. `docs/maps/AUDIT-STATUS.md`
-4. `docs/pipeline/PRE-INSTALL.md`
-5. `docs/pipeline/INSTALL-GUIDE.md`
-6. `docs/pipeline/TEST-PLAN.md`
-7. `docs/maps/README.md`
-8. `docs/pipeline/POST-STABILITY.md`
-9. `docs/pipeline/RECOVERY.md`
-10. `docs/maps/PERFORMANCE-NOTES.md`
+4. `docs/pipeline/INSTALL-GUIDE.md`
+5. `docs/pipeline/TEST-PLAN.md`
+6. `docs/pipeline/POST-STABILITY.md`
+7. `docs/pipeline/RECOVERY.md`
 
 ## Code-derived maps
 - feature inventory → `docs/maps/FEATURES.md`
 - hardening knob ledger → `docs/maps/HARDENING-TRACKER.md`
 - security boundary map → `docs/maps/SECURITY-SURFACES.md`
-- Nix import tree → `docs/maps/NIX-IMPORT-TREE.md`
-- design notes and conventions → `docs/maps/TECH-DEBT.md`
-- governance navigation → `docs/maps/README.md`
+- source audit → `docs/maps/SOURCE-COVERAGE.md`
 
 ## Repo map
 - architecture / policy / constraints / support boundary → `PROJECT-STATE.md`
@@ -71,6 +78,17 @@ After that point:
 - keep using the machine from the stable baseline
 - move all further tightening, experiments, and optional rollouts into `docs/pipeline/POST-STABILITY.md`
 - do not mix deferred work back into the baseline path unless it is revalidated and moved into `docs/pipeline/TEST-PLAN.md`
+
+## Code conventions
+
+These are deliberate design choices, not debt. Do not "simplify" them.
+
+- `lib.mkForce` in `profiles/daily.nix` is intentional — daily explicitly overrides the hardened base
+- `networking.firewall.interfaces.<iface>.allowedUDPPorts = [ 9 ]` is WoL-over-UDP compatibility (see modules/security/networking.nix:16-29)
+- `services.avahi.enable = lib.mkForce false` in modules/desktop/vr.nix is required because upstream wivrn.nix sets it without mkDefault
+- `services.geoclue2.enable = lib.mkForce false` in modules/desktop/base.nix is required because Plasma 6 enables it via mkDefault
+- `hosts/nixos/default.nix` imports `hosts/nixos/local.nix` only via lib.optional (builtins.pathExists ./local.nix) — this is the sanctioned extension point for per-install hardware quirks
+- `--show-trace` on every flake-* rebuild alias is debug-phase posture; drop once first fully-clean rebuild lands (HARDENING-TRACKER.md operator decision C1)
 
 ## What this repo does not claim
 - wrapper isolation is not VM-equivalent; same-kernel containment only
