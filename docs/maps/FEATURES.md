@@ -102,6 +102,7 @@ This is what the repo currently contains.
 * Plasma 6
 * greetd + regreet (Wayland-native greeter)
 * X server explicitly disabled
+* keyboard layout via XKB_DEFAULT_LAYOUT (Wayland-native)
 * default session `plasma` (Wayland)
 * Polkit
 * D-Bus (default daemon, broker commented out)

@@ -7,7 +7,10 @@
   # ── Desktop environment ────────────────────────────────────────
   console.keyMap = "br-abnt2";
   services.xserver.enable = false;
-  services.xserver.xkb.layout = "br";
+  # Wayland-native keyboard layout via XKB_DEFAULT_* (respected by cage and Plasma 6 Wayland)
+  environment.sessionVariables = {
+    XKB_DEFAULT_LAYOUT = "br";
+  };
   services.desktopManager.plasma6.enable = true;
   programs.regreet.enable = true;  # Wayland-native greeter (greetd + cage + regreet)
 

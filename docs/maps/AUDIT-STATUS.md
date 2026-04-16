@@ -50,7 +50,7 @@ Still needs target-machine validation:
 - Tor Browser wrapper runtime matrix
 - Mullvad Browser wrapper runtime matrix
 - `safe-vrcx` and `safe-windsurf` launch/file-chooser validation
-- Mullvad app-mode connectivity and DNS behavior on both profiles
+- Mullvad app-mode connectivity and DNS behavior on daily profile
 - live VM class validation and guest-template refinement
 - scanner timers/services and AIDE initialization flow
 
