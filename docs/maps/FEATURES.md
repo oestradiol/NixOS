@@ -104,7 +104,7 @@ This is what the repo currently contains.
 * X server explicitly disabled
 * default session `plasma` (Wayland)
 * Polkit
-* D-Bus broker
+* D-Bus (default daemon, broker commented out)
 * udisks2
 * printing disabled
 * OpenSSH disabled
@@ -137,6 +137,7 @@ This is what the repo currently contains.
 * zram enabled with zstd
 * fstrim enabled
 * power management tied to security option
+* systemd sleep targets masked when sleep disabled
 
 ### GPU stack
 
@@ -151,10 +152,10 @@ This is what the repo currently contains.
 
 * NetworkManager enabled
 * daily Wake-on-LAN on `enp5s0`
-* default path is Mullvad app mode
-* self-owned WireGuard path exists but staged off
-* resolved enabled in app-mode path
-* Mullvad daemon enabled in app-mode path
+* daily: Mullvad app mode (GUI + daemon)
+* paranoid: self-owned WireGuard path (staged off by default)
+* resolved enabled system-wide
+* Mullvad daemon enabled on daily only
 * privacy layer:
 
   * paranoid:
@@ -270,7 +271,8 @@ This is what the repo currently contains.
 * secure boot module present
 * TPM module path present
 * governance module present
-* PAM profile-binding module present but intentionally blocked
+* profile-user binding enforced via account locking
+* PAM profile-binding module present but superseded
 
 ## 2. Profile split
 
@@ -296,7 +298,7 @@ This is what the repo currently contains.
 * stricter memory/kernel settings than daily
 * controllers off
 * no Steam/gaming stack imported
-* self-owned WireGuard still staged off by default
+* self-owned WireGuard path (staged off by default)
 
 ### Daily
 

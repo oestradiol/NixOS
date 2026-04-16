@@ -21,7 +21,8 @@ Status values:
 | `users.mutableUsers = false` | staged | maybe later | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | only after declarative secret-backed passwords are deployed |
 | root account locked | baseline | keep | `modules/security/base.nix` | reduce direct root login surface |
 | `ghost` in wheel by default | rejected | do not add | `modules/security/governance.nix` | paranoid user should not have default wheel escalation |
-| PAM profile-binding | rejected | keep blocked | `modules/security/user-profile-binding.nix`, `docs/pipeline/POST-STABILITY.md` | current implementation path is unsafe/stack-replacing |
+| profile-user binding via account locking | baseline | keep | `modules/core/users.nix`, `docs/pipeline/POST-STABILITY.md` | daily locks ghost, paranoid locks player |
+| PAM profile-binding | rejected | superseded | `modules/security/user-profile-binding.nix` | account locking approach is simpler and safer |
 
 ## Kernel and boot hardening
 
@@ -102,7 +103,7 @@ Status values:
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| Mullvad app mode | baseline | keep for now | `modules/security/networking.nix`, `PROJECT-STATE.md` | simpler stable baseline |
+| Mullvad app mode (daily only) | baseline | keep for now | `modules/security/networking.nix`, `PROJECT-STATE.md` | simpler stable baseline for daily/player |
 | self-owned WireGuard path | staged | post-stability / optional | `modules/security/wireguard.nix`, `modules/core/options.nix` | stronger repo-owned path, but more operator burden |
 | explicit nftables ownership in self-owned WG mode | staged | keep | `modules/security/wireguard.nix` | avoid split authority |
 | MAC randomization on paranoid | baseline | keep | `modules/security/privacy.nix` | stronger identifier reduction |
