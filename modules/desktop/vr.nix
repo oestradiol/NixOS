@@ -20,7 +20,7 @@
     config.json = {
       encoders = [
         {
-          encoder = "nvenc";
+          encoder = if config.myOS.gpu == "nvidia" then "nvenc" else "vaapi";
           codec = "h265";
         }
       ];
