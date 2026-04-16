@@ -102,7 +102,8 @@ in
   systemd.services.profile-mount-invariants = {
     description = "Assert profile-specific mount isolation invariants";
     wantedBy = [ "multi-user.target" ];
-    after = [ "local-fs.target" ];
+    before = [ "multi-user.target" ];
+    after = [ "local-fs.target" "home-player.mount" "home-ghost.mount" "persist-home-ghost.mount" ];
     path = [ pkgs.util-linux ];
     serviceConfig = {
       Type = "oneshot";
