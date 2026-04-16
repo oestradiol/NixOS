@@ -61,29 +61,7 @@ Post-stability work can add:
 - richer reference freshness tracking
 - launch/audit gates inspired by the stronger governance pattern you already use elsewhere
 
-## 7. PAM profile-binding — RESOLVED
-Implemented via account locking in `modules/core/users.nix` instead of PAM:
-- daily profile: ghost account locked (`hashedPassword = "!"`)
-- paranoid profile: player account locked (`hashedPassword = "!"`)
-
-This blocks all auth paths (greetd, TTY, su, sudo, SSH) without modifying
-PAM service files. Recovery: boot the other profile or use install media.
-The experimental PAM module in `user-profile-binding.nix` remains disabled.
-
-## 8. Separate ghost and player machine-id
-Current state:
-- Both profiles share a persistent machine-id
-- Journal logs are persistent across profiles
-- Systemd state is persistent
-
-Post-stability work:
-- Make journalctl, systemd state, and machine-id entirely impermanent on ghost
-- Generate random machine-id on each ghost boot
-- Ensure player's machine-id remains persistent and unique
-- Validate that this separation doesn't break systemd services or logging
-- Test cross-profile isolation of system identifiers
-
-## 9. Lanzaboote feature parity tracking
+## 7. Lanzaboote feature parity tracking
 Current state:
 - systemd-boot used by default with extraInstallCommands for default daily entry
 - Secure Boot path uses Lanzaboote with `settings.default = "@saved"` to preserve last-selected entry

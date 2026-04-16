@@ -162,4 +162,3 @@ These are not required to call the first stable baseline complete:
 - [ ] wrapper Landlock
 - [ ] deeper Tor Browser containment trials
 - [ ] deeper Mullvad Browser containment trials
-- [ ] PAM profile-binding trials

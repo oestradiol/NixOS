@@ -40,7 +40,6 @@ These are not part of the first stable install target:
 - TPM-bound unlock rollout
 - self-owned WireGuard host path
 - repo custom audit rules
-- PAM profile-binding
 - custom AppArmor profile library
 
 ## 6. Red flags before you start

@@ -2,8 +2,7 @@
 
 Snapshot of everything in the repo that is **temporary**, **pending**, **commented-out**,
 **staged off**, or **explicitly deferred**. Generated 2026-04-16 from an exhaustive
-sweep of all `.nix`, `.md`, and `.sh` files; last refreshed 2026-04-16 after the
-A1–A7 / D1–D2 operator decisions landed and kernel scheduler sysctl documentation.
+sweep of all `.nix`, `.md`, and `.sh` files; last refreshed 2026-04-16.
 
 Scope policy:
 - This file tracks debt that lives INSIDE the repo (code comments, disabled blocks,
@@ -31,10 +30,6 @@ in code or been deleted since the last refresh.
 | `modules/desktop/gaming.nix` | 64-65 | `# mangohud`, `# protontricks` in `systemPackages` | **A6 — kept (deferred)**: enable on demand; neither is needed for the current baseline. `protonup-qt` (sibling line) is **enabled** and manages Proton builds at runtime. |
 | `modules/security/privacy.nix` | 38-39 | hostname-randomization one-liner in a comment | **kept (documented)**: deliberately disabled because it breaks local network identification. The comment is a runtime recipe, not debt. Do not promote to an option unless requested. |
 
-Resolved since last refresh (no longer rows here):
-- **A2**: commented PAM-hook blocks + unreachable `profileCheckScript` let-binding in `modules/security/user-profile-binding.nix` — **deleted**. File reduced to its guardrail assertion; see §4.
-- **A5**: `#proton-ge-bin` in `modules/desktop/gaming.nix` — **deleted**. `protonup-qt` enabled in its place; Proton variants are now a runtime choice, not a rebuild.
-
 ## 2. Temporary fixes / workaround notes
 
 Comments that explicitly mark non-permanent design.
@@ -46,8 +41,6 @@ Comments that explicitly mark non-permanent design.
 | `modules/desktop/gaming.nix` | 12-17 | CFS scheduler tunables removed from sysctl in kernel 5.13+ (moved to debugfs) | **baseline**; comment documents the upstream change and that no sysctl alternatives exist |
 | `modules/desktop/controllers.nix` | 37 | Bluetooth module added to boot.kernelModules for controller support | **baseline**; ensures module loads even without hardware present |
 
-Resolved since last refresh:
-- **A7**: the `Temp fix: auto-mount external drive` block previously at the bottom of `hosts/nixos/fs-layout.nix` has been **moved out of the tracked tree** into `hosts/nixos/local.nix` (gitignored). `hosts/nixos/default.nix` now imports it via `lib.optional (builtins.pathExists ./local.nix)` so the entry is a no-op on any machine that does not host the external drive. See `README.md` → "Operator-local overrides".
 
 ## 3. Staged features (off by default in both profiles)
 
@@ -77,23 +70,9 @@ Code exists but governance already classified it as "do not add".
 
 ## 5. Operational follow-ups (live-system state)
 
-These are not code debt — they will clear with a rebuild+reboot after the 2026-04 fix
-set lands. Listed so nothing is lost.
+These are not code debt — they will clear with a rebuild+reboot after fixes land.
 
-| symptom | surfaced by | root cause | clears when |
-|---|---|---|---|
-| `/` tmpfs at 100% | `tests/runtime/010-system-health.sh` | 4G tmpfs too small for KDE + VR + IDE | Fix 3 lands + reboot releases deleted-but-held inodes |
-| `logrotate.service` failed | `tests/runtime/010-system-health.sh` | `/var/lib/logrotate.status.tmp` on tmpfs root | Fix 4 (persist `/var/lib/logrotate`) + rebuild |
-| `fwupd.service` failed | `tests/runtime/010-system-health.sh` | `/var/lib/fwupd` write hit tmpfs-full | Fix 3 + Fix 4 (persist `/var/lib/fwupd`) + rebuild |
-| `fwupd-refresh.service` failed | dependency of fwupd | same as above | same |
-| `clamav-impermanence-scan.service` / `clamav-deep-scan.service` failed (2/INVALIDARGUMENT) | `tests/runtime/010-system-health.sh` | `/var/lib/clamav` empty: freshclam hasn't populated the CVD DB AND that dir is on tmpfs | Fix 4 extension (persist `/var/lib/clamav`) + first run of `clamav-freshclam.service` post-rebuild |
-| `avahi-daemon.service` active + `avahi` user present | `tests/runtime/220-misc-services.sh` | upstream wivrn.nix forced avahi; no override before Fix 2 | Fix 2 lands + rebuild |
-| Bluetooth module not loaded without hardware | `tests/runtime/100-controllers-bluetooth.sh` | bluetooth module only loaded when hardware present | **cleared 2026-04-16**: added to `boot.kernelModules` in `modules/desktop/controllers.nix` |
-
-Resolved since last refresh:
-- **~player/.nix-profile dangling**: HM activation hit tmpfs-full during last switch. Test now treats this as info (non-blocking) since packages are reachable via system PATH (useGlobalPkgs=true).
-- **switch.log records profile-mount-invariants failure**: historical artefact of the pre-fix alias. Cleared 2026-04-16: `switch.log` deleted; now gitignored. `bugs/020` + `bugs/030` treat absence as PASS.
-- **/etc/ssh/ssh_host_*_key{,.pub} dangling symlinks**: pre-fix impermanence.nix persisted those paths unconditionally; sshd is disabled so no keys exist in `/persist/etc/ssh/`. Fix landed in `modules/security/impermanence.nix` (now gated on `config.services.openssh.enable`); clears on first rebuild.
+No current operational follow-ups pending.
 
 ## 6. Non-obvious repo conventions worth keeping documented
 
@@ -128,5 +107,3 @@ These are not debt, but explain comment patterns a reviewer might otherwise flag
     condition under which it would be re-evaluated.
   - `kept (documented)` — in-code recipe / reference, not debt.
   - `decide` — open item pending operator sign-off. Should be rare and transient.
-- When a decision lands, move the row out of the table and into the adjacent
-  "Resolved since last refresh" list so the history isn't lost.

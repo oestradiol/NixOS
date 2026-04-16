@@ -83,9 +83,6 @@ That would likely add naming symmetry without adding real clarity.
 - staged surfaces are mostly kept out of the baseline path
 
 ### Weak parts
-- the shared `base` concept was under-documented
-- hardening/source traceability was spread across multiple docs
-- some important knobs were only obvious if you read the code directly
 - `users.mutableUsers = true` is operationally understandable but should be tracked as an explicit temporary policy decision
 
 ## 5. Decision on repo structure

@@ -227,6 +227,7 @@ This is what the repo currently contains.
 * Flathub auto-added
 * xdg-desktop-portal enabled
 * GTK portal enabled
+* KDE portal enabled (Plasma 6 integration)
 * intended app role:
 
   * Signal
@@ -290,7 +291,6 @@ This is what the repo currently contains.
 * TPM module path present
 * governance module present
 * profile-user binding enforced via account locking
-* PAM profile-binding module present but superseded
 
 ## 2. Profile split
 

@@ -34,14 +34,6 @@ Enabled or stricter on paranoid:
 - VM tooling capability layer
 - tighter wrapper environment and minimal `/etc` browser exposure
 
-## Deferred measurements
-Still worth measuring on real hardware:
-- daily gaming FPS delta after wrapper changes
-- VR latency/compositor issues
-- browser GPU acceleration behavior inside paranoid wrappers
-- Mullvad app-mode overhead and DNS behavior
-- any future seccomp or Landlock overhead once implemented
-
 ## Rule for future changes
 If a hardening change has non-trivial performance cost, document:
 - expected cost

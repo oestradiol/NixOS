@@ -45,12 +45,10 @@ Reference set index: `REFERENCES.md`
 ## Runtime backlog
 Still needs target-machine validation:
 - daily first boot and recovery path
-- daily Firefox policy validation in the real desktop session
 - paranoid `safe-firefox` runtime validation
 - Tor Browser wrapper runtime matrix
 - Mullvad Browser wrapper runtime matrix
 - `safe-vrcx` and `safe-windsurf` launch/file-chooser validation
-- Mullvad app-mode connectivity and DNS behavior on daily profile
 - live VM class validation and guest-template refinement
 - scanner timers/services and AIDE initialization flow
 
