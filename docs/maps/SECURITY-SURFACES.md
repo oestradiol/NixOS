@@ -46,7 +46,7 @@ Wrapped browsers keep network access unless you move the task into a VM.
 Flatpak is enabled for relatively trusted GUI apps, not as the hostile-workload boundary.
 
 ### 2.8 Full desktop environment
-KDE Plasma 6 + SDDM + normal desktop services remain in scope.
+KDE Plasma 6 + greetd/regreet + normal desktop services remain in scope.
 
 ### 2.9 NVIDIA stack
 The current baseline still accepts NVIDIA complexity for target-hardware reliability.
@@ -98,7 +98,7 @@ These remain intentionally outside the first stable baseline:
 - custom AppArmor profile library
 - wrapper seccomp
 - wrapper Landlock
-- PAM profile-binding
+- PAM profile-binding (superseded by account locking in `users.nix`)
 
 ## 5. Operator expectation
 Use the repo as a hardened workstation baseline.

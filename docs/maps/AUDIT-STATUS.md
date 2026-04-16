@@ -30,7 +30,7 @@ Canonical audit surface: what has been checked, what is only statically verified
 | ClamAV + AIDE monitoring path | implemented | static review | `modules/security/scanners.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/RECOVERY.md` | timers/services still need live validation |
 | Flatpak + Flathub + portals | implemented | static review | `modules/security/flatpak.nix`, `docs/pipeline/TEST-PLAN.md`, `PROJECT-STATE.md` | containment for relatively trusted GUI apps, not hostile-software guarantee |
 | VM tooling layer + workflow classes | implemented | static review | `modules/security/vm-tooling.nix`, `PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/POST-STABILITY.md` | host-side automation present; guest templates still need runtime proof |
-| PAM profile-binding surface | rejected-for-baseline | static review | `modules/security/user-profile-binding.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/POST-STABILITY.md` | intentionally blocked, not baseline-ready |
+| profile-user binding | implemented | static review | `modules/core/users.nix`, `modules/security/user-profile-binding.nix` | enforced via account locking; PAM approach remains disabled |
 
 ## Claim ledger
 - daily Firefox is configured through Firefox enterprise policies, not through the vendored arkenfox file
