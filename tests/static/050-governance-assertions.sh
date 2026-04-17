@@ -58,13 +58,26 @@ done
 
 describe "account-locking invariants in users.nix"
 # Profile-user binding via account locking is the canonical mechanism.
-if grep -Fq 'hashedPasswordFile = lib.mkIf isDaily' "$users_nix" \
-   && grep -Fq 'hashedPassword = lib.mkIf isParanoid "!"' "$users_nix" \
-   && grep -Fq 'hashedPasswordFile = lib.mkIf isParanoid' "$users_nix" \
-   && grep -Fq 'hashedPassword = lib.mkIf isDaily "!"' "$users_nix"; then
-  pass "player/ghost account locks are conditional on profile"
+# The conditions carry a debug-mode escape hatch (crossProfile) that lifts
+# both locks together; default state (crossProfile=false) preserves the
+# original paranoid↔ghost / daily↔player binding.
+if grep -Fq 'hashedPasswordFile = lib.mkIf (isDaily || crossProfile)' "$users_nix" \
+   && grep -Fq 'hashedPassword = lib.mkIf (isParanoid && !crossProfile) "!"' "$users_nix" \
+   && grep -Fq 'hashedPasswordFile = lib.mkIf (isParanoid || crossProfile)' "$users_nix" \
+   && grep -Fq 'hashedPassword = lib.mkIf (isDaily && !crossProfile) "!"' "$users_nix"; then
+  pass "player/ghost account locks are conditional on profile (with debug escape hatch)"
 else
   fail "account-locking mechanism drifted in users.nix"
+fi
+
+# The crossProfile / paranoidWheel shorthands must derive from the debug
+# namespace with the master gate gating every sub-flag. This is what makes
+# `myOS.debug.*.enable` a no-op when `myOS.debug.enable = false`.
+if grep -Fq 'crossProfile = debug.enable && debug.crossProfileLogin.enable' "$users_nix" \
+   && grep -Fq 'paranoidWheel = debug.enable && debug.paranoidWheel.enable' "$users_nix"; then
+  pass "debug-mode master gate is required for each sub-flag in users.nix"
+else
+  fail "debug-mode master gate has drifted in users.nix"
 fi
 
 # mutableUsers must be false (NOTE: PROFILE-POLICY.md describes a transitional

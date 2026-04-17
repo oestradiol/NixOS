@@ -11,6 +11,7 @@ in {
     ./fs-layout.nix
     ./hardware-target.nix
     ../../modules/core/options.nix
+    ../../modules/core/debug.nix
     ../../modules/core/boot.nix
     ../../modules/core/users.nix
     ../../modules/desktop/base.nix

@@ -32,6 +32,10 @@ in
   # ── myOS options ────────────────────────────────────────────────────
   "myOS.profile"                                       = try cfg.myOS.profile;
   "myOS.gpu"                                           = try cfg.myOS.gpu;
+  "myOS.debug.enable"                                  = try cfg.myOS.debug.enable;
+  "myOS.debug.crossProfileLogin.enable"                = try cfg.myOS.debug.crossProfileLogin.enable;
+  "myOS.debug.paranoidWheel.enable"                    = try cfg.myOS.debug.paranoidWheel.enable;
+  "myOS.debug.warnings.enable"                         = try cfg.myOS.debug.warnings.enable;
   "myOS.security.secureBoot.enable"                    = try cfg.myOS.security.secureBoot.enable;
   "myOS.security.tpm.enable"                           = try cfg.myOS.security.tpm.enable;
   "myOS.security.impermanence.enable"                  = try cfg.myOS.security.impermanence.enable;
@@ -134,6 +138,15 @@ in
   "users.users.ghost.shell"                            = try (cfg.users.users.ghost.shell.pname
                                                               or cfg.users.users.ghost.shell.name
                                                               or "");
+  # Account locking surface. hashedPasswordFile is null when the mkIf
+  # condition evaluated to false; hashedPassword is null when its mkIf
+  # evaluated to false. Stage 1 uses these to assert the debug-off default.
+  "users.users.player.hashedPasswordFile"              = try cfg.users.users.player.hashedPasswordFile;
+  "users.users.player.hashedPassword"                  = try cfg.users.users.player.hashedPassword;
+  "users.users.ghost.hashedPasswordFile"               = try cfg.users.users.ghost.hashedPasswordFile;
+  "users.users.ghost.hashedPassword"                   = try cfg.users.users.ghost.hashedPassword;
+  "users.users.player.extraGroups"                     = try cfg.users.users.player.extraGroups;
+  "users.users.ghost.extraGroups"                      = try cfg.users.users.ghost.extraGroups;
 
   # ── misc ─────────────────────────────────────────────────────────────
   "age.secrets.__keys"                                 = attrKeys (cfg.age.secrets or {});

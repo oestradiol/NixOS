@@ -29,6 +29,14 @@ This is what the repo currently contains.
 * persisted identity files via impermanence
 * machine-id persistence model present
 
+### Debug mode (`myOS.debug.*`)
+
+* master gate `myOS.debug.enable` (default OFF); sub-flags are no-ops without it
+* `myOS.debug.crossProfileLogin.enable`: sets `hashedPasswordFile` on both accounts regardless of profile (relaxes the profile-user account-lock binding)
+* `myOS.debug.paranoidWheel.enable`: adds `"wheel"` to ghost's `extraGroups` on paranoid and skips the matching governance assertion
+* `myOS.debug.warnings.enable` (default ON): emits a NixOS activation warning per active relaxation, so debug state is visible on every rebuild
+* intended for local debugging and recovery only; must be off on any stable baseline or published fork
+
 ### Boot and kernel baseline
 
 * systemd-boot enabled by default

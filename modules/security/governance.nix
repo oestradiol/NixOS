@@ -3,6 +3,10 @@ let
   persistRoot = config.myOS.persistence.root;
   isDaily = config.myOS.profile == "daily";
   isParanoid = config.myOS.profile == "paranoid";
+  # Debug-mode relaxations (see modules/core/debug.nix). Each flag only
+  # takes effect when myOS.debug.enable is also true.
+  debug = config.myOS.debug;
+  paranoidWheelRelaxed = debug.enable && debug.paranoidWheel.enable;
 in {
   assertions = [
     {
@@ -50,7 +54,10 @@ in {
       message = "This design assumes greetd is enabled as the Wayland-native display manager.";
     }
     {
-      assertion = !isParanoid || !(builtins.elem "wheel" config.users.users."ghost".extraGroups);
+      # Relaxed by myOS.debug.paranoidWheel.enable when the master debug
+      # gate is also on. The relaxation is surfaced as an activation warning
+      # by modules/core/debug.nix.
+      assertion = !isParanoid || paranoidWheelRelaxed || !(builtins.elem "wheel" config.users.users."ghost".extraGroups);
       message = "Paranoid user must not be in the wheel group by default.";
     }
     {

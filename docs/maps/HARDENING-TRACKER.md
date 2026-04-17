@@ -22,6 +22,10 @@ Status values:
 | `ghost` in wheel by default | rejected | do not add | `modules/security/governance.nix` | paranoid user should not have default wheel escalation |
 | profile-user binding via account locking | baseline | keep | `modules/core/users.nix`, `docs/pipeline/POST-STABILITY.md` | daily locks ghost, paranoid locks player |
 | PAM profile-binding | rejected | superseded | `modules/security/user-profile-binding.nix` | account locking approach is simpler and safer |
+| `myOS.debug.enable` master gate | baseline | keep default off | `modules/core/debug.nix` | declarative escape hatch; sub-flags are no-ops without it; must stay off on any stable baseline |
+| `myOS.debug.crossProfileLogin.enable` | staged off by default | keep off except when actively debugging login flows | `modules/core/debug.nix`, `modules/core/users.nix` | relaxes profile-user account-lock binding for cross-profile authentication; documented escape for recovery/bootstrap |
+| `myOS.debug.paranoidWheel.enable` | staged off by default | keep off except when actively administering paranoid from paranoid | `modules/core/debug.nix`, `modules/core/users.nix`, `modules/security/governance.nix` | adds ghost to wheel and skips the matching governance assertion; escape for emergency admin |
+| `myOS.debug.warnings.enable` | baseline on | keep on | `modules/core/debug.nix` | surfaces active debug relaxations in every rebuild; silencing is a footgun |
 
 ## Kernel and boot hardening
 
