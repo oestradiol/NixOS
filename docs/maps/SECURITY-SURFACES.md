@@ -46,7 +46,10 @@ Wrapped browsers keep network access unless you move the task into a VM.
 Flatpak is enabled for relatively trusted GUI apps, not as the hostile-workload boundary.
 
 ### 2.8 Full desktop environment
-KDE Plasma 6 + greetd/regreet + normal desktop services remain in scope.
+Desktop environment is optional via `myOS.desktopEnvironment` option:
+- `plasma` (default): KDE Plasma 6 + greetd/regreet + normal desktop services
+- `hyprland`: Hyprland Wayland compositor + greetd/regreet
+- `none`: Manual Wayland compositor setup (no greeter)
 
 ### 2.9 NVIDIA stack
 The current baseline still accepts NVIDIA complexity for target-hardware reliability.

@@ -101,11 +101,14 @@ This is what the repo currently contains.
 
 ### Desktop and session
 
-* Plasma 6
-* greetd + regreet (Wayland-native greeter)
+* Desktop environment via `myOS.desktopEnvironment` option:
+
+  * `plasma` (default): KDE Plasma 6 (Wayland-native)
+  * `hyprland`: Hyprland (Wayland compositor, X11 disabled)
+  * `none`: Manual Wayland compositor setup
+* greetd + regreet (Wayland-native greeter, enabled when DE != none)
 * X server explicitly disabled
 * keyboard layout via XKB_DEFAULT_LAYOUT (Wayland-native)
-* default session `plasma` (Wayland)
 * Polkit
 * D-Bus (default daemon, broker commented out)
 * udisks2

@@ -80,6 +80,7 @@ doc_claims "fcitx5"
 
 assert_eq "$(nix_eval 'services.xserver.enable')" 'false' "xserver disabled (paranoid)"
 assert_eq "$(nix_eval_daily 'services.xserver.enable')" 'false' "xserver disabled (daily)"
+assert_eq "$(nix_eval 'myOS.desktopEnvironment')" '"plasma"' "desktop environment is plasma"
 assert_eq "$(nix_eval 'services.desktopManager.plasma6.enable')" 'true' "plasma6 enabled"
 assert_eq "$(nix_eval 'programs.regreet.enable')" 'true' "regreet enabled"
 assert_eq "$(nix_eval 'services.greetd.enable')" 'true' "greetd enabled"

@@ -24,7 +24,7 @@ assert_file "$shell_nix"
 describe "per-profile switch aliases are declared"
 for a in flake-switch-daily flake-switch-paranoid flake-switch \
          flake-test-daily flake-test-paranoid flake-test \
-         flake-boot-daily flake-boot-paranoid flake-boot \
+         flake-boot \
          flake-dry flake-rollback \
          flake-update nix-update; do
   if grep -Fq "$a " "$shell_nix" || grep -Fq "$a=" "$shell_nix" || grep -Fq "$a " "$shell_nix"; then
@@ -49,18 +49,8 @@ for a in flake-switch-daily flake-test-daily; do
   fi
 done
 
-describe "boot-daily does NOT pass --specialisation (boot builds all specialisations)"
-line=$(grep -E "^\s*flake-boot-daily\s*=" "$shell_nix" | head -1)
-if [[ -z "$line" ]]; then
-  fail "could not locate alias line for flake-boot-daily"
-elif [[ "$line" == *'--specialisation'* ]]; then
-  fail "flake-boot-daily wrongly carries --specialisation" "line: $line"
-else
-  pass "flake-boot-daily does NOT pass --specialisation (boot already builds all)"
-fi
-
 describe "paranoid aliases do NOT pass --specialisation daily"
-for a in flake-switch-paranoid flake-test-paranoid flake-boot-paranoid; do
+for a in flake-switch-paranoid flake-test-paranoid; do
   line=$(grep -E "^\s*${a}\s*=" "$shell_nix" | head -1)
   if [[ -z "$line" ]]; then
     fail "could not locate alias line for $a"
@@ -74,23 +64,33 @@ for a in flake-switch-paranoid flake-test-paranoid flake-boot-paranoid; do
 done
 
 describe "smart default routes by booted specialisation"
-for a in flake-switch flake-test flake-boot; do
+for a in flake-switch flake-test; do
   line=$(grep -E "^\s*${a}\s*=" "$shell_nix" | head -1)
   if [[ -z "$line" ]]; then
     fail "could not locate alias line for $a"
     continue
   fi
-  if [[ "$line" == *'/run/current-system/specialisation/daily'* ]]; then
-    pass "$a branches on /run/current-system/specialisation/daily"
+  if [[ "$line" == *'/nix/var/nix/profiles/system/specialisation/daily'* ]]; then
+    pass "$a branches on /nix/var/nix/profiles/system/specialisation/daily"
   else
     fail "$a does not route by booted specialisation" "line: $line"
   fi
 done
 
+describe "flake-boot does NOT route by specialisation (builds all)"
+line=$(grep -E "^\s*flake-boot\s*=" "$shell_nix" | head -1)
+if [[ -z "$line" ]]; then
+  fail "could not locate alias line for flake-boot"
+elif [[ "$line" == *'specialisation'* ]]; then
+  fail "flake-boot wrongly carries specialisation (should build all)" "line: $line"
+else
+  pass "flake-boot does not route by specialisation (builds all)"
+fi
+
 describe "debug-phase: rebuild aliases carry --show-trace"
 for a in flake-switch-daily flake-switch-paranoid \
          flake-test-daily flake-test-paranoid \
-         flake-boot-daily flake-boot-paranoid \
+         flake-boot \
          flake-dry; do
   line=$(grep -E "^\s*${a}\s*=" "$shell_nix" | head -1)
   [[ -z "$line" ]] && continue

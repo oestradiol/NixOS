@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{ config, pkgs, lib, ... }: {
   home.stateVersion = "26.05";
 
   imports = [
@@ -19,4 +19,8 @@
       core.sshCommand = "ssh -o IdentitiesOnly=yes";
     };
   };
+
+  home.packages = with pkgs; lib.optionals (config ? osConfig && config.osConfig.myOS.desktopEnvironment == "plasma") [
+    kdePackages.kate  # KDE text editor
+  ];
 }

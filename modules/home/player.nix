@@ -1,5 +1,7 @@
-{ pkgs, ... }: {
-  imports = [ ./common.nix ];
+{ config, pkgs, lib, ... }: {
+  imports = [
+    ./common.nix
+  ];
 
   home.username = "player";
   home.homeDirectory = "/home/player";
@@ -19,7 +21,6 @@
     eza
     bat
     mullvad-vpn
-    kdePackages.kate
     # Flatpak packages (installed via system.services.flatpak, not home.packages)
     # These are listed here for reference; actual installation via flatpak command
     # spotify → com.spotify.Client

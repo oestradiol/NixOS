@@ -4,6 +4,7 @@
   # Purpose: make every security weakening explicit by overriding the hardened base.
   myOS.profile = lib.mkForce "daily";
   myOS.gpu = lib.mkForce "nvidia";
+  myOS.desktopEnvironment = lib.mkForce "plasma";
 
   home-manager.users.player = import ../modules/home/player.nix;
 

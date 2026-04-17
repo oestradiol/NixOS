@@ -10,7 +10,7 @@
 # always targets the paranoid toplevel, regardless of the booted specialisation.
 #
 # Fix: split aliases (flake-switch-daily, flake-switch-paranoid), plus a smart
-# default that picks based on /run/current-system/specialisation/daily.
+# default that picks based on /nix/var/nix/profiles/system/specialisation/daily.
 #
 # This test complements tests/bugs/020-profile-mount-switch.sh which documents
 # the historical switch.log evidence.
@@ -83,8 +83,8 @@ assert_ne "$line_s"  '' "flake-switch (smart default) declared"
 [[ "$line_sp" != *'--specialisation'* ]] && pass "flake-switch-paranoid → toplevel (no --specialisation)" \
   || fail "flake-switch-paranoid incorrectly passes --specialisation" "line: $line_sp"
 
-[[ "$line_s" == *'/run/current-system/specialisation/daily'* ]] && pass "flake-switch branches on booted specialisation" \
-  || fail "flake-switch does not branch on /run/current-system/specialisation/daily" "line: $line_s"
+[[ "$line_s" == *'/nix/var/nix/profiles/system/specialisation/daily'* ]] && pass "flake-switch branches on booted specialisation" \
+  || fail "flake-switch does not branch on /nix/var/nix/profiles/system/specialisation/daily" "line: $line_s"
 
 describe "debug-mode ergonomics: --show-trace required everywhere during test phase"
 for a in flake-switch-daily flake-switch-paranoid flake-test-daily flake-test-paranoid \

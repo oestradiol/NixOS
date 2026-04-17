@@ -57,7 +57,7 @@
       # or `switch`). Does not touch /boot.
       flake-rollback = "sudo /run/current-system/bin/switch-to-configuration switch";
 
-      flake-update = "sudo nix flake update .";
+      flake-update = "sudo nix flake update --flake .";
       nix-update   = "flake-update && flake-switch";
 
       ls = "eza";

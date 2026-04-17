@@ -121,7 +121,7 @@ Status values:
 | `myOS.vr.lanDiscovery.enable` | baseline (false) | keep default off | `modules/core/options.nix`, `modules/desktop/vr.nix` | connect headset by manual IP; avoid mDNS broadcast |
 | `myOS.vr.lanInterfaces` scope | baseline | enforce non-empty when lanDiscovery on | `modules/security/governance.nix`, `tests/static/150-avahi-governance.sh` | prevents avahi broadcast on VPN/bluetooth/guest interfaces when ever enabled |
 | WiVRn `openFirewall = true` (upstream) | suppressed | keep off; per-interface rules instead | `modules/desktop/vr.nix`, `tests/static/140-firewall-surface.sh` | upstream opens TCP/UDP 9757 on every interface; we bind to `myOS.vr.lanInterfaces` only |
-| `services.geoclue2` (Plasma 6 default) | removed | keep off | `modules/desktop/base.nix`, `modules/security/governance.nix` | Wi-Fi BSSID queries to Mozilla Location Service = identity beacon; not referenced by any declared feature |
+| `services.geoclue2` (Plasma 6 default) | removed | keep off | `modules/desktop/plasma.nix`, `modules/security/governance.nix` | Wi-Fi BSSID queries to Mozilla Location Service = identity beacon; not referenced by any declared feature |
 
 ## Filesystem / tmpfs capacity
 

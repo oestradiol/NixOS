@@ -13,6 +13,12 @@
       description = "Current trust profile.";
     };
 
+    desktopEnvironment = lib.mkOption {
+      type = lib.types.enum [ "plasma" "hyprland" "none" ];
+      default = "plasma";
+      description = "Desktop environment (plasma for KDE Plasma 6, hyprland for Hyprland, none for manual Wayland compositor setup).";
+    };
+
     persistence.root = lib.mkOption {
       type = lib.types.str;
       default = "/persist";

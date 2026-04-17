@@ -91,6 +91,7 @@ in
   # ── security + services ──────────────────────────────────────────────
   "security.apparmor.enable"                           = try cfg.security.apparmor.enable;
   "services.xserver.enable"                            = try cfg.services.xserver.enable;
+  "myOS.desktopEnvironment"                            = try cfg.myOS.desktopEnvironment;
   "services.desktopManager.plasma6.enable"             = try cfg.services.desktopManager.plasma6.enable;
   "services.greetd.enable"                             = try cfg.services.greetd.enable;
   "services.pipewire.enable"                           = try cfg.services.pipewire.enable;

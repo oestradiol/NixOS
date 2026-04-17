@@ -5,6 +5,7 @@
   # it is a hardened desktop baseline with explicit, documented residual exposure.
   myOS.profile = "paranoid";
   myOS.gpu = "nvidia";
+  myOS.desktopEnvironment = "plasma";
 
   home-manager.users.ghost = import ../modules/home/ghost.nix;
 
