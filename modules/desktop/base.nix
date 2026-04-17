@@ -69,7 +69,7 @@
     };
   };
 
-  # ── Nix settings (was nix.nix) ────────────────────────────────
+  # ── Nix settings ────────────────────────────────
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
@@ -82,6 +82,24 @@
     automatic = true;
     dates = "weekly";
     options = "--delete-older-than 7d";
+  };
+  # ── Automatic system updates ────────────────────────────────────────
+  systemd.services.nix-auto-update = {
+    description = "Daily automatic Nix flake update and boot entry rebuild";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "/bin/sh -c 'cd /home/player/dotfiles && sudo -u player ${pkgs.nix}/bin/nix flake update --flake . && ${pkgs.nixos-rebuild}/bin/nixos-rebuild boot --flake .#nixos'";
+      WorkingDirectory = "/home/player/dotfiles";
+    };
+  };
+
+  systemd.timers.nix-auto-update = {
+    description = "Run daily Nix flake update and boot rebuild";
+    timerConfig = {
+      OnCalendar = "daily";
+      Persistent = true;
+    };
+    wantedBy = [ "timers.target" ];
   };
 
   # ── Audio (was audio.nix) ─────────────────────────────────────
