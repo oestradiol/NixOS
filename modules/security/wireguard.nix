@@ -1,6 +1,69 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.myOS.security.wireguardMullvad;
+  options = {
+    options.myOS.security.wireguardMullvad = {
+      enable = lib.mkEnableOption ''
+        Self-owned WireGuard tunnel to Mullvad servers.
+
+        Provider: Mullvad (servers only)
+        Control plane: NixOS (interface, routes, firewall, config)
+
+        This removes the split-authority problem where Mullvad app owned
+        connection state but the repo owned a separate firewall story.
+      '';
+      privateKeyFile = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Path to WireGuard private key file (your key).
+          Use agenix or sops to provide this securely.
+        '';
+      };
+      presharedKeyFile = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = ''
+          Optional WireGuard preshared key path.
+        '';
+      };
+      address = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "10.64.123.45/32";
+        description = "WireGuard tunnel IP address assigned by Mullvad.";
+      };
+      dns = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "10.64.0.1";
+        description = "DNS server to use through the tunnel (Mullvad DNS).";
+      };
+      endpoint = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        example = "146.70.34.211:51820";
+        description = ''
+          Mullvad server endpoint. Paranoid policy requires a literal pinned IP:port.
+        '';
+      };
+      serverPublicKey = lib.mkOption {
+        type = lib.types.str;
+        default = "";
+        description = "Mullvad server public key.";
+      };
+      allowedIPs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ "0.0.0.0/0" "::/0" ];
+        description = "IPs to route through the tunnel (default: full tunnel).";
+      };
+      persistentKeepalive = lib.mkOption {
+        type = lib.types.int;
+        default = 25;
+        description = "WireGuard persistent keepalive interval in seconds.";
+      };
+    };
+  };
 
   # Self-owned WireGuard stack for paranoid profile
   # Provider: Mullvad (servers only)
@@ -94,6 +157,7 @@ let
     '';
 
 in {
+  inherit (options) options;
   config = lib.mkIf cfg.enable {
     # Assert that we have the minimum required configuration
     assertions = [

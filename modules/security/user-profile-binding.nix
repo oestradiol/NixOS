@@ -15,6 +15,14 @@
 # This file stays in-tree so the option cannot be flipped on by accident:
 # enabling it deliberately fires the assertion below.
 {
+  options.myOS.security.pamProfileBinding.enable = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = ''
+      EXPERIMENTAL: Enforce user/profile binding via PAM (daily=player, paranoid=ghost).
+    '';
+  };
+
   config = lib.mkIf config.myOS.security.pamProfileBinding.enable {
     assertions = [
       {

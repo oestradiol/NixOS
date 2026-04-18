@@ -5,6 +5,15 @@
     ../desktop/greeter.nix
     ../desktop/plasma.nix
     ../desktop/hyprland.nix
+    # Controller support is self-gated on myOS.gaming.controllers.enable
+    # (default false). Imported unconditionally so the option is visible
+    # on every profile (paranoid sets it explicitly to false).
+    ../desktop/controllers.nix
+    # VR is gated internally on profile == "daily" (preserves current
+    # semantics: paranoid never activates wivrn). Imported unconditionally
+    # so myOS.vr.* options are visible on every profile (governance
+    # assertions in security/governance.nix reference them).
+    ../desktop/vr.nix
   ];
 
   # ── Desktop environment ────────────────────────────────────────

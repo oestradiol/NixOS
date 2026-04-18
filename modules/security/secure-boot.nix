@@ -1,5 +1,10 @@
 { config, lib, ... }:
 {
+  options.myOS.security = {
+    secureBoot.enable = lib.mkEnableOption "Secure Boot via Lanzaboote";
+    tpm.enable = lib.mkEnableOption "TPM-backed LUKS enrollment workflow";
+  };
+
   # ── Secure Boot (Lanzaboote) ──────────────────────────────────
   config = lib.mkMerge [
     (lib.mkIf config.myOS.security.secureBoot.enable {

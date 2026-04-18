@@ -9,6 +9,30 @@ let
   profile = config.myOS.profile;
   vmsEnabled = config.myOS.security.sandbox.vms;
   vmCfg = config.myOS.security.vm;
+  vmOptions = {
+    options.myOS.security.vm = {
+      storageRoot = lib.mkOption {
+        type = lib.types.str;
+        default = "/var/lib/libvirt/repo-vm";
+        description = "Root directory for repo-managed VM disks, overlays, state, and helper assets.";
+      };
+      natNetworkName = lib.mkOption {
+        type = lib.types.str;
+        default = "repo-nat";
+        description = "Name of the repo-managed libvirt NAT network for VM classes that permit outbound connectivity.";
+      };
+      isolatedNetworkName = lib.mkOption {
+        type = lib.types.str;
+        default = "repo-isolated";
+        description = "Name of the repo-managed libvirt isolated network for staged research traffic with no external connectivity.";
+      };
+      defaultBaseImageDir = lib.mkOption {
+        type = lib.types.str;
+        default = "/var/lib/libvirt/repo-vm/base";
+        description = "Directory containing operator-supplied base qcow2 images used by the VM class helper.";
+      };
+    };
+  };
   kvmModule =
     if config.hardware.cpu.amd.updateMicrocode or false then "kvm-amd"
     else if config.hardware.cpu.intel.updateMicrocode or false then "kvm-intel"
@@ -370,6 +394,7 @@ let
     '';
   };
 in {
+  inherit (vmOptions) options;
   config = mkIf vmsEnabled {
     warnings = lib.optional (!(config.hardware.cpu.amd.updateMicrocode or false || config.hardware.cpu.intel.updateMicrocode or false))
       "VM tooling could not infer CPU vendor from hardware.cpu.*.updateMicrocode; kernel module autoload is left untouched. Set the hardware target explicitly before enabling VMs if libvirt/QEMU does not load the right KVM module on its own.";

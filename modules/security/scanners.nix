@@ -2,6 +2,15 @@
 let
   daily = config.myOS.profile == "daily";
   paranoid = config.myOS.profile == "paranoid";
+  scannerOptions = {
+    options.myOS.security.aide.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        AIDE integrity monitoring.
+      '';
+    };
+  };
 
   clamTargetPaths =
     [ "/persist" "/var/lib" "/var/log" "/boot" "/nix/var/nix/profiles" ]
@@ -67,6 +76,7 @@ let
     exec ${pkgs.aide}/bin/aide --check
   '';
 in {
+  inherit (scannerOptions) options;
   config = lib.mkIf (daily || paranoid) {
     # --- DAILY IMPERMANENCE SCAN ---
     # Daily scan of all durable state - critical for security

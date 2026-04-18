@@ -1,5 +1,7 @@
 { config, lib, ... }:
 {
+  options.myOS.security.agenix.enable = lib.mkEnableOption "agenix secrets";
+
   config = lib.mkIf config.myOS.security.agenix.enable {
     age.identityPaths = [
       "/persist/etc/ssh/ssh_host_ed25519_key"

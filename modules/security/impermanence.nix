@@ -6,6 +6,24 @@ let
   machineIdValue = config.myOS.security.machineIdValue;
   profile = config.myOS.profile;
 in {
+  options.myOS.security = {
+    impermanence.enable = lib.mkEnableOption "tmpfs root + explicit persistence";
+    persistMachineId = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Persist /etc/machine-id across reboots via impermanence.
+      '';
+    };
+    machineIdValue = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Explicit machine-id value to set. When null, systemd generates the ID.
+      '';
+    };
+  };
+
   config = lib.mkMerge [
     (lib.mkIf impermanenceEnabled {
       environment.persistence.${persistRoot} = {

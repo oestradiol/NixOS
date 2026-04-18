@@ -1,6 +1,7 @@
 { config, lib, pkgs, ... }: {
-  imports = [ ./vr.nix ./controllers.nix ];
-
+  # vr.nix and controllers.nix are imported unconditionally via
+  # modules/desktop/base.nix so their options are visible on every
+  # profile. They self-gate their own configs.
   config = {
     # Kernel module for NT sync (Wine gaming)
     boot.kernelModules = [ "ntsync" ];

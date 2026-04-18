@@ -1,7 +1,6 @@
 { config, lib, pkgs, ... }:
 let
   sec = config.myOS.security;
-  kh = sec.kernelHardening;
 in {
   boot.loader = {
     systemd-boot = {
@@ -34,23 +33,17 @@ in {
 
   boot.kernelPackages = lib.mkDefault pkgs.linuxPackages;
 
+  # Kernel-hardening-gated boot parameters (slab_nomerge, init_on_alloc,
+  # init_on_free, page_alloc.shuffle, nosmt=force, usbcore.authorized_default=2,
+  # pti=on, vsyscall=none, oops=panic, module.sig_enforce=1) live in
+  # modules/security/kernel-hardening.nix alongside their option declarations.
   boot.kernelParams = [
       "randomize_kstack_offset=on"
       "debugfs=off"
       "slub_debug=FZP"
       "page_poison=1"
       "hash_pointers=always"
-    ] ++ lib.optionals kh.slabNomerge       [ "slab_nomerge" ]
-    ++ lib.optionals kh.initOnAlloc        [ "init_on_alloc=1" ]
-    ++ lib.optionals kh.initOnFree         [ "init_on_free=1" ]
-    ++ lib.optionals kh.pageAllocShuffle   [ "page_alloc.shuffle=1" ]
-    ++ lib.optionals sec.disableSMT        [ "nosmt=force" ]
-    ++ lib.optionals sec.usbRestrict       [ "usbcore.authorized_default=2" ]
-    # Madaidan-recommended kernel hardening
-    ++ lib.optionals kh.pti                [ "pti=on" ]
-    ++ lib.optionals kh.vsyscallNone       [ "vsyscall=none" ]
-    ++ lib.optionals kh.oopsPanic          [ "oops=panic" ]
-    ++ lib.optionals kh.moduleSigEnforce   [ "module.sig_enforce=1" ]
+    ]
     # NVIDIA-specific parameters
     ++ lib.optionals (config.myOS.gpu == "nvidia") [ "nvidia_drm.modeset=1" ];
 
@@ -68,7 +61,6 @@ in {
 
     # Faster TCP port reuse for apps killed and restarted quickly
     "net.ipv4.tcp_fin_timeout" = 5;
-    # Madaidan-recommended: ignore ICMP echo (ping) requests
-    "net.ipv4.icmp_echo_ignore_all" = lib.mkIf kh.disableIcmpEcho true;
+    # net.ipv4.icmp_echo_ignore_all is set in modules/security/kernel-hardening.nix
   };
 }

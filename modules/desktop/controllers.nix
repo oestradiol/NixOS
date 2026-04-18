@@ -8,6 +8,12 @@
 let
   cfg = config.myOS.gaming.controllers;
 in {
+  options.myOS.gaming.controllers.enable = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Bluetooth and Xbox controller support (xpadneo, game-devices-udev-rules).";
+  };
+
   config = lib.mkIf cfg.enable {
     # ── Xbox One / Series wireless controller (Bluetooth) ───────────
     hardware.xpadneo.enable = true;
