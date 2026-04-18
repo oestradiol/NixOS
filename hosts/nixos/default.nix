@@ -13,6 +13,7 @@ in {
     ../../modules/core/options.nix
     ../../modules/core/host.nix
     ../../modules/core/debug.nix
+    ../../modules/core/users-framework.nix
     ../../modules/core/boot.nix
     ../../modules/core/users.nix
     ../../modules/desktop/base.nix
