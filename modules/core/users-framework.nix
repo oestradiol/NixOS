@@ -64,7 +64,6 @@ in {
           type = lib.types.bool;
           internal = true;
           readOnly = true;
-          default = false;
           description = ''
             Computed: is this user active on the current profile?
             Derived from `activeOnProfiles` or `activationPredicate`.

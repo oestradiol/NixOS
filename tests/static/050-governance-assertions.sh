@@ -61,11 +61,11 @@ describe "account-locking invariants in users.nix"
 # The conditions carry a debug-mode escape hatch (crossProfile) that lifts
 # both locks together; default state (crossProfile=false) preserves the
 # original paranoid↔ghost / daily↔player binding.
-if grep -Fq 'hashedPasswordFile = lib.mkIf (isDaily || crossProfile)' "$users_nix" \
-   && grep -Fq 'hashedPassword = lib.mkIf (isParanoid && !crossProfile) "!"' "$users_nix" \
-   && grep -Fq 'hashedPasswordFile = lib.mkIf (isParanoid || crossProfile)' "$users_nix" \
-   && grep -Fq 'hashedPassword = lib.mkIf (isDaily && !crossProfile) "!"' "$users_nix"; then
-  pass "player/ghost account locks are conditional on profile (with debug escape hatch)"
+# Stage 4b generalized this: active users (u._activeOn) get hashedPasswordFile,
+# inactive users get the locked "!" sentinel.
+if grep -Fq 'hashedPasswordFile = lib.mkIf (u._activeOn || crossProfile)' "$users_nix" \
+   && grep -Fq 'hashedPassword = lib.mkIf (!u._activeOn && !crossProfile) "!"' "$users_nix"; then
+  pass "account locks are conditional on _activeOn (with debug escape hatch)"
 else
   fail "account-locking mechanism drifted in users.nix"
 fi

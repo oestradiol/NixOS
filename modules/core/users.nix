@@ -1,74 +1,77 @@
+# Stage 4b: framework-driven user wiring.
+#
+# Reads every `myOS.users.<name>` entry declared by the accounts files
+# (`accounts/*.nix`) and materialises:
+#
+#   1. `users.users.<name>`        — Unix account with profile locking
+#   2. `home-manager.users.<name>` — HM config for users active on
+#                                    the current profile only
+#   3. `users.allowNoPasswordLogin` — NixOS invariant escape hatch
+#   4. `security.sudo`              — root-lock posture (unchanged)
+#
+# Profile locking rules:
+#   active user (`_activeOn = true`)  → hashedPasswordFile set
+#   inactive user                     → hashedPassword = "!"
+#   debug.crossProfileLogin lifts both lock types on all users.
+#
+# Wheel membership rules:
+#   allowWheel = true                 → wheel always added
+#   debug.paranoidWheel.enable        → wheel added to every user
+#                                       regardless of allowWheel
+#                                       (matches legacy behaviour)
+#
+# `users.allowNoPasswordLogin` is true when no active user carries
+# wheel — a necessary acknowledgement because NixOS refuses to
+# activate a system where every wheel user lacks a password.
 { pkgs, config, lib, ... }:
 let
-  lockRoot = config.myOS.security.lockRoot;
-  isDaily = config.myOS.profile == "daily";
-  isParanoid = config.myOS.profile == "paranoid";
-
-  # Debug-mode relaxations — off unless the master gate is also on.
-  debug = config.myOS.debug;
+  cfg = config.myOS;
+  lockRoot = cfg.security.lockRoot;
+  debug = cfg.debug;
   crossProfile = debug.enable && debug.crossProfileLogin.enable;
   paranoidWheel = debug.enable && debug.paranoidWheel.enable;
+
+  enabledUsers = lib.filterAttrs (_: u: u.enable) cfg.users;
+
+  effectivelyInWheel = u: u.allowWheel || paranoidWheel;
+
+  buildUser = name: u: ({
+    isNormalUser = true;
+    description = u.description;
+    home = "/home/${name}";
+    shell = u.shell;
+    group = "users";  # Standard group (GID 100).
+    extraGroups = u.extraGroups ++ lib.optional (effectivelyInWheel u) "wheel";
+    # Profile binding: active user gets hashedPasswordFile; inactive
+    # user gets a locked "!" sentinel. debug.crossProfileLogin flips
+    # both profiles on (hashedPasswordFile everywhere) for dev.
+    hashedPasswordFile = lib.mkIf (u._activeOn || crossProfile)
+      "/persist/secrets/${name}-password.hash";
+    hashedPassword = lib.mkIf (!u._activeOn && !crossProfile) "!";
+  } // lib.optionalAttrs (u.uid != null) { inherit (u) uid; });
+
+  hmActive = lib.filterAttrs (_: u: u._activeOn && u.homeManagerConfig != null) enabledUsers;
+
+  # If any active user is effectively in wheel we have a wheel user
+  # with a password, and allowNoPasswordLogin is not needed.
+  anyActiveWheel =
+    lib.any (u: u._activeOn && effectivelyInWheel u)
+            (builtins.attrValues enabledUsers);
 in {
-  # NOTE: mutableUsers=false means /etc/{passwd,group,shadow,gshadow,subuid,subgid}
-  # are regenerated from NixOS config on every activation — no persistence needed.
-  # Passwords are read declaratively from hashedPasswordFile on the persist volume.
-  #
-  # FIRST BOOT PASSWORD SETUP:
-  # The install script (scripts/rebuild-install.sh) writes hashed passwords to
-  # /persist/secrets/{player,ghost}-password.hash before nixos-install.
   users.mutableUsers = false;
 
-  users.users.player = {
-    isNormalUser = true;
-    description = "Daily desktop";
-    home = "/home/player";
-    shell = pkgs.zsh;
-    group = "users";  # Use standard users group (GID typically 100)
-    extraGroups = [
-      "wheel"
-      "networkmanager"
-      "video"
-      "audio"
-      "input"
-      "render"
-      "realtime"
-      "gamemode"
-    ];
-    # Profile binding: player authenticates on daily, locked on paranoid.
-    # myOS.debug.crossProfileLogin.enable lifts the paranoid-side lock and
-    # sets hashedPasswordFile on both profiles (see modules/core/debug.nix).
-    hashedPasswordFile = lib.mkIf (isDaily || crossProfile) "/persist/secrets/player-password.hash";
-    hashedPassword = lib.mkIf (isParanoid && !crossProfile) "!";
-  };
+  users.users = lib.mapAttrs buildUser enabledUsers;
 
-  # On paranoid, player is locked and ghost (the actual auth target) is not
-  # in the wheel group — which means no wheel user has a password, and NixOS
-  # would otherwise refuse to activate with "you will be locked out".
-  # `allowNoPasswordLogin = true` acknowledges that the auth target is the
-  # non-wheel ghost account on paranoid. Daily has player in wheel with a
-  # password, so the normal NixOS invariant is already satisfied.
-  users.allowNoPasswordLogin = isParanoid;
+  # Required when the active persona is non-wheel (e.g. paranoid/ghost):
+  # no wheel user then has a password, and NixOS refuses activation
+  # otherwise.
+  users.allowNoPasswordLogin = !anyActiveWheel;
 
-  users.users."ghost" = {
-    isNormalUser = true;
-    uid = 1001;  # Explicit for hardware-target.nix tmpfs mount
-    description = "Hardened workspace";
-    home = "/home/ghost";
-    shell = pkgs.zsh;
-    group = "users";
-    extraGroups = [
-      "networkmanager"
-      "video"
-      "audio"
-      "input"
-      "render"
-    ] ++ lib.optional paranoidWheel "wheel";
-    # Profile binding: ghost authenticates on paranoid, locked on daily.
-    # myOS.debug.crossProfileLogin.enable lifts the daily-side lock and
-    # sets hashedPasswordFile on both profiles (see modules/core/debug.nix).
-    hashedPasswordFile = lib.mkIf (isParanoid || crossProfile) "/persist/secrets/ghost-password.hash";
-    hashedPassword = lib.mkIf (isDaily && !crossProfile) "!";
-  };
+  # home-manager binds only for active users. Inactive personas get
+  # their HM profile skipped to keep the build lean and avoid building
+  # a profile that can never be used.
+  home-manager.users =
+    lib.mapAttrs (_: u: { imports = [ u.homeManagerConfig ]; }) hmActive;
 
   security.sudo = lib.mkIf lockRoot {
     enable = true;

@@ -20,6 +20,8 @@ in {
     ../../modules/gpu/nvidia.nix
     ../../modules/gpu/amd.nix
     ../../modules/security/base.nix
+    ../../accounts/ghost.nix
+    ../../accounts/player.nix
     ../../profiles/paranoid.nix
   ] ++ lib.optional (builtins.pathExists localOverride) localOverride;
 

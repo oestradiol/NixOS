@@ -6,7 +6,8 @@
   myOS.gpu = lib.mkForce "nvidia";
   myOS.desktopEnvironment = lib.mkForce "plasma";
 
-  home-manager.users.player = import ../modules/home/player.nix;
+  # home-manager binding for player is now owned by accounts/player.nix
+  # via myOS.users.player.homeManagerConfig (activated on active profiles).
 
   myOS.gaming = {
     enable = lib.mkForce true;          # master gate for the gaming stack
