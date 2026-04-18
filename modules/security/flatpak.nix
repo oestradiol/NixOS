@@ -1,7 +1,21 @@
 { config, lib, pkgs, ... }:
-{
+let
+  cfg = config.myOS.desktop.flatpak;
+in {
+  options.myOS.desktop.flatpak = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Flatpak containment layer for relatively trusted daily GUI apps.
+        Higher-risk software should stay in bubblewrap wrappers or VMs.
+      '';
+    };
+  };
+
   # Flatpak is the containment layer for relatively trusted daily GUI apps.
   # Higher-risk software should stay in bubblewrap wrappers or VMs instead.
+  config = lib.mkIf cfg.enable {
   services.flatpak.enable = true;
 
   systemd.services.flatpak-repo = {
@@ -47,5 +61,6 @@
     extraPortals = with pkgs; [
       xdg-desktop-portal-gtk
     ];
+  };
   };
 }

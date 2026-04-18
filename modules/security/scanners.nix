@@ -2,13 +2,24 @@
 let
   daily = config.myOS.profile == "daily";
   paranoid = config.myOS.profile == "paranoid";
+  scanCfg = config.myOS.security.scanners;
   scannerOptions = {
-    options.myOS.security.aide.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = ''
-        AIDE integrity monitoring.
-      '';
+    options.myOS.security.scanners = {
+      clamav.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          ClamAV impermanence-scan + deep-scan systemd timers and the
+          freshclam signature updater.
+        '';
+      };
+      aide.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          AIDE integrity monitoring (weekly timer + /etc/aide.conf policy).
+        '';
+      };
     };
   };
 
@@ -81,7 +92,7 @@ in {
     # --- DAILY IMPERMANENCE SCAN ---
     # Daily scan of all durable state - critical for security
     # Focuses on paths where malware or tampering can survive a reboot.
-    systemd.services.clamav-impermanence-scan = {
+    systemd.services.clamav-impermanence-scan = lib.mkIf scanCfg.clamav.enable {
       description = "Daily ClamAV scan of persisted state and boot surfaces";
       path = [ pkgs.clamav pkgs.coreutils pkgs.findutils pkgs.util-linux ];
       serviceConfig = {
@@ -107,7 +118,7 @@ in {
       script = ''${clamScanImpermanence} > /var/log/clamav-impermanence-scan.log 2>&1'';
     };
 
-    systemd.timers.clamav-impermanence-scan = {
+    systemd.timers.clamav-impermanence-scan = lib.mkIf scanCfg.clamav.enable {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnBootSec = "30m";
@@ -120,7 +131,7 @@ in {
     # --- WEEKLY DEEP SCAN ---
     # Comprehensive recursive scan of all durable state and boot chain surfaces
     # Higher resource use, runs weekly, thorough check
-    systemd.services.clamav-deep-scan = {
+    systemd.services.clamav-deep-scan = lib.mkIf scanCfg.clamav.enable {
       description = "Weekly deep ClamAV scan (comprehensive recursive check)";
       path = [ pkgs.clamav pkgs.coreutils pkgs.findutils pkgs.util-linux ];
       serviceConfig = {
@@ -145,7 +156,7 @@ in {
       script = ''${clamScanDeep} > /var/log/clamav-deep-scan.log 2>&1'';
     };
 
-    systemd.timers.clamav-deep-scan = {
+    systemd.timers.clamav-deep-scan = lib.mkIf scanCfg.clamav.enable {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnBootSec = "2h";  # Wait longer after boot
@@ -156,7 +167,7 @@ in {
     };
 
     # ClamAV virus signature updates (required for meaningful scans)
-    services.clamav.updater = {
+    services.clamav.updater = lib.mkIf scanCfg.clamav.enable {
       enable = true;
       interval = "daily";
       frequency = 12;  # Check twice daily if interval is daily
@@ -227,7 +238,7 @@ in {
     ]);
 
     # AIDE services only if aide.enable is true (allows ClamAV-only if desired)
-    systemd.services.aide-daily-check = lib.mkIf config.myOS.security.aide.enable {
+    systemd.services.aide-daily-check = lib.mkIf scanCfg.aide.enable {
       description = "Periodic AIDE integrity check";
       path = [ pkgs.aide pkgs.coreutils pkgs.gzip ];
       serviceConfig = {
@@ -252,7 +263,7 @@ in {
       script = ''${aideCheck} > /var/log/aide-daily-check.log 2>&1'';
     };
 
-    systemd.timers.aide-daily-check = lib.mkIf config.myOS.security.aide.enable {
+    systemd.timers.aide-daily-check = lib.mkIf scanCfg.aide.enable {
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnBootSec = "45m";

@@ -1,6 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   isDaily = config.myOS.profile == "daily";
+  primaryIface = config.myOS.networking.primaryInterface;
 
   # VPN architecture:
   # daily/player  → Mullvad app mode (GUI + daemon)
@@ -19,13 +20,13 @@ in {
   # so we open UDP 9 on the LAN interface only, not globally. UDP 7 (echo) was
   # never needed and has been removed (attack-surface minimisation).
   networking.interfaces = lib.mkIf isDaily {
-    enp5s0.wakeOnLan = {
+    ${primaryIface}.wakeOnLan = {
       enable = true;
       policy = [ "magic" ];
     };
   };
   networking.firewall.interfaces = lib.mkIf isDaily {
-    enp5s0.allowedUDPPorts = [ 9 ];  # WoL-over-UDP compatibility (LAN only)
+    ${primaryIface}.allowedUDPPorts = [ 9 ];  # WoL-over-UDP compatibility (LAN only)
   };
 
   # DNS resolver: needed on both profiles

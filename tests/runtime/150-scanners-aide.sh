@@ -54,7 +54,7 @@ else
   fail "/etc/aide.conf missing or unreadable"
 fi
 
-describe "aide services gated behind myOS.security.aide.enable"
+describe "aide services gated behind myOS.security.scanners.aide.enable"
 # With enable=true (default) service + timer must exist.
 assert_unit_exists aide-daily-check.service
 assert_unit_exists aide-daily-check.timer

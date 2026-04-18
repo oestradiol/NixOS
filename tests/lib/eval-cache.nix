@@ -62,7 +62,8 @@ in
   "myOS.security.lockRoot"                             = try cfg.myOS.security.lockRoot;
   "myOS.security.usbRestrict"                          = try cfg.myOS.security.usbRestrict;
   "myOS.security.hardenedMemory.enable"                = try cfg.myOS.security.hardenedMemory.enable;
-  "myOS.security.aide.enable"                          = try cfg.myOS.security.aide.enable;
+  "myOS.security.scanners.aide.enable"                 = try cfg.myOS.security.scanners.aide.enable;
+  "myOS.security.scanners.clamav.enable"               = try cfg.myOS.security.scanners.clamav.enable;
   "myOS.security.pamProfileBinding.enable"             = try cfg.myOS.security.pamProfileBinding.enable;
   "myOS.security.kernelHardening.initOnAlloc"          = try cfg.myOS.security.kernelHardening.initOnAlloc;
   "myOS.security.kernelHardening.initOnFree"           = try cfg.myOS.security.kernelHardening.initOnFree;
@@ -78,9 +79,27 @@ in
   "myOS.security.kernelHardening.sysrqRestrict"        = try cfg.myOS.security.kernelHardening.sysrqRestrict;
   "myOS.security.kernelHardening.modulesDisabled"      = try cfg.myOS.security.kernelHardening.modulesDisabled;
   "myOS.security.kernelHardening.ioUring"              = try cfg.myOS.security.kernelHardening.ioUring;
+  "myOS.gaming.enable"                                 = try cfg.myOS.gaming.enable;
+  "myOS.gaming.steam.enable"                           = try cfg.myOS.gaming.steam.enable;
+  "myOS.gaming.gamescope.enable"                       = try cfg.myOS.gaming.gamescope.enable;
+  "myOS.gaming.gamemode.enable"                        = try cfg.myOS.gaming.gamemode.enable;
+  "myOS.gaming.vr.enable"                              = try cfg.myOS.gaming.vr.enable;
   "myOS.gaming.controllers.enable"                     = try cfg.myOS.gaming.controllers.enable;
   "myOS.vr.lanDiscovery.enable"                        = try cfg.myOS.vr.lanDiscovery.enable;
   "myOS.vr.lanInterfaces"                              = try cfg.myOS.vr.lanInterfaces;
+  "myOS.desktop.flatpak.enable"                        = try cfg.myOS.desktop.flatpak.enable;
+  "myOS.i18n.japanese.enable"                          = try cfg.myOS.i18n.japanese.enable;
+  "myOS.i18n.japanese.inputMethod.enable"              = try cfg.myOS.i18n.japanese.inputMethod.enable;
+  "myOS.i18n.japanese.fonts.enable"                    = try cfg.myOS.i18n.japanese.fonts.enable;
+  "myOS.i18n.brazilian.enable"                         = try cfg.myOS.i18n.brazilian.enable;
+  "myOS.i18n.brazilian.locale.enable"                  = try cfg.myOS.i18n.brazilian.locale.enable;
+  "myOS.i18n.brazilian.keyboard.enable"                = try cfg.myOS.i18n.brazilian.keyboard.enable;
+  "myOS.host.hostName"                                 = try cfg.myOS.host.hostName;
+  "myOS.host.timeZone"                                 = try cfg.myOS.host.timeZone;
+  "myOS.host.defaultLocale"                            = try cfg.myOS.host.defaultLocale;
+  "myOS.networking.primaryInterface"                   = try cfg.myOS.networking.primaryInterface;
+  "myOS.autoUpdate.enable"                             = try cfg.myOS.autoUpdate.enable;
+  "myOS.autoUpdate.repoPath"                           = try cfg.myOS.autoUpdate.repoPath;
 
   # ── boot ─────────────────────────────────────────────────────────────
   "boot.kernelParams"                                  = try cfg.boot.kernelParams;

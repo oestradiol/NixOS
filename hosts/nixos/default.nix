@@ -11,6 +11,7 @@ in {
     ./fs-layout.nix
     ./hardware-target.nix
     ../../modules/core/options.nix
+    ../../modules/core/host.nix
     ../../modules/core/debug.nix
     ../../modules/core/boot.nix
     ../../modules/core/users.nix
@@ -21,8 +22,8 @@ in {
     ../../profiles/paranoid.nix
   ] ++ lib.optional (builtins.pathExists localOverride) localOverride;
 
-  networking.hostName = "nixos";
-  time.timeZone = "America/Sao_Paulo";
+  # networking.hostName / time.timeZone are now applied by
+  # modules/core/host.nix via myOS.host.* options.
   system.stateVersion = "26.05";
 
   environment.systemPackages = with pkgs; [

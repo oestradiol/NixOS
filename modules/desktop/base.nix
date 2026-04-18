@@ -5,23 +5,24 @@
     ../desktop/greeter.nix
     ../desktop/plasma.nix
     ../desktop/hyprland.nix
+    # i18n layer (BR locale/keymap + JP fcitx5/mozc). Each subsystem
+    # self-gates on its myOS.i18n.<layer>.enable knob.
+    ../desktop/i18n.nix
+    # Daily flake-update + rebuild-boot timer. Self-gated on
+    # myOS.autoUpdate.enable (default true).
+    ../desktop/auto-update.nix
+    # Gaming stack (Steam, gamescope, gamemode, NT sync). Self-gated on
+    # myOS.gaming.enable (default false; daily profile sets true).
+    ../desktop/gaming.nix
     # Controller support is self-gated on myOS.gaming.controllers.enable
     # (default false). Imported unconditionally so the option is visible
     # on every profile (paranoid sets it explicitly to false).
     ../desktop/controllers.nix
-    # VR is gated internally on profile == "daily" (preserves current
-    # semantics: paranoid never activates wivrn). Imported unconditionally
-    # so myOS.vr.* options are visible on every profile (governance
-    # assertions in security/governance.nix reference them).
+    # VR is gated on myOS.gaming.vr.enable (default follows
+    # myOS.gaming.enable). Imported unconditionally so myOS.vr.* options
+    # are visible on every profile (governance assertions reference them).
     ../desktop/vr.nix
   ];
-
-  # ── Desktop environment ────────────────────────────────────────
-  console.keyMap = "br-abnt2";
-  # Wayland-native keyboard layout via XKB_DEFAULT_*
-  environment.sessionVariables = {
-    XKB_DEFAULT_LAYOUT = "br";
-  };
 
   services.xserver.enable = lib.mkForce false;
 
@@ -53,30 +54,9 @@
     };
   };
 
-  # ── Locale (was i18n.nix) ──────────────────────────────────────
-  i18n.defaultLocale = "en_GB.UTF-8";
-  i18n.extraLocaleSettings = {
-    LC_ADDRESS = "pt_BR.UTF-8";
-    LC_IDENTIFICATION = "pt_BR.UTF-8";
-    LC_MEASUREMENT = "pt_BR.UTF-8";
-    LC_MONETARY = "pt_BR.UTF-8";
-    LC_NAME = "pt_BR.UTF-8";
-    LC_NUMERIC = "pt_BR.UTF-8";
-    LC_PAPER = "pt_BR.UTF-8";
-    LC_TELEPHONE = "pt_BR.UTF-8";
-    LC_TIME = "pt_BR.UTF-8";
-  };
-  i18n.inputMethod = {
-    enable = true;
-    type = "fcitx5";
-    fcitx5 = {
-      addons = with pkgs; [
-        fcitx5-mozc-ut
-        fcitx5-gtk
-      ];
-      waylandFrontend = true;
-    };
-  };
+  # ── Locale / keyboard / input method ───────────────────────────
+  # Moved to modules/desktop/i18n.nix (myOS.i18n.{brazilian,japanese}.*).
+  # Default locale wiring reads from myOS.host.defaultLocale.
 
   # ── Nix settings ────────────────────────────────
   nix.settings = {
@@ -92,24 +72,8 @@
     dates = "weekly";
     options = "--delete-older-than 7d";
   };
-  # ── Automatic system updates ────────────────────────────────────────
-  systemd.services.nix-auto-update = {
-    description = "Daily automatic Nix flake update and boot entry rebuild";
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "/bin/sh -c 'cd /home/player/dotfiles && sudo -u player ${pkgs.nix}/bin/nix flake update --flake . && ${pkgs.nixos-rebuild}/bin/nixos-rebuild boot --flake .#nixos'";
-      WorkingDirectory = "/home/player/dotfiles";
-    };
-  };
-
-  systemd.timers.nix-auto-update = {
-    description = "Run daily Nix flake update and boot rebuild";
-    timerConfig = {
-      OnCalendar = "daily";
-      Persistent = true;
-    };
-    wantedBy = [ "timers.target" ];
-  };
+  # ── Automatic system updates ────────────────────────────────────
+  # Moved to modules/desktop/auto-update.nix (myOS.autoUpdate.*).
 
   # ── Audio (was audio.nix) ─────────────────────────────────────
   services.pulseaudio.enable = false;

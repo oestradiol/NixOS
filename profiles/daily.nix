@@ -9,7 +9,10 @@
   home-manager.users.player = import ../modules/home/player.nix;
 
   myOS.gaming = {
+    enable = lib.mkForce true;          # master gate for the gaming stack
     controllers.enable = lib.mkForce true;
+    # steam / gamescope / gamemode / vr default to gaming.enable so they
+    # follow the master gate automatically.
   };
 
   myOS.security = {
@@ -65,5 +68,6 @@
     tpm.enable = lib.mkForce false;
   };
 
-  imports = [ ../modules/desktop/gaming.nix ];
+  # modules/desktop/gaming.nix is now imported unconditionally from
+  # modules/desktop/base.nix and self-gated on myOS.gaming.enable.
 }

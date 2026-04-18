@@ -1,8 +1,54 @@
-{ config, lib, pkgs, ... }: {
-  # vr.nix and controllers.nix are imported unconditionally via
-  # modules/desktop/base.nix so their options are visible on every
-  # profile. They self-gate their own configs.
-  config = {
+# Gaming stack — Steam, gamescope, gamemode, NT sync, Proton plumbing.
+#
+# Stage 3 introduces knob-gated sub-features:
+#   - myOS.gaming.enable       — master gate (default false; daily sets true)
+#   - myOS.gaming.steam.enable       (default = gaming.enable)
+#   - myOS.gaming.gamescope.enable   (default = gaming.enable)
+#   - myOS.gaming.gamemode.enable    (default = gaming.enable)
+#   - myOS.gaming.vr.enable          (default = gaming.enable, consumed by desktop/vr.nix)
+#   - myOS.gaming.controllers.enable — declared in modules/desktop/controllers.nix
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.myOS.gaming;
+in {
+  options.myOS.gaming = {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Master gate for the gaming stack. Pulls in Steam + gamescope +
+        gamemode + NT sync + Proton plumbing. Disabled by default so
+        forkers and paranoid-profile users do not carry the gaming
+        attack surface unless they opt in. The daily profile flips this
+        on via lib.mkForce.
+      '';
+    };
+    steam.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = cfg.enable;
+      description = "Enable Steam (programs.steam) when gaming.enable is true.";
+    };
+    gamescope.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = cfg.enable;
+      description = "Enable gamescope compositor with cap_sys_nice wrapper.";
+    };
+    gamemode.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = cfg.enable;
+      description = "Enable Feral Gamemode for per-process performance tuning.";
+    };
+    vr.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = cfg.enable;
+      description = ''
+        Enable the VR stack (WiVRn + avahi policy) from modules/desktop/vr.nix.
+        Consumed by vr.nix to gate its config block.
+      '';
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
     # Kernel module for NT sync (Wine gaming)
     boot.kernelModules = [ "ntsync" ];
 
@@ -21,44 +67,47 @@
       "kernel.sched_rt_runtime_us" = -1;
     };
 
-    # Steam
-    programs.steam = {
-      enable = true;
-      remotePlay.openFirewall = false;
-      package = pkgs.steam.override {
-        extraProfile = ''
-          unset TZ
-          export PRESSURE_VESSEL_IMPORT_OPENXR_1_RUNTIMES=1
-        '';
-        extraEnv = {
-          PRESSURE_VESSEL_FILESYSTEMS_RW = "$XDG_RUNTIME_DIR/wivrn/comp_ipc";
+    # Steam (merged with gamescopeSession so Nix doesn't complain about
+    # programs.steam being defined twice at the top level).
+    programs.steam = lib.mkMerge [
+      (lib.mkIf cfg.steam.enable {
+        enable = true;
+        remotePlay.openFirewall = false;
+        package = pkgs.steam.override {
+          extraProfile = ''
+            unset TZ
+            export PRESSURE_VESSEL_IMPORT_OPENXR_1_RUNTIMES=1
+          '';
+          extraEnv = {
+            PRESSURE_VESSEL_FILESYSTEMS_RW = "$XDG_RUNTIME_DIR/wivrn/comp_ipc";
+          };
         };
-      };
-      # Proton builds are managed via protonup-qt (see environment.systemPackages
-      # below) rather than pinned in extraCompatPackages. This keeps the choice
-      # of GE / Luxtorpeda / SteamTinkerLaunch / etc. a runtime decision owned
-      # by the operator, not a rebuild.
-      extraCompatPackages = [ ];
-    };
+        # Proton builds are managed via protonup-qt (see environment.systemPackages
+        # below) rather than pinned in extraCompatPackages. This keeps the choice
+        # of GE / Luxtorpeda / SteamTinkerLaunch / etc. a runtime decision owned
+        # by the operator, not a rebuild.
+        extraCompatPackages = [ ];
+      })
+      (lib.mkIf (cfg.steam.enable && cfg.gamescope.enable) {
+        gamescopeSession.enable = true;
+      })
+    ];
 
     # Graphics
     hardware.graphics = {
       enable = true;
       enable32Bit = true;
     };
-    hardware.steam-hardware.enable = true;
+    hardware.steam-hardware.enable = lib.mkIf cfg.steam.enable true;
 
     # Gamescope
-    programs.gamescope = {
+    programs.gamescope = lib.mkIf cfg.gamescope.enable {
       enable = true;
       capSysNice = true;
     };
-    programs.steam.gamescopeSession = {
-      enable = true;
-    };
 
     # Feral Gamemode
-    programs.gamemode.enable = true;
+    programs.gamemode.enable = cfg.gamemode.enable;
 
     # Environment
     environment.systemPackages = with pkgs; [

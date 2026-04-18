@@ -30,7 +30,8 @@ in {
     };
     lanInterfaces = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "enp5s0" ];
+      default = [ config.myOS.networking.primaryInterface ];
+      defaultText = lib.literalExpression "[ config.myOS.networking.primaryInterface ]";
       description = ''
         LAN interfaces where WiVRn (TCP/UDP 9757) is reachable. The firewall opens
         9757 ONLY on these interfaces, and if `lanDiscovery.enable = true` avahi
@@ -39,12 +40,11 @@ in {
     };
   };
 
-  # Gate the entire config on the daily profile. Paranoid never activates
-  # wivrn (no VR stack, no avahi beacon). This gate preserves the
-  # pre-Stage-2 semantics where vr.nix was only reachable through the
-  # daily-specific gaming.nix import chain. A future stage can replace
-  # this with a dedicated `myOS.gaming.vr.enable` master knob.
-  config = lib.mkIf (config.myOS.profile == "daily") {
+  # VR stack activates only when myOS.gaming.vr.enable is true. This
+  # knob is declared in modules/desktop/gaming.nix and defaults to
+  # config.myOS.gaming.enable, so paranoid (gaming off) stays clean
+  # while daily (gaming on) lights up wivrn + avahi policy.
+  config = lib.mkIf config.myOS.gaming.vr.enable {
     users.groups.realtime = {};
 
     security.pam.loginLimits = [
