@@ -13,8 +13,9 @@ Confirm the following before starting:
 
 ### 2. Storage plan
 You are about to install the repo's expected layout:
-- EFI partition labeled `NIXBOOT`
-- LUKS2 partition labeled `NIXCRYPT`
+- **WARNING: The entire target disk will be erased**
+- EFI partition (1 GiB) labeled `NIXBOOT`
+- LUKS2 partition (rest of disk) labeled `NIXCRYPT`
 - Btrfs subvolumes for `@nix`, `@persist`, `@log`, `@swap`, `@home-daily`, `@home-paranoid`
 - tmpfs root
 
@@ -48,7 +49,7 @@ These are not part of the first stable install target:
 ### 6. Red flags before starting
 Stop and fix these before running the install script:
 - you have not backed up the target disk
-- you are not willing to wipe the target disk completely
+- you are not willing to wipe the **entire target disk completely** (the installer creates a fresh GPT partition table)
 - you have not decided how user passwords will be set before first real boot
 - you intend to enable the staged self-owned WireGuard path soon but do not have a pinned literal endpoint `IP:port`
 - you are planning to treat post-stability items as blocking for the first machine-usable baseline
@@ -58,7 +59,15 @@ Stop and fix these before running the install script:
 ### 1. Prepare the disk
 - boot the NixOS installer
 - run `scripts/rebuild-install.sh` from the installer ISO
-- it will prompt for destructive confirmation, the LUKS passphrase, run the filesystem setup, copy the repo into `/mnt/etc/nixos`, generate a hardware scan, optionally run `nix flake check`, run `nixos-install`, and offer to set `player`/`ghost` passwords in the installed system
+- the script will:
+  1. Show available disks and prompt you to select a target device (e.g., `/dev/sda`, `/dev/nvme0n1`)
+  2. Display the partition plan and require typing `DESTROY` to confirm full-disk wipe
+  3. Create a fresh GPT partition table with EFI (1 GiB) and LUKS (rest of disk) partitions
+  4. Prompt for the LUKS passphrase and set up the filesystem
+  5. Copy the repo into `/mnt/etc/nixos` and generate a hardware scan
+  6. Optionally run `nix flake check`
+  7. Run `nixos-install`
+  8. Prompt for `player`/`ghost` passwords
 - confirm `/mnt`, `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, and `/mnt/boot` are mounted as expected if you stop before install
 
 ## 2. Review the staged repo

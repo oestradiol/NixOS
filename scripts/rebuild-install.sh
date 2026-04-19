@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Guided installer for NixOS hardened workstation (dual-boot mode).
-# Reformats only the designated EFI and Linux partitions; all others are preserved.
+# Guided installer for NixOS hardened workstation.
+# Destroys entire target disk and creates fresh GPT partition table with EFI + LUKS partitions.
 #
 # Usage:
 #   From inside a local checkout:
@@ -110,7 +110,7 @@ strip_fs_and_swap() {
 # ── Preflight ───────────────────────────────────────────────────────────
 [[ $EUID -eq 0 ]] || fail "Run as root."
 
-for cmd in lsblk findmnt sgdisk mkfs.fat cryptsetup mkfs.btrfs mount umount \
+for cmd in lsblk findmnt sgdisk partprobe mkfs.fat cryptsetup mkfs.btrfs mount umount \
            btrfs swapon swapoff nixos-generate-config nixos-install \
            sed awk grep mkpasswd mountpoint; do
   need_cmd "$cmd"
@@ -120,29 +120,41 @@ done
   || fail "Could not locate repo root from script path: $REPO_ROOT
 Run this script from inside your repo checkout."
 
-# ── Phase 0: Confirm target layout ─────────────────────────────────────
-phase "Phase 0 — Target confirmation"
+# ── Phase 0: Select and confirm target disk ──────────────────────────────
+phase "Phase 0 — Disk selection and confirmation"
 
 echo "Repo root: $REPO_ROOT"
 echo
-echo "This script will ONLY reformat:"
-echo "  EFI:   /dev/nvme0n1p1  (→ FAT32 NIXBOOT)"
-echo "  Linux: /dev/nvme0n1p5  (→ LUKS2 NIXCRYPT → Btrfs)"
-echo "All other partitions and disks are preserved."
+echo "Available disks:"
+lsblk -dpno NAME,SIZE,MODEL,TYPE | grep -E 'disk$' | while read -r name size model _; do
+  printf "  %-12s %8s  %s\n" "$name" "$size" "$model"
+done
+echo
 
-DISK="/dev/nvme0n1"
-BOOT_PART="${DISK}p1"
-CRYPT_PART="${DISK}p5"
+# Prompt for target disk
+read -r -p "Enter the target disk (e.g., /dev/sda or /dev/nvme0n1): " DISK
+[[ -b "$DISK" ]] || fail "Not a block device: $DISK"
+[[ "$(lsblk -dno TYPE "$DISK")" == "disk" ]] || fail "Not a disk device: $DISK"
 
-[[ -b "$BOOT_PART" ]] || fail "EFI partition not found: $BOOT_PART"
-[[ -b "$CRYPT_PART" ]] || fail "Linux partition not found: $CRYPT_PART"
-findmnt -rn -S "$BOOT_PART" >/dev/null 2>&1 && fail "EFI partition is already mounted: $BOOT_PART"
-findmnt -rn -S "$CRYPT_PART" >/dev/null 2>&1 && fail "Linux partition is already mounted: $CRYPT_PART"
+# Determine partition naming scheme (nvme uses p1, sda uses 1)
+if [[ "$DISK" =~ nvme ]]; then
+  BOOT_PART="${DISK}p1"
+  CRYPT_PART="${DISK}p2"
+else
+  BOOT_PART="${DISK}1"
+  CRYPT_PART="${DISK}2"
+fi
 
+# Warn about data destruction
+echo
+echo "WARNING: This will DESTROY ALL DATA on $DISK"
+echo "  - Create new GPT partition table"
+echo "  - EFI partition:   $BOOT_PART  (1 GiB, FAT32, label: NIXBOOT)"
+echo "  - LUKS partition:  $CRYPT_PART  (rest of disk, LUKS2, label: NIXCRYPT)"
 echo
 lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS "$DISK"
 echo
-confirm_keyword "REFORMAT" "Type REFORMAT to wipe the above two partitions:"
+confirm_keyword "DESTROY" "Type DESTROY to wipe the entire disk and proceed:"
 
 # ── Phase 1: Format ────────────────────────────────────────────────────
 phase "Phase 1 — Formatting"
@@ -151,8 +163,32 @@ umount -R "$MNT" >/dev/null 2>&1 || true
 swapoff -a >/dev/null 2>&1 || true
 cryptsetup close cryptroot >/dev/null 2>&1 || true
 
-# Set partition label for LUKS partition (required by fs-layout.nix)
-sgdisk -c 5:NIXCRYPT "$DISK"
+# Create new GPT partition table and partitions
+echo "Creating GPT partition table on $DISK..."
+sgdisk -Z "$DISK"  # Zap (destroy) existing partition table
+sgdisk -o "$DISK"  # Create new GPT
+
+# Create EFI partition (1 GiB) - partition 1
+sgdisk -n 1:0:+1G -t 1:ef00 -c 1:NIXBOOT "$DISK"
+
+# Create LUKS partition (rest of disk) - partition 2
+sgdisk -n 2:0:0 -t 2:8309 -c 2:NIXCRYPT "$DISK"
+
+# Inform kernel of partition table changes
+partprobe "$DISK" || sleep 2
+
+# Wait for partitions to appear
+for _ in {1..10}; do
+  [[ -b "$BOOT_PART" && -b "$CRYPT_PART" ]] && break
+  sleep 0.5
+done
+[[ -b "$BOOT_PART" ]] || fail "EFI partition did not appear: $BOOT_PART"
+[[ -b "$CRYPT_PART" ]] || fail "LUKS partition did not appear: $CRYPT_PART"
+
+# Verify partitions are not mounted
+findmnt -rn -S "$BOOT_PART" >/dev/null 2>&1 && fail "EFI partition is already mounted: $BOOT_PART"
+findmnt -rn -S "$CRYPT_PART" >/dev/null 2>&1 && fail "LUKS partition is already mounted: $CRYPT_PART"
+
 mkfs.fat -F 32 -n NIXBOOT "$BOOT_PART"
 
 echo
