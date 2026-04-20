@@ -1,5 +1,5 @@
 { pkgs, ... }: {
-  imports = [ ./common.nix ];
+  imports = [ hardening.home-common ];
 
   home.username = "ghost";
   home.homeDirectory = "/home/ghost";

@@ -7,9 +7,7 @@ let
   gitName  = userCfg.identity.git.name  or null;
   gitEmail = userCfg.identity.git.email or null;
 in {
-  imports = [
-    ./common.nix
-  ];
+  imports = [ hardening.home-common ];
 
   home.username = "player";
   home.homeDirectory = "/home/player";
