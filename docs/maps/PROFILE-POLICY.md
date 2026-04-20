@@ -8,7 +8,7 @@ This file defines the intended governance model for the repo.
 `base` is **not** a bootable profile.
 
 `base` means the shared hardening baseline encoded across:
-- `hosts/nixos/default.nix`
+- `templates/default/hosts/nixos/default.nix` (reference implementation)
 - `modules/core/*`
 - `modules/security/*`
 - shared desktop stack in `modules/desktop/base.nix`

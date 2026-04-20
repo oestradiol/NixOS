@@ -63,7 +63,7 @@ Stop and fix these before running the install script:
 
 ## 2. Review the staged repo
 - `rebuild-install.sh` copies the repo to `/mnt/etc/nixos` automatically
-- it updates `/mnt/etc/nixos/hosts/nixos/hardware-target.nix` from the installer scan for review
+- it updates `/mnt/etc/nixos/templates/default/hosts/nixos/hardware-target.nix` from the installer scan for review
 - place or prepare host-local secrets outside git
 - review the generated files before treating the install as final
 - do not overwrite repo-owned layout, impermanence, or profile policy wholesale
@@ -79,12 +79,12 @@ Stop and fix these before running the install script:
 Do not add a separate local override layer for basic identity. Make the first boot edits in the canonical tracked files.
 
 Required first-boot edits:
-- set the hostname in `hosts/nixos/default.nix` by changing `networking.hostName`
+- set the hostname in `templates/default/hosts/nixos/default.nix` by changing `networking.hostName`
 - set git identity in the canonical shared Home Manager path: `modules/home/common.nix`
 - only move git identity into per-user files later if you intentionally want different identities per account
 
 Suggested commands after logging into the `daily` specialization:
-- `sudoedit /etc/nixos/hosts/nixos/default.nix`
+- `sudoedit /etc/nixos/templates/default/hosts/nixos/default.nix`
 - `sudoedit /etc/nixos/modules/home/common.nix`
 - `cd /etc/nixos && sudo nixos-rebuild switch --flake .#nixos --specialisation daily`
 

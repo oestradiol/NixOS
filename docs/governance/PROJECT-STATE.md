@@ -4,7 +4,7 @@ Canonical current state: actual architecture, profile split, implemented support
 
 ## 1. Repository role
 One NixOS installation with one shared hardening base, two boot states, and two users:
-- shared `base`: the non-bootable policy substrate encoded across `hosts/nixos/default.nix`, `modules/core/*`, `modules/security/*`, and shared desktop plumbing
+- shared `base`: the non-bootable policy substrate encoded across `modules/core/*`, `modules/security/*`, and shared desktop plumbing (instantiated via templates/default/hosts/nixos/)
 - `paranoid`: instantiates that shared base as the default hardened workstation baseline for the `ghost` user
 - `daily`: instantiates that shared base as the explicit relaxation layer for the `player` user
 
@@ -50,11 +50,12 @@ Anything in `docs/pipeline/POST-STABILITY.md` is intentionally non-blocking for 
 
 ### Module structure
 ```
-flake.nix
+flake.nix (exports nixosModules library)
+templates/default/ (reference implementation)
 ├── hosts/nixos/default.nix
-│   ├── hosts/nixos/fs-layout.nix
-│   ├── hosts/nixos/hardware-target.nix
-│   ├── modules/core/options.nix
+│   ├── templates/default/hosts/nixos/fs-layout.nix
+│   ├── templates/default/hosts/nixos/hardware-target.nix
+│   ├── modules/core/options.nix (via hardening.nixosModules)
 │   ├── modules/core/boot.nix
 │   ├── modules/core/users.nix
 │   ├── modules/desktop/base.nix
@@ -82,9 +83,9 @@ flake.nix
 │       ├── modules/desktop/gaming.nix
 │       │   ├── modules/desktop/vr.nix
 │       │   └── modules/desktop/controllers.nix
-├── home-manager modules (ghost.nix, player.nix)
-│   └── modules/home/common.nix
-│       └── modules/desktop/shell.nix
+├── home-manager modules (templates/default/accounts/home/)
+│   ├── ghost.nix, player.nix (per-user)
+│   └── common.nix (shared baseline via hardening.home-common)
 └── flake inputs (home-manager, stylix, impermanence, lanzaboote, agenix)
 ```
 
@@ -161,7 +162,7 @@ Current support boundary:
 - `docs/pipeline/POST-STABILITY.md`
 
 ### Operator-local (gitignored)
-- `hosts/nixos/local.nix` — per-install hardware quirks, conditionally imported by `hosts/nixos/default.nix`; never tracked
+- `templates/default/hosts/nixos/local.nix` — per-install hardware quirks, conditionally imported by `hosts/nixos/default.nix`; never tracked
 - `LOCAL-NOTES.md` (if the operator creates it) — personal notes that must not be published; gitignored
 - `switch.log` — transient nixos-rebuild artefact; gitignored
 

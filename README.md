@@ -96,12 +96,12 @@ Fork if you need to change framework internals (governance invariants, PAM bindi
 Operator-specific values (git email, mic aliases, repo paths) live in gitignored `*.local.nix` files:
 - `accounts/player.local.nix` (created from `accounts/player.local.nix.example`)
 - `accounts/ghost.local.nix` (optional)
-- `hosts/nixos/local.nix` (system-level hardware quirks)
+- `templates/default/hosts/nixos/local.nix` (system-level hardware quirks)
 
 Tracked files contain only framework-level defaults and structural wiring.
 
 ## Operator-local overrides
-`hosts/nixos/default.nix` conditionally imports `hosts/nixos/local.nix` when that file exists. The path is **gitignored** and is the right place for per-install hardware quirks (external-drive UUIDs, experimental toggles, transient workarounds) that must never be published. If the file is absent, the import list is a no-op.
+`templates/default/hosts/nixos/default.nix` conditionally imports `local.nix` when that file exists. The path is **gitignored** and is the right place for per-install hardware quirks (external-drive UUIDs, experimental toggles, transient workarounds) that must never be published. If the file is absent, the import list is a no-op.
 
 ## Testing
 The repo ships a three-layer test suite runnable offline:
@@ -131,7 +131,7 @@ These are deliberate design choices, not debt. Do not "simplify" them.
 - `networking.firewall.interfaces.<iface>.allowedUDPPorts = [ 9 ]` is WoL-over-UDP compatibility (see modules/security/networking.nix:16-29)
 - `services.avahi.enable = lib.mkForce false` in modules/desktop/vr.nix is required because upstream wivrn.nix sets it without mkDefault
 - `services.geoclue2.enable = lib.mkForce false` in modules/desktop/base.nix is required because Plasma 6 enables it via mkDefault
-- `hosts/nixos/default.nix` imports `hosts/nixos/local.nix` only via lib.optional (builtins.pathExists ./local.nix) — this is the sanctioned extension point for per-install hardware quirks
+- `templates/default/hosts/nixos/default.nix` imports `local.nix` only via lib.optional (builtins.pathExists ./local.nix) — this is the sanctioned extension point for per-install hardware quirks
 - `--show-trace` on every flake-* rebuild alias is debug-phase posture; drop once first fully-clean rebuild lands (HARDENING-TRACKER.md operator decision C1)
 
 ## What this repo does not claim
