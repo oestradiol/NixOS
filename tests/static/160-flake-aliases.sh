@@ -18,7 +18,7 @@ source "${BASH_SOURCE%/*}/../lib/common.sh"
 
 require_cmd grep || exit 0
 
-shell_nix="$REPO_ROOT/modules/desktop/shell.nix"
+shell_nix="$REPO_ROOT/modules/home/shell.nix"
 assert_file "$shell_nix"
 
 describe "per-profile switch aliases are declared"

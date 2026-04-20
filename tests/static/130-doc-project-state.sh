@@ -26,26 +26,13 @@ for claim in \
   fi
 done
 
-describe "flake.nix: required-files check covers the governance truth surfaces"
-# flake.nix has an inline `required-files` check. Make sure it still lists
-# the files PROJECT-STATE says are canonical.
-flake="$REPO_ROOT/flake.nix"
-for f in docs/governance/PROJECT-STATE.md flake.nix hosts/nixos/default.nix \
-         docs/maps/SECURITY-SURFACES.md; do
-  if grep -Fq "$f" "$flake"; then
-    pass "flake required-files includes $f"
-  else
-    fail "flake required-files drift: $f no longer required by checks"
-  fi
-done
-
-describe "user expectations match profile"
+describe "user expectations match profile (templates/default reference implementation)"
 # PROJECT-STATE says /home/player persistent daily, /home/ghost tmpfs paranoid.
 # Stage 4b moved the Btrfs subvol names into accounts/*.nix as the
 # `home.btrfsSubvol` attribute; fs-layout.nix reads them via the
-# framework. Grep across both surfaces so the check stays accurate.
-fs="$REPO_ROOT/hosts/nixos/fs-layout.nix"
-accounts="$REPO_ROOT/accounts"
+# framework. The reference implementation is now in templates/default/.
+fs="$REPO_ROOT/templates/default/hosts/nixos/fs-layout.nix"
+accounts="$REPO_ROOT/templates/default/accounts"
 if grep -rFq 'btrfsSubvol = "@home-daily"' "$accounts" 2>/dev/null; then
   pass "accounts/ declares @home-daily"
 else

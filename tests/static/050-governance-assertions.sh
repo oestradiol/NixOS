@@ -89,7 +89,7 @@ else
 fi
 
 describe "profile-mount-invariants service is declared"
-fs="$REPO_ROOT/hosts/nixos/fs-layout.nix"
+fs="$REPO_ROOT/templates/default/hosts/nixos/fs-layout.nix"
 if grep -Fq 'systemd.services.profile-mount-invariants' "$fs"; then
   pass "profile-mount-invariants.service is declared"
 else

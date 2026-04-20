@@ -55,49 +55,112 @@ fi
 # These use targeted nix evals with module overrides. No caching — keep count small.
 
 _debug_eval() {
-  # $1 = dotted attr path; $2 = extra module body (nix expression)
   local attr="$1" extraModule="$2"
-  nix --extra-experimental-features 'nix-command flakes' eval --impure --json \
-    --expr "
-      let
-        flake = builtins.getFlake \"$REPO_ROOT\";
-        system = flake.outputs.nixosConfigurations.nixos.extendModules {
-          modules = [ ($extraModule) ];
-        };
-      in system.config.$attr
-    " 2>/dev/null
+  local nix_expr
+debug_eval_nix_expr() {
+cat <<'NIXEOF'
+let
+  flake = builtins.getFlake "REPO_ROOT";
+  nixpkgs = flake.inputs.nixpkgs;
+  agenix = flake.inputs.agenix;
+  impermanence = flake.inputs.impermanence;
+  lanzaboote = flake.inputs.lanzaboote;
+  home-manager = flake.inputs.home-manager;
+  stylix = flake.inputs.stylix;
+  system = "x86_64-linux";
+  pkgs = nixpkgs.legacyPackages.${system};
+  hardening = flake.outputs.nixosModules;
+  baseModules = [
+    { nixpkgs.config.allowUnfree = true;
+      fileSystems."/" = { device = "tmpfs"; fsType = "tmpfs"; };
+      fileSystems."/persist" = { device = "/dev/disk/by-label/persist"; fsType = "btrfs"; neededForBoot = true; };
+      boot.loader.grub.enable = false;
+      boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
+      boot.kernelModules = [ "kvm-amd" ];
+      myOS.users.player = { activeOnProfiles = [ "daily" ]; description = "Daily"; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = true; home.persistent = true; };
+      myOS.users.ghost = { activeOnProfiles = [ "paranoid" ]; description = "Ghost"; uid = 1001; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = false; home.persistent = false; };
+    }
+    agenix.nixosModules.default
+    impermanence.nixosModules.impermanence
+    lanzaboote.nixosModules.lanzaboote
+    home-manager.nixosModules.home-manager
+    stylix.nixosModules.stylix
+    hardening.default hardening.profile-paranoid
+    (EXTRA_MODULE)
+  ];
+  result = nixpkgs.lib.nixosSystem { inherit system; modules = baseModules; };
+in result.config.ATTR_PATH
+NIXEOF
+}
+  nix_expr=$(debug_eval_nix_expr)
+  nix_expr=${nix_expr//REPO_ROOT/$REPO_ROOT}
+  nix_expr=${nix_expr//ATTR_PATH/$attr}
+  nix_expr=${nix_expr//EXTRA_MODULE/$extraModule}
+  nix --extra-experimental-features 'nix-command flakes' eval --impure --json --expr "$nix_expr" 2>/dev/null
 }
 
 _debug_eval_daily() {
   local attr="$1" extraModule="$2"
-  nix --extra-experimental-features 'nix-command flakes' eval --impure --json \
-    --expr "
-      let
-        flake = builtins.getFlake \"$REPO_ROOT\";
-        top = flake.outputs.nixosConfigurations.nixos.extendModules {
-          modules = [ ($extraModule) ];
-        };
-      in top.config.specialisation.daily.configuration.$attr
-    " 2>/dev/null
+  local nix_expr
+debug_eval_daily_nix_expr() {
+cat <<'NIXEOF'
+let
+  flake = builtins.getFlake "REPO_ROOT";
+  nixpkgs = flake.inputs.nixpkgs;
+  agenix = flake.inputs.agenix;
+  impermanence = flake.inputs.impermanence;
+  lanzaboote = flake.inputs.lanzaboote;
+  home-manager = flake.inputs.home-manager;
+  stylix = flake.inputs.stylix;
+  system = "x86_64-linux";
+  pkgs = nixpkgs.legacyPackages.${system};
+  hardening = flake.outputs.nixosModules;
+  baseModules = [
+    { nixpkgs.config.allowUnfree = true;
+      fileSystems."/" = { device = "tmpfs"; fsType = "tmpfs"; };
+      fileSystems."/persist" = { device = "/dev/disk/by-label/persist"; fsType = "btrfs"; neededForBoot = true; };
+      boot.loader.grub.enable = false;
+      boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
+      boot.kernelModules = [ "kvm-amd" ];
+      myOS.users.player = { activeOnProfiles = [ "daily" ]; description = "Daily"; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = true; home.persistent = true; };
+      myOS.users.ghost = { activeOnProfiles = [ "paranoid" ]; description = "Ghost"; uid = 1001; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = false; home.persistent = false; };
+    }
+    agenix.nixosModules.default
+    impermanence.nixosModules.impermanence
+    lanzaboote.nixosModules.lanzaboote
+    home-manager.nixosModules.home-manager
+    stylix.nixosModules.stylix
+    hardening.default hardening.profile-paranoid hardening.profile-daily
+    (EXTRA_MODULE)
+  ];
+  result = nixpkgs.lib.nixosSystem { inherit system; modules = baseModules; };
+in result.config.ATTR_PATH
+NIXEOF
+}
+  nix_expr=$(debug_eval_daily_nix_expr)
+  nix_expr=${nix_expr//REPO_ROOT/$REPO_ROOT}
+  nix_expr=${nix_expr//ATTR_PATH/$attr}
+  nix_expr=${nix_expr//EXTRA_MODULE/$extraModule}
+  nix --extra-experimental-features 'nix-command flakes' eval --impure --json --expr "$nix_expr" 2>/dev/null
 }
 
-describe "debug.crossProfileLogin.enable: lifts the account locks"
+describe 'debug.crossProfileLogin.enable: lifts the account locks'
 cross='{ myOS.debug = { enable = true; crossProfileLogin.enable = true; warnings.enable = false; }; }'
 ppw=$(_debug_eval 'users.users.player.hashedPasswordFile' "$cross")
 assert_eq "$ppw" '"/persist/secrets/player-password.hash"' \
-  "paranoid + crossProfileLogin: player.hashedPasswordFile is set (cross-profile)"
+  'paranoid + crossProfileLogin: player.hashedPasswordFile is set (cross-profile)'
 ppwh=$(_debug_eval 'users.users.player.hashedPassword' "$cross")
 assert_eq "$ppwh" 'null' \
-  "paranoid + crossProfileLogin: player.hashedPassword is null (lock lifted)"
+  'paranoid + crossProfileLogin: player.hashedPassword is null (lock lifted)'
 gpw=$(_debug_eval 'users.users.ghost.hashedPasswordFile' "$cross")
 assert_eq "$gpw" '"/persist/secrets/ghost-password.hash"' \
-  "paranoid + crossProfileLogin: ghost.hashedPasswordFile still set"
+  'paranoid + crossProfileLogin: ghost.hashedPasswordFile still set'
 gpw_d=$(_debug_eval_daily 'users.users.ghost.hashedPasswordFile' "$cross")
 assert_eq "$gpw_d" '"/persist/secrets/ghost-password.hash"' \
-  "daily + crossProfileLogin: ghost.hashedPasswordFile is set (cross-profile)"
+  'daily + crossProfileLogin: ghost.hashedPasswordFile is set (cross-profile)'
 gpwh_d=$(_debug_eval_daily 'users.users.ghost.hashedPassword' "$cross")
 assert_eq "$gpwh_d" 'null' \
-  "daily + crossProfileLogin: ghost.hashedPassword is null (lock lifted)"
+  'daily + crossProfileLogin: ghost.hashedPassword is null (lock lifted)'
 
 describe "debug.paranoidWheel.enable: adds wheel + relaxes governance"
 wheel_mod='{ myOS.debug = { enable = true; paranoidWheel.enable = true; warnings.enable = false; }; }'
@@ -113,9 +176,9 @@ fi
 # a drv path for the system.
 drv_with_wheel=$(_debug_eval 'system.build.toplevel.drvPath' "$wheel_mod" || true)
 if [[ -n "$drv_with_wheel" && "$drv_with_wheel" != 'null' ]]; then
-  pass "paranoid + paranoidWheel: toplevel drv evaluates (governance assertion relaxed)"
+  pass 'paranoid + paranoidWheel: toplevel drv evaluates (governance assertion relaxed)'
 else
-  fail "paranoid + paranoidWheel: eval failed; governance may be over-strict"
+  fail 'paranoid + paranoidWheel: eval failed; governance may be over-strict'
 fi
 
 describe "sub-flag without master gate is a no-op"
@@ -123,30 +186,30 @@ describe "sub-flag without master gate is a no-op"
 sub_only='{ myOS.debug = { enable = false; crossProfileLogin.enable = true; }; }'
 ppw_noop=$(_debug_eval 'users.users.player.hashedPasswordFile' "$sub_only")
 assert_eq "$ppw_noop" 'null' \
-  "sub-flag without master gate: player.hashedPasswordFile still null on paranoid"
+  'sub-flag without master gate: player.hashedPasswordFile still null on paranoid'
 ppwh_noop=$(_debug_eval 'users.users.player.hashedPassword' "$sub_only")
 assert_eq "$ppwh_noop" '"!"' \
-  "sub-flag without master gate: player.hashedPassword still \"!\" on paranoid"
+  'sub-flag without master gate: player.hashedPassword still "!" on paranoid'
 
 # paranoidWheel=true but enable=false: ghost must still not be in wheel.
 wheel_noop='{ myOS.debug = { enable = false; paranoidWheel.enable = true; }; }'
 ghost_groups_noop=$(_debug_eval 'users.users.ghost.extraGroups' "$wheel_noop")
 if jq_cmd -e '. | index("wheel")' <<<"$ghost_groups_noop" >/dev/null 2>&1; then
-  fail "sub-flag without master gate: ghost has 'wheel'" "$ghost_groups_noop"
+  fail 'sub-flag without master gate: ghost has wheel' "$ghost_groups_noop"
 else
-  pass "sub-flag without master gate: ghost still not in 'wheel'"
+  pass 'sub-flag without master gate: ghost still not in wheel'
 fi
 
 describe "warnings.enable: activation warning surface when relaxations are on"
 warn_mod='{ myOS.debug = { enable = true; crossProfileLogin.enable = true; paranoidWheel.enable = true; warnings.enable = true; }; }'
 warnings=$(_debug_eval 'warnings' "$warn_mod" || echo null)
 if jq_cmd -e 'type == "array" and (.[] | test("crossProfileLogin")) and (.[] | test("paranoidWheel"))' <<<"$warnings" >/dev/null 2>&1; then
-  pass "warnings list contains both crossProfileLogin and paranoidWheel notices"
+  pass 'warnings list contains both crossProfileLogin and paranoidWheel notices'
 else
   # Less strict: at least one warning mentions a debug relaxation.
   if jq_cmd -e 'type == "array" and (any(.[]; test("myOS.debug")))' <<<"$warnings" >/dev/null 2>&1; then
-    pass "warnings list contains a myOS.debug notice (both flags on)"
+    pass 'warnings list contains a myOS.debug notice (both flags on)'
   else
-    fail "warnings list does not mention myOS.debug relaxations" "$warnings"
+    fail 'warnings list does not mention myOS.debug relaxations' "$warnings"
   fi
 fi

@@ -15,7 +15,7 @@ source "${BASH_SOURCE%/*}/../lib/common.sh"
 
 require_cmd grep || exit 0
 
-fs="$REPO_ROOT/hosts/nixos/fs-layout.nix"
+fs="$REPO_ROOT/templates/default/hosts/nixos/fs-layout.nix"
 base="$REPO_ROOT/modules/security/base.nix"
 assert_file "$fs"
 assert_file "$base"
