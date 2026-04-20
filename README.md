@@ -54,7 +54,8 @@ Read in this order:
 - external source ledger → `REFERENCES.md`
 - audit coverage / validation state / backlog → `docs/maps/AUDIT-STATUS.md`
 - operational pipeline → `docs/pipeline/`
-- host + profiles + modules → `hosts/`, `profiles/`, `modules/`
+- framework (reusable modules + profiles) → `modules/`, `profiles/`
+- reference implementation (host + accounts) → `templates/default/`
 - test suite (static / runtime / bugs) → `tests/` (`tests/README.md`)
 - helper scripts only → `scripts/`
 
@@ -90,12 +91,12 @@ Import only the hardening surface you need:
 All 41 `nixosModules.*` outputs are documented in `flake.nix`.
 
 ### C. Fork-and-own (full adaptation)
-Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `hosts/`, `accounts/`, and `accounts/*.local.nix` are your instance.
+Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `templates/default/hosts/`, `templates/default/accounts/`, and `*.local.nix` are your instance.
 
 ### Identity separation
 Operator-specific values (git email, mic aliases, repo paths) live in gitignored `*.local.nix` files:
-- `accounts/player.local.nix` (created from `accounts/player.local.nix.example`)
-- `accounts/ghost.local.nix` (optional)
+- `templates/default/accounts/player.local.nix` (created from `templates/default/accounts/player.local.nix.example`)
+- `templates/default/accounts/ghost.local.nix` (optional)
 - `templates/default/hosts/nixos/local.nix` (system-level hardware quirks)
 
 Tracked files contain only framework-level defaults and structural wiring.
