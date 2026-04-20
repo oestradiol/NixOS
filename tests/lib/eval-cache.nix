@@ -27,8 +27,51 @@ let
 
   # Bare attr access helpers.
   inherit (builtins) hasAttr;
+
+  # Stage 4c: per-user attributes are generated dynamically from
+  # `cfg.myOS.users`, so tests and helpers never need to hardcode names.
+  # Any `myOS.users.<name>` declared by the accounts/*.nix files (or by an
+  # integrator flake) will automatically appear in the cache under
+  # `users.users.<name>.*` entries.
+  enabledUserNames =
+    let r = builtins.tryEval (builtins.attrNames cfg.myOS.users);
+    in if r.success then r.value else [];
+  activeUserNames =
+    let r = builtins.tryEval (builtins.filter
+      (n: cfg.myOS.users.${n}._activeOn or false)
+      enabledUserNames);
+    in if r.success then r.value else [];
+
+  # Per-user entries generated for every declared account, whether active
+  # or inactive on the current profile.
+  perUserEntries = builtins.listToAttrs (builtins.concatMap (n: [
+    { name = "users.users.${n}.description";
+      value = try cfg.users.users.${n}.description; }
+    { name = "users.users.${n}.shell";
+      value = try (cfg.users.users.${n}.shell.pname
+                    or cfg.users.users.${n}.shell.name
+                    or ""); }
+    { name = "users.users.${n}.hashedPasswordFile";
+      value = try cfg.users.users.${n}.hashedPasswordFile; }
+    { name = "users.users.${n}.hashedPassword";
+      value = try cfg.users.users.${n}.hashedPassword; }
+    { name = "users.users.${n}.extraGroups";
+      value = try cfg.users.users.${n}.extraGroups; }
+    { name = "myOS.users.${n}._activeOn";
+      value = try cfg.myOS.users.${n}._activeOn; }
+    { name = "myOS.users.${n}.allowWheel";
+      value = try cfg.myOS.users.${n}.allowWheel; }
+    { name = "myOS.users.${n}.home.persistent";
+      value = try cfg.myOS.users.${n}.home.persistent; }
+  ]) enabledUserNames);
 in
+perUserEntries //
 {
+  # Framework-level indexes: every declared user, and the subset active
+  # on the currently-evaluated profile. Tests iterate these instead of
+  # hardcoding `player` / `ghost`.
+  "myOS.users.__names"       = try enabledUserNames;
+  "myOS.users.__activeNames" = try activeUserNames;
   # ── myOS options ────────────────────────────────────────────────────
   "myOS.profile"                                       = try cfg.myOS.profile;
   "myOS.gpu"                                           = try cfg.myOS.gpu;
@@ -149,23 +192,11 @@ in
   "programs.regreet.enable"                            = try cfg.programs.regreet.enable;
 
   # ── users ────────────────────────────────────────────────────────────
-  "users.users.player.description"                     = try cfg.users.users.player.description;
-  "users.users.ghost.description"                      = try cfg.users.users.ghost.description;
-  "users.users.player.shell"                           = try (cfg.users.users.player.shell.pname
-                                                              or cfg.users.users.player.shell.name
-                                                              or "");
-  "users.users.ghost.shell"                            = try (cfg.users.users.ghost.shell.pname
-                                                              or cfg.users.users.ghost.shell.name
-                                                              or "");
-  # Account locking surface. hashedPasswordFile is null when the mkIf
-  # condition evaluated to false; hashedPassword is null when its mkIf
-  # evaluated to false. Stage 1 uses these to assert the debug-off default.
-  "users.users.player.hashedPasswordFile"              = try cfg.users.users.player.hashedPasswordFile;
-  "users.users.player.hashedPassword"                  = try cfg.users.users.player.hashedPassword;
-  "users.users.ghost.hashedPasswordFile"               = try cfg.users.users.ghost.hashedPasswordFile;
-  "users.users.ghost.hashedPassword"                   = try cfg.users.users.ghost.hashedPassword;
-  "users.users.player.extraGroups"                     = try cfg.users.users.player.extraGroups;
-  "users.users.ghost.extraGroups"                      = try cfg.users.users.ghost.extraGroups;
+  # Per-user entries (users.users.<name>.{description,shell,
+  # hashedPasswordFile,hashedPassword,extraGroups} and
+  # myOS.users.<name>.{_activeOn,allowWheel,home.persistent}) are
+  # generated dynamically from `myOS.users.__names` above via
+  # `perUserEntries`. See the `let` binding at the top of this file.
 
   # ── misc ─────────────────────────────────────────────────────────────
   "age.secrets.__keys"                                 = attrKeys (cfg.age.secrets or {});

@@ -418,8 +418,10 @@ in {
        then [ "amd_iommu=on" ]
        else [ ]);
 
-    users.users.player.extraGroups = lib.mkIf (profile == "daily") [ "libvirtd" "kvm" ];
-    users.users.ghost.extraGroups = lib.mkIf (profile == "paranoid") [ "libvirtd" "kvm" ];
+    # Add libvirtd/kvm groups to all active users (framework-driven)
+    users.users = lib.mapAttrs (_: u: {
+      extraGroups = lib.mkIf u._activeOn [ "libvirtd" "kvm" ];
+    }) (lib.filterAttrs (_: u: u.enable) config.myOS.users);
 
     environment.systemPackages = with pkgs; [
       virt-viewer

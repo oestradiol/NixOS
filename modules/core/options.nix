@@ -16,7 +16,7 @@
 {
   options.myOS = {
     gpu = lib.mkOption {
-      type = lib.types.enum [ "nvidia" "amd" ];
+      type = lib.types.enum [ "nvidia" "amd" "none" ];
       default = "nvidia";
       description = "Primary GPU stack.";
     };
@@ -24,7 +24,7 @@
     profile = lib.mkOption {
       type = lib.types.enum [ "daily" "paranoid" ];
       default = "paranoid";
-      description = "Current trust profile.";
+      description = "Current trust / posture profile.";
     };
 
     desktopEnvironment = lib.mkOption {

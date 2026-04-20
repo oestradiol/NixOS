@@ -13,8 +13,8 @@ assert_file "$gov"
 # Each assertion message is searched verbatim. This is intentional: changing
 # a message is itself a governance event and should show up in diffs.
 expected_messages=(
-  "Governance invariant: daily user 'player' must exist."
-  "Governance invariant: paranoid user 'ghost' must exist."
+  "Governance invariant: daily profile requires at least one active user with allowWheel=true and home.persistent=true."
+  "Governance invariant: paranoid profile requires at least one active user with allowWheel=false and home.persistent=false."
   "X server must be disabled system-wide (Wayland-only stack)."
   "Paranoid profile must use sandboxed browsers exclusively (no base Firefox)."
   "Paranoid profile must keep impermanence enabled."
@@ -39,7 +39,7 @@ expected_messages=(
   "Paranoid profile must not enable gamemode."
   "Paranoid profile must not enable wivrn."
   "Daily profile must not enable hardened memory allocator."
-  "GPU option must be set to either 'nvidia' or 'amd'."
+  "GPU option must be set to 'nvidia', 'amd', or 'none'."
   "Paranoid profile must persist machine-id."
   "Paranoid profile must keep a unique host machine-id."
   "Paranoid profile must keep X11 disabled inside bubblewrap sandboxes."

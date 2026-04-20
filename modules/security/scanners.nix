@@ -23,10 +23,20 @@ let
     };
   };
 
+  # Build scan targets from active users' home configurations
+  enabledUsers = lib.filterAttrs (_: u: u.enable) config.myOS.users;
+  activeUsers = lib.filterAttrs (_: u: u._activeOn) enabledUsers;
+  # For persistent homes: scan /home/<name>
+  # For tmpfs homes: scan /persist/home/<name> (impermanence backing store)
+  userHomePaths = lib.mapAttrsToList (_: u:
+    if u.home.persistent
+    then "/home/${u.home.btrfsSubvol}"
+    else "/persist/home/${u.home.btrfsSubvol}"
+  ) activeUsers;
+
   clamTargetPaths =
     [ "/persist" "/var/lib" "/var/log" "/boot" "/nix/var/nix/profiles" ]
-    ++ lib.optionals daily [ "/home/player" ]
-    ++ lib.optionals paranoid [ "/persist/home/ghost" ];
+    ++ userHomePaths;
 
   clamTargets = ''
     targets=()
@@ -45,7 +55,7 @@ let
     set -eu
     ${clamTargets}
     rc=0
-    ${pkgs.clamav}/bin/clamscan -r --infected       --exclude-dir='^/persist/etc/ssh$'       --exclude-dir='^/persist/home/ghost/etc/ssh$'       --exclude-dir='^/home/player/.*\.steam$'       --exclude-dir='^/home/player/\.local/share/Steam$'       --exclude-dir='^/home/player/\.local/share/Steam/steamapps$'       --exclude-dir='^/home/player/\.var/app$'       --exclude-dir='^/var/log/journal$'       ${extraArgs}       "''${targets[@]}" || rc=$?
+    ${pkgs.clamav}/bin/clamscan -r --infected       --exclude-dir='^/persist/etc/ssh$'       --exclude-dir='^/persist/home/[^/]+/etc/ssh$'       --exclude-dir='^/home/[^/]+/.*\.steam$'       --exclude-dir='^/home/[^/]+/\.local/share/Steam$'       --exclude-dir='^/home/[^/]+/\.local/share/Steam/steamapps$'       --exclude-dir='^/home/[^/]+/\.var/app$'       --exclude-dir='^/var/log/journal$'       ${extraArgs}       "''${targets[@]}" || rc=$?
     case "$rc" in
       0)
         exit 0
@@ -203,7 +213,7 @@ in {
     # - whole /persist tree
     # - whole /var/lib tree
     # - /var/log, /tmp, /var/tmp
-    # - /home/player and /persist/home/ghost user data
+    # - active users' home data (both /home/<user> and /persist/home/<user>)
     # - Flatpak trees, Steam trees, browser profiles, app state, package caches
     environment.etc."aide.conf".text = lib.mkDefault (lib.concatStringsSep "
 " [

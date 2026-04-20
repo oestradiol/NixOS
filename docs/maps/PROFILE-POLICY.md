@@ -82,6 +82,12 @@ Expected boot state: `paranoid`.
 `player` is the daily desktop account.
 Expected boot state: `daily`.
 
+Intent:
+- let sibling instances describe themselves honestly without pretending to be
+  `daily` or `paranoid`
+- keep the local Dotfiles truth unchanged: this repo still ships one default
+  boot state (`paranoid`) and one explicit specialization (`daily`)
+
 ## 2. Policy rule set
 
 ### Rule A: shared base first
