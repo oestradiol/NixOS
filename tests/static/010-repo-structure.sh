@@ -16,11 +16,19 @@ for f in \
   assert_file "$f"
 done
 
-describe "host entrypoint and fs/hardware layouts"
+describe "templates"
 for f in \
-    "$REPO_ROOT/hosts/nixos/default.nix" \
-    "$REPO_ROOT/hosts/nixos/fs-layout.nix" \
-    "$REPO_ROOT/hosts/nixos/hardware-target.nix"; do
+    "$REPO_ROOT/templates/workstation/flake.nix" \
+    "$REPO_ROOT/templates/workstation/README.md" \
+    "$REPO_ROOT/templates/default/flake.nix"; do
+  assert_file "$f"
+done
+
+describe "host entrypoint and fs/hardware layouts (templates/default)"
+for f in \
+    "$REPO_ROOT/templates/default/hosts/nixos/default.nix" \
+    "$REPO_ROOT/templates/default/hosts/nixos/fs-layout.nix" \
+    "$REPO_ROOT/templates/default/hosts/nixos/hardware-target.nix"; do
   assert_file "$f"
 done
 
@@ -44,7 +52,6 @@ for f in \
     "$REPO_ROOT/modules/desktop/base.nix" \
     "$REPO_ROOT/modules/desktop/controllers.nix" \
     "$REPO_ROOT/modules/desktop/gaming.nix" \
-    "$REPO_ROOT/modules/desktop/shell.nix" \
     "$REPO_ROOT/modules/desktop/theme.nix" \
     "$REPO_ROOT/modules/desktop/vr.nix"; do
   assert_file "$f"
@@ -60,8 +67,14 @@ done
 describe "home manager modules"
 for f in \
     "$REPO_ROOT/modules/home/common.nix" \
-    "$REPO_ROOT/modules/home/ghost.nix" \
-    "$REPO_ROOT/modules/home/player.nix"; do
+    "$REPO_ROOT/modules/home/shell.nix"; do
+  assert_file "$f"
+done
+
+describe "template account home configs"
+for f in \
+    "$REPO_ROOT/templates/default/accounts/home/ghost.nix" \
+    "$REPO_ROOT/templates/default/accounts/home/player.nix"; do
   assert_file "$f"
 done
 

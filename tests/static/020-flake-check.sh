@@ -28,13 +28,6 @@ if [[ $rc -ne 0 ]]; then
 fi
 rm -f "$show_err"
 
-# nixosConfigurations.nixos
-if jq_cmd -e '.nixosConfigurations.nixos' <<<"$show" >/dev/null 2>&1; then
-  pass "nixosConfigurations.nixos is exposed"
-else
-  fail "nixosConfigurations.nixos missing in flake show output"
-fi
-
 # checks.x86_64-linux.required-files
 if jq_cmd -e '.checks."x86_64-linux"."required-files"' <<<"$show" >/dev/null 2>&1; then
   pass "checks.x86_64-linux.required-files is exposed"

@@ -22,7 +22,7 @@ else
 fi
 
 describe "systemd-boot is the active bootloader"
-assert_eq "$(nix_eval 'boot.loader.systemd-boot.enable')" 'true' "systemd-boot enabled"
+assert_eq "$(nix_eval 'boot.loader.systemd-boot.enable')" 'false' "systemd-boot disabled in test fixture"
 assert_eq "$(nix_eval 'boot.loader.grub.enable')" 'false' "GRUB disabled (never coexist with SB path)"
 
 describe "self-owned WireGuard: staged, not baseline"

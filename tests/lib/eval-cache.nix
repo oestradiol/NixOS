@@ -5,14 +5,71 @@
 # Each value is wrapped in `tryEval` so a missing option becomes `{ ok =
 # false; }` instead of aborting the whole eval. Tests that care about
 # "absent" vs "false" can distinguish by looking at `ok`.
+#
+# NOTE: Uses root flake with inline test fixture. The root flake is pure
+# framework (library only) so we construct a minimal host config here.
 { flakePath ? toString ./../..
 , profile ? "paranoid"   # "paranoid" or "daily"
 }:
 let
   flake = builtins.getFlake flakePath;
-  topCfg = flake.outputs.nixosConfigurations.nixos.config;
-  dailyCfg = topCfg.specialisation.daily.configuration;
-  cfg = if profile == "daily" then dailyCfg else topCfg;
+  nixpkgs = flake.inputs.nixpkgs;
+  system = "x86_64-linux";
+  pkgs = nixpkgs.legacyPackages.${system};
+  
+  # Import framework modules from the root flake outputs
+  hardening = flake.outputs.nixosModules;
+  agenix = flake.inputs.agenix;
+  impermanence = flake.inputs.impermanence;
+  lanzaboote = flake.inputs.lanzaboote;
+  home-manager = flake.inputs.home-manager;
+  stylix = flake.inputs.stylix;
+    # Build a test configuration using the framework modules
+  testConfig = nixpkgs.lib.nixosSystem {
+    inherit system;
+    modules = [
+      # Minimal mock config for testing (no disk dependencies)
+      {
+        nixpkgs.config.allowUnfree = true;
+        fileSystems."/" = { device = "tmpfs"; fsType = "tmpfs"; };
+        fileSystems."/persist" = { device = "/dev/disk/by-label/persist"; fsType = "btrfs"; neededForBoot = true; };
+        boot.loader.grub.enable = false;
+        boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
+        boot.kernelModules = [ "kvm-amd" ];
+
+        # Test users matching the old ghost/player structure
+        myOS.users.player = {
+          activeOnProfiles = [ "daily" ];
+          description = "Daily desktop";
+          shell = pkgs.zsh;
+          extraGroups = [ "networkmanager" "video" "audio" "input" "render" ];
+          allowWheel = true;
+          home.persistent = true;
+        };
+
+        myOS.users.ghost = {
+          activeOnProfiles = [ "paranoid" ];
+          description = "Hardened workspace";
+          uid = 1001;
+          shell = pkgs.zsh;
+          extraGroups = [ "networkmanager" "video" "audio" "input" "render" ];
+          allowWheel = false;
+          home.persistent = false;
+        };
+      }
+      # Required flake input modules
+      agenix.nixosModules.default
+      impermanence.nixosModules.impermanence
+      lanzaboote.nixosModules.lanzaboote
+      home-manager.nixosModules.home-manager
+      stylix.nixosModules.stylix
+      # Use default module (includes core + all feature modules)
+      hardening.default
+      hardening.profile-paranoid
+    ] ++ nixpkgs.lib.optionals (profile == "daily") [ hardening.profile-daily ];
+  };
+  
+  cfg = testConfig.config;
 
   # Safe lookup: evaluate an expression; on error, return { ok = false; }.
   try = expr:
