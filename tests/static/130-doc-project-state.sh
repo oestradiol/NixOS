@@ -41,10 +41,21 @@ done
 
 describe "user expectations match profile"
 # PROJECT-STATE says /home/player persistent daily, /home/ghost tmpfs paranoid.
-# Verify fs-layout.nix has both.
+# Stage 4b moved the Btrfs subvol names into accounts/*.nix as the
+# `home.btrfsSubvol` attribute; fs-layout.nix reads them via the
+# framework. Grep across both surfaces so the check stays accurate.
 fs="$REPO_ROOT/hosts/nixos/fs-layout.nix"
-if grep -Fq 'subvol=@home-daily' "$fs"; then pass "fs-layout declares @home-daily"; else fail "fs-layout missing @home-daily"; fi
-if grep -Fq 'subvol=@home-paranoid' "$fs"; then pass "fs-layout declares @home-paranoid"; else fail "fs-layout missing @home-paranoid"; fi
+accounts="$REPO_ROOT/accounts"
+if grep -rFq 'btrfsSubvol = "@home-daily"' "$accounts" 2>/dev/null; then
+  pass "accounts/ declares @home-daily"
+else
+  fail "accounts/ missing @home-daily subvol binding"
+fi
+if grep -rFq 'btrfsSubvol = "@home-paranoid"' "$accounts" 2>/dev/null; then
+  pass "accounts/ declares @home-paranoid"
+else
+  fail "accounts/ missing @home-paranoid subvol binding"
+fi
 if grep -Fq 'fsType = "tmpfs"' "$fs"; then pass "tmpfs root present"; else fail "tmpfs root missing"; fi
 
 describe "audit status: paranoid baseline audit + staged custom rules"

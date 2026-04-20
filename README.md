@@ -32,6 +32,8 @@ Use these files for:
 - which external sources influenced the decision
 
 ## Truth surfaces
+For agent entry, read `AGENTS.md` first.
+
 Read in this order:
 1. `PROJECT-STATE.md`
 2. `REFERENCES.md`

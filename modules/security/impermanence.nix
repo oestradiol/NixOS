@@ -98,34 +98,18 @@ in {
       };
     })
 
-    (lib.mkIf (impermanenceEnabled && profile == "paranoid") {
-      environment.persistence.${persistRoot} = {
-        # NOTE: Daily profile (/home/player): fully persistent Btrfs subvolume (@home-daily).
-        # Do not duplicate that persistence through impermanence allowlists here.
-        #
-        # NOTE: Paranoid profile (/home/ghost): selective impermanence (tmpfs + allowlist)
-        # @home-paranoid is mounted at /persist/home/ghost, and only allowlisted items
-        # are persisted. The home directory itself is tmpfs and is wiped on every boot.
-        users."ghost" = {
-          # Note: home directory is now automatically deduced by impermanence module
-          # @home-paranoid should be mounted at /persist/home/ghost
-          directories = [
-            "Downloads"
-            "Documents"
-            ".config/Signal"
-            ".config/keepassxc"
-            ".local/share/KeePassXC"  # KeePassXC database storage
-            ".local/share/keyrings"  # Password/key storage
-            ".local/share/applications"  # Custom desktop entries
-            ".gnupg"
-            ".ssh"
-            ".local/share/flatpak"
-            ".var/app/org.signal.Signal"
-            ".mozilla/safe-firefox"
-          ];
+    # Impermanence allowlists for users with home.persistent = false.
+    # Each user's allowlist is declared in their account file (accounts/*.nix).
+    (lib.mkIf impermanenceEnabled {
+      environment.persistence.${persistRoot}.users =
+        let
+          enabledUsers = lib.filterAttrs (_: u: u.enable) config.myOS.users;
+          tmpfsUsers = lib.filterAttrs (_: u: !u.home.persistent) enabledUsers;
+        in
+        lib.mapAttrs (_: u: {
+          directories = u.home.allowlist;
           files = [ ".zsh_history" ];
-        };
-      };
+        }) tmpfsUsers;
     })
     
     {

@@ -7,15 +7,48 @@ let
   # takes effect when myOS.debug.enable is also true.
   debug = config.myOS.debug;
   paranoidWheelRelaxed = debug.enable && debug.paranoidWheel.enable;
+
+  # Framework-driven: users active on current profile
+  enabledUsers = lib.filterAttrs (_: u: u.enable) config.myOS.users;
+  activeUsers = lib.filterAttrs (_: u: u._activeOn) enabledUsers;
+  activeUsersList = builtins.attrValues activeUsers;
+
+  # Structural assertions: wheel-restricted users on paranoid
+  # (replaces the hardcoded "ghost not in wheel" assertion)
+  paranoidWheelViolations = lib.filterAttrs (n: u:
+    u._activeOn && !u.allowWheel && builtins.elem "wheel" config.users.users.${n}.extraGroups
+  ) (lib.filterAttrs (_: u: u.enable) config.myOS.users);
+
+  # Structural profile-posture invariants, derived from user framework
+  # properties rather than literal names:
+  #   - daily posture requires a permissive user (wheel + persistent home)
+  #   - paranoid posture requires a hardened user (no wheel + tmpfs home)
+  # These replace the previous "daily user 'player' must exist" /
+  # "paranoid user 'ghost' must exist" name assertions (Stage 4c).
+  dailyPostureUsers = lib.filterAttrs (_: u:
+    u._activeOn && u.allowWheel && u.home.persistent
+  ) activeUsers;
+  paranoidPostureUsers = lib.filterAttrs (_: u:
+    u._activeOn && !u.allowWheel && !u.home.persistent
+  ) activeUsers;
 in {
   assertions = [
+    # Structural: at least one user must be active on the current profile
     {
-      assertion = config.users.users ? "player";
-      message = "Governance invariant: daily user 'player' must exist.";
+      assertion = activeUsersList != [];
+      message = "Governance invariant: at least one user must be active on profile '${config.myOS.profile}'.";
     }
+    # Structural: daily posture requires a permissive persistent-home user
+    # (replaces name-based "daily user 'player' must exist").
     {
-      assertion = config.users.users ? "ghost";
-      message = "Governance invariant: paranoid user 'ghost' must exist.";
+      assertion = !isDaily || dailyPostureUsers != {};
+      message = "Governance invariant: daily profile requires at least one active user with allowWheel=true and home.persistent=true.";
+    }
+    # Structural: paranoid posture requires a locked-down tmpfs-home user
+    # (replaces name-based "paranoid user 'ghost' must exist").
+    {
+      assertion = !isParanoid || paranoidPostureUsers != {};
+      message = "Governance invariant: paranoid profile requires at least one active user with allowWheel=false and home.persistent=false.";
     }
     {
       assertion = !config.services.xserver.enable;
@@ -53,11 +86,11 @@ in {
       assertion = config.services.greetd.enable;
       message = "This design assumes greetd is enabled as the Wayland-native display manager.";
     }
+    # Structural wheel governance: on paranoid, no active user with
+    # allowWheel=false may be in the wheel group (unless debug override).
+    # Stage 4c: generalized from hardcoded "ghost" check to any allowWheel=false user.
     {
-      # Relaxed by myOS.debug.paranoidWheel.enable when the master debug
-      # gate is also on. The relaxation is surfaced as an activation warning
-      # by modules/core/debug.nix.
-      assertion = !isParanoid || paranoidWheelRelaxed || !(builtins.elem "wheel" config.users.users."ghost".extraGroups);
+      assertion = !isParanoid || paranoidWheelRelaxed || (paranoidWheelViolations == {});
       message = "Paranoid user must not be in the wheel group by default.";
     }
     {
@@ -121,8 +154,8 @@ in {
       message = "Daily profile must not enable hardened memory allocator.";
     }
     {
-      assertion = config.myOS.gpu == "nvidia" || config.myOS.gpu == "amd";
-      message = "GPU option must be set to either 'nvidia' or 'amd'.";
+      assertion = builtins.elem config.myOS.gpu [ "nvidia" "amd" "none" ];
+      message = "GPU option must be set to 'nvidia', 'amd', or 'none'.";
     }
     {
       assertion = !isParanoid || config.myOS.security.persistMachineId;

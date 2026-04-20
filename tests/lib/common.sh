@@ -450,7 +450,11 @@ jq_cmd()          { _tc_ensure_jq || return 1; "$_tc_jq" "$@"; }
 # Priority:
 #  1) TEST_PROFILE env
 #  2) kernel cmdline has nosmt=force → paranoid, usbcore.authorized_default=2 → paranoid
-#  3) shadow file: whichever account has a real hash (not "!") wins
+#  3) shadow fallback: iterate user names declared in `myOS.users` (via
+#     the eval cache) and for each check which profile has that account
+#     unlocked. Stage 4c: names are no longer hardcoded here; anything
+#     declared in `accounts/*.nix` (or by an integrator flake) is picked
+#     up automatically.
 detect_profile() {
   if [[ -n "${TEST_PROFILE:-}" ]]; then
     printf '%s\n' "$TEST_PROFILE"; return
@@ -459,16 +463,30 @@ detect_profile() {
   if [[ "$params" == *"nosmt=force"* ]] || [[ "$params" == *"usbcore.authorized_default=2"* ]]; then
     printf 'paranoid\n'; return
   fi
-  # Fallback: consult /etc/shadow (requires read privs; may fail for normal users)
-  if [[ -r /etc/shadow ]]; then
-    local player_field ghost_field
-    player_field=$(getent shadow player 2>/dev/null | cut -d: -f2 || true)
-    ghost_field=$(getent shadow ghost 2>/dev/null | cut -d: -f2 || true)
-    if [[ "$player_field" != '!' && -n "$player_field" ]]; then
-      printf 'daily\n'; return
-    fi
-    if [[ "$ghost_field" != '!' && -n "$ghost_field" ]]; then
-      printf 'paranoid\n'; return
+  # Fallback: consult /etc/shadow (requires read privs; may fail for normal users).
+  # For each declared user, check which profile marks them active.
+  if [[ -r /etc/shadow ]] && _tc_ensure_jq 2>/dev/null; then
+    # Discover declared user names from the paranoid cache (both caches
+    # agree on who's declared; they differ only on `_activeOn`).
+    local names_json
+    names_json=$(_tc_cache_lookup paranoid 'myOS.users.__names' 2>/dev/null || echo '[]')
+    if [[ -n "$names_json" && "$names_json" != 'null' ]]; then
+      local names
+      mapfile -t names < <("$_tc_jq" -r '.[]' <<<"$names_json" 2>/dev/null || true)
+      for n in "${names[@]}"; do
+        local field; field=$(getent shadow "$n" 2>/dev/null | cut -d: -f2 || true)
+        [[ "$field" == '!' || -z "$field" ]] && continue
+        # Find which profile has this user active.
+        local active_paranoid active_daily
+        active_paranoid=$(_tc_cache_lookup paranoid "myOS.users.${n}._activeOn" 2>/dev/null || echo null)
+        active_daily=$(_tc_cache_lookup daily    "myOS.users.${n}._activeOn" 2>/dev/null || echo null)
+        if [[ "$active_paranoid" == 'true' ]]; then
+          printf 'paranoid\n'; return
+        fi
+        if [[ "$active_daily" == 'true' ]]; then
+          printf 'daily\n'; return
+        fi
+      done
     fi
   fi
   printf 'daily\n'
