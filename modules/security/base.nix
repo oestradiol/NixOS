@@ -3,21 +3,21 @@ let
   sec = config.myOS.security;
 in {
   imports = [
-    ./governance.nix
-    ./networking.nix
-    ./wireguard.nix
     ./browser.nix
-    ./impermanence.nix
-    ./secrets.nix
-    ./secure-boot.nix
     ./flatpak.nix
-    ./scanners.nix
-    ./vm-tooling.nix
+    ./governance.nix
+    ./impermanence.nix
+    ./kernel-hardening.nix
+    ./networking.nix
+    ./privacy.nix
     ./sandbox.nix
     ./sandboxed-apps.nix
-    ./kernel-hardening.nix
-    ./privacy.nix
+    ./scanners.nix
+    ./secrets.nix
+    ./secure-boot.nix
     ./user-profile-binding.nix
+    ./vm-tooling.nix
+    ./wireguard.nix
   ];
 
   # Option declarations for the security knobs consumed here. Sibling

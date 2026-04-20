@@ -7,7 +7,7 @@
   myOS.gpu = "nvidia";
   myOS.desktopEnvironment = "plasma";
 
-  # home-manager binding for ghost is now owned by accounts/ghost.nix
+  # home-manager binding for ghost is now owned by templates/default/accounts/ghost.nix
   # via myOS.users.ghost.homeManagerConfig (activated on active profiles).
 
   myOS.gaming = {

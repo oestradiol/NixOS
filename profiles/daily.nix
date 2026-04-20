@@ -6,7 +6,7 @@
   myOS.gpu = lib.mkForce "nvidia";
   myOS.desktopEnvironment = lib.mkForce "plasma";
 
-  # home-manager binding for player is now owned by accounts/player.nix
+  # home-manager binding for player is now owned by templates/default/accounts/player.nix
   # via myOS.users.player.homeManagerConfig (activated on active profiles).
 
   myOS.gaming = {

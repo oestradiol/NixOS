@@ -9,7 +9,7 @@
 # This template assembles a single hardened workstation with one
 # permissive daily user on the `daily` profile. For the full paranoid
 # + daily specialisation split, copy the reference host at
-# `hosts/nixos/` in the upstream repo instead.
+# `templates/default/` in the upstream repo instead.
 {
   description = "Hardened NixOS workstation (oestradiol/NixOS framework template)";
 
