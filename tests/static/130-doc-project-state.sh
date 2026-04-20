@@ -5,7 +5,7 @@ source "${BASH_SOURCE%/*}/../lib/common.sh"
 require_cmd nix || exit 0
 _tc_ensure_jq || { skip "jq unavailable"; exit 0; }
 
-ps="$REPO_ROOT/PROJECT-STATE.md"
+ps="$REPO_ROOT/docs/governance/PROJECT-STATE.md"
 assert_file "$ps"
 
 describe "PROJECT-STATE baseline split"
@@ -30,7 +30,7 @@ describe "flake.nix: required-files check covers the governance truth surfaces"
 # flake.nix has an inline `required-files` check. Make sure it still lists
 # the files PROJECT-STATE says are canonical.
 flake="$REPO_ROOT/flake.nix"
-for f in PROJECT-STATE.md flake.nix hosts/nixos/default.nix \
+for f in docs/governance/PROJECT-STATE.md flake.nix hosts/nixos/default.nix \
          docs/maps/SECURITY-SURFACES.md; do
   if grep -Fq "$f" "$flake"; then
     pass "flake required-files includes $f"

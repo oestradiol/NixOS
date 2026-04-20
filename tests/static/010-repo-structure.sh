@@ -7,8 +7,8 @@ source "${BASH_SOURCE%/*}/../lib/common.sh"
 describe "repo top-level files"
 for f in \
     "$REPO_ROOT/README.md" \
-    "$REPO_ROOT/PROJECT-STATE.md" \
-    "$REPO_ROOT/REFERENCES.md" \
+    "$REPO_ROOT/docs/governance/PROJECT-STATE.md" \
+    "$REPO_ROOT/docs/governance/REFERENCES.md" \
     "$REPO_ROOT/LICENSE" \
     "$REPO_ROOT/flake.nix" \
     "$REPO_ROOT/flake.lock" \

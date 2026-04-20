@@ -14,9 +14,9 @@ Status values:
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| two-account split (`ghost` / `player`) | baseline | keep | `modules/core/users.nix`, `PROJECT-STATE.md` | core governance model |
-| `ghost` expected on `paranoid` | baseline | keep | `PROJECT-STATE.md`, `modules/security/governance.nix` | hardened workspace split |
-| `player` expected on `daily` | baseline | keep | `PROJECT-STATE.md` | normal desktop split |
+| two-account split (`ghost` / `player`) | baseline | keep | `modules/core/users.nix`, `docs/governance/PROJECT-STATE.md` | core governance model |
+| `ghost` expected on `paranoid` | baseline | keep | `docs/governance/PROJECT-STATE.md`, `modules/security/governance.nix` | hardened workspace split |
+| `player` expected on `daily` | baseline | keep | `docs/governance/PROJECT-STATE.md` | normal desktop split |
 | `users.mutableUsers = false` (immutable) | baseline | keep | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | declarative password management via hashedPasswordFile |
 | root account locked | baseline | keep | `modules/security/base.nix` | reduce direct root login surface |
 | `ghost` in wheel by default | rejected | do not add | `modules/security/governance.nix` | paranoid user should not have default wheel escalation |
@@ -99,14 +99,14 @@ Status values:
 | paranoid Firefox via vendored arkenfox wrapper | baseline in paranoid | keep | `modules/security/browser.nix`, `modules/security/arkenfox/user.js` | stronger privacy baseline |
 | Tor Browser wrapper | baseline optional | keep | `modules/security/browser.nix` | upstream anonymity model + local containment |
 | Mullvad Browser wrapper | baseline optional | keep | `modules/security/browser.nix` | upstream privacy model + local containment |
-| Firefox Sync disabled | baseline | keep | `modules/security/browser.nix`, `PROJECT-STATE.md` | privacy and account-linking reduction |
+| Firefox Sync disabled | baseline | keep | `modules/security/browser.nix`, `docs/governance/PROJECT-STATE.md` | privacy and account-linking reduction |
 | broad `/etc` bind into wrappers | rejected | do not add | `modules/security/sandbox-core.nix` | wrapper posture intentionally tightened |
 
 ## Network / identifiers
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| Mullvad app mode (daily only) | baseline | keep for now | `modules/security/networking.nix`, `PROJECT-STATE.md` | simpler stable baseline for daily/player |
+| Mullvad app mode (daily only) | baseline | keep for now | `modules/security/networking.nix`, `docs/governance/PROJECT-STATE.md` | simpler stable baseline for daily/player |
 | self-owned WireGuard path | staged | post-stability / optional | `modules/security/wireguard.nix`, `modules/core/options.nix` | stronger repo-owned path, but more operator burden |
 | explicit nftables ownership in self-owned WG mode | staged | keep | `modules/security/wireguard.nix` | avoid split authority |
 | MAC randomization on paranoid | baseline | keep | `modules/security/privacy.nix` | stronger identifier reduction |
