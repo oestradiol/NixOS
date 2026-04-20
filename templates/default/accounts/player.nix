@@ -28,6 +28,6 @@
       persistent = true;
       btrfsSubvol = "@home-daily";
     };
-    homeManagerConfig = ../modules/home/player.nix;
+    homeManagerConfig = ./home/player.nix;
   };
 }

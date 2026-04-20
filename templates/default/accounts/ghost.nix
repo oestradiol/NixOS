@@ -46,6 +46,6 @@
         ".mozilla/safe-firefox"
       ];
     };
-    homeManagerConfig = ../modules/home/ghost.nix;
+    homeManagerConfig = ./home/ghost.nix;
   };
 }
