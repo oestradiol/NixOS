@@ -19,8 +19,8 @@ Canonical audit surface: what has been checked, what is only statically verified
 | surface | state | validation mode | canonical locations | notes |
 |---|---|---|---|---|
 | shared sandbox core | implemented | static review | `modules/security/sandbox-core.nix`, `modules/security/browser.nix`, `modules/security/sandboxed-apps.nix` | shared constructor, explicit relaxations, cleared environment |
-| daily Firefox enterprise-policy path | implemented | static review | `modules/security/browser.nix`, `PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md` | normal Firefox path, not arkenfox-managed |
-| paranoid `safe-firefox` arkenfox-derived baseline | implemented | static review | `modules/security/browser.nix`, `modules/security/arkenfox/user.js`, `PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md` | wrapper + vendored arkenfox + repo overrides |
+| daily Firefox enterprise-policy path | implemented | static review | `modules/security/browser.nix`, `docs/governance/PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md` | normal Firefox path, not arkenfox-managed |
+| paranoid `safe-firefox` arkenfox-derived baseline | implemented | static review | `modules/security/browser.nix`, `modules/security/arkenfox/user.js`, `docs/governance/PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md` | wrapper + vendored arkenfox + repo overrides |
 | Tor Browser / Mullvad Browser wrapper path | implemented+manual | static review | `modules/security/browser.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/POST-STABILITY.md` | upstream browser model kept; wrapper compatibility still needs runtime trials |
 | daily app wrappers (`safe-vrcx`, `safe-windsurf`) | implemented+manual | static review | `modules/security/sandboxed-apps.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/RECOVERY.md` | functionality must be proven on target desktop |
 | staged self-owned WireGuard path | implemented | static review | `modules/security/wireguard.nix`, `modules/security/networking.nix`, `docs/pipeline/INSTALL-GUIDE.md`, `docs/pipeline/TEST-PLAN.md` | present in repo, off by default |
@@ -28,8 +28,8 @@ Canonical audit surface: what has been checked, what is only statically verified
 | repo custom audit rules | deferred | static review | `modules/security/base.nix`, `modules/core/options.nix`, `docs/pipeline/POST-STABILITY.md`, `docs/pipeline/TEST-PLAN.md` | intentionally defaulted off pending upstream fix and live revalidation |
 | AppArmor framework baseline | implemented+manual | static review | `modules/security/base.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/POST-STABILITY.md` | framework + D-Bus mediation only; no custom profile library yet |
 | ClamAV + AIDE monitoring path | implemented | static review | `modules/security/scanners.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/RECOVERY.md` | timers/services still need live validation |
-| Flatpak + Flathub + portals | implemented | static review | `modules/security/flatpak.nix`, `docs/pipeline/TEST-PLAN.md`, `PROJECT-STATE.md` | containment for relatively trusted GUI apps, not hostile-software guarantee |
-| VM tooling layer + workflow classes | implemented | static review | `modules/security/vm-tooling.nix`, `PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/POST-STABILITY.md` | host-side automation present; guest templates still need runtime proof |
+| Flatpak + Flathub + portals | implemented | static review | `modules/security/flatpak.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/governance/PROJECT-STATE.md` | containment for relatively trusted GUI apps, not hostile-software guarantee |
+| VM tooling layer + workflow classes | implemented | static review | `modules/security/vm-tooling.nix`, `docs/governance/PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/POST-STABILITY.md` | host-side automation present; guest templates still need runtime proof |
 | profile-user binding | implemented | static review | `modules/core/users.nix`, `modules/security/user-profile-binding.nix` | enforced via account locking; PAM approach remains disabled |
 
 ## Claim ledger

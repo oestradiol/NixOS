@@ -2,7 +2,7 @@
 
 Single-host NixOS repo with one default hardened profile and one explicit daily specialization.
 
-This is a personal hardened-desktop configuration, not a distribution and not a turnkey template. It is designed to be **honest** about what it enforces, what is merely staged, and what remains the operator's responsibility. Read `PROJECT-STATE.md` before adapting any part of it to another machine.
+This is a personal hardened-desktop configuration, not a distribution and not a turnkey template. It is designed to be **honest** about what it enforces, what is merely staged, and what remains the operator's responsibility. Read `docs/governance/PROJECT-STATE.md` before adapting any part of it to another machine.
 
 ## Current repo state
 - `paranoid`: default hardened workstation baseline
@@ -50,13 +50,55 @@ Read in this order:
 - source audit → `docs/maps/SOURCE-COVERAGE.md`
 
 ## Repo map
-- architecture / policy / constraints / support boundary → `PROJECT-STATE.md`
+- architecture / policy / constraints / support boundary → `docs/governance/PROJECT-STATE.md`
 - external source ledger → `REFERENCES.md`
 - audit coverage / validation state / backlog → `docs/maps/AUDIT-STATUS.md`
 - operational pipeline → `docs/pipeline/`
 - host + profiles + modules → `hosts/`, `profiles/`, `modules/`
 - test suite (static / runtime / bugs) → `tests/` (`tests/README.md`)
 - helper scripts only → `scripts/`
+
+## Framework consumption (Stage 6+)
+
+This repo now exposes itself as a reusable NixOS framework. You can consume it without forking:
+
+### A. Quickstart from template (new install)
+```bash
+nix flake init -t github:oestradiol/NixOS#workstation
+# edit flake.nix for your hostName, GPU, user identity
+sudo nixos-rebuild switch --flake .#workstation
+```
+See `templates/workstation/README.md` for the bootstrap checklist.
+
+### B. Cherry-pick modules (existing flake)
+Import only the hardening surface you need:
+```nix
+{
+  inputs.hardening.url = "github:oestradiol/NixOS";
+  outputs = { nixpkgs, hardening, ... }: {
+    nixosConfigurations.laptop = nixpkgs.lib.nixosSystem {
+      modules = [
+        hardening.nixosModules.core
+        hardening.nixosModules.security-kernel-hardening
+        hardening.nixosModules.desktop-plasma
+        # ... your own modules
+      ];
+    };
+  };
+}
+```
+All 41 `nixosModules.*` outputs are documented in `flake.nix`.
+
+### C. Fork-and-own (full adaptation)
+Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `hosts/`, `accounts/`, and `accounts/*.local.nix` are your instance.
+
+### Identity separation
+Operator-specific values (git email, mic aliases, repo paths) live in gitignored `*.local.nix` files:
+- `accounts/player.local.nix` (created from `accounts/player.local.nix.example`)
+- `accounts/ghost.local.nix` (optional)
+- `hosts/nixos/local.nix` (system-level hardware quirks)
+
+Tracked files contain only framework-level defaults and structural wiring.
 
 ## Operator-local overrides
 `hosts/nixos/default.nix` conditionally imports `hosts/nixos/local.nix` when that file exists. The path is **gitignored** and is the right place for per-install hardware quirks (external-drive UUIDs, experimental toggles, transient workarounds) that must never be published. If the file is absent, the import list is a no-op.

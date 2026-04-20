@@ -7,7 +7,7 @@ framework repo without prior context.
 
 Read these in order:
 
-1. `PROJECT-STATE.md`
+1. `docs/governance/PROJECT-STATE.md`
 2. `README.md`
 3. `docs/maps/AUDIT-STATUS.md`
 4. `docs/maps/README.md`

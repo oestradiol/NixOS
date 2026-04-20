@@ -133,7 +133,7 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] virt-manager launches
 - [ ] `repo-vm-class help` works
 - [ ] the four VM classes are documented and understood
-- [ ] `repo-vm-class policy <class>` matches `PROJECT-STATE.md`
+- [ ] `repo-vm-class policy <class>` matches `docs/governance/PROJECT-STATE.md`
 - [ ] repo NAT network exists and comes up
 - [ ] repo isolated network exists and comes up
 - [ ] `repo-vm-class create trusted-work-vm ...` yields a persistent NAT-backed VM

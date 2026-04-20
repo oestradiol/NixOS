@@ -193,7 +193,7 @@ This section now tracks the Madaidan guide **section by section**, including ite
 | 21.5 USBs | daily-softened | `profiles/*`, `modules/security/governance.nix` | USB restriction is enforced for paranoid and softened for daily | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 | 21.6 DMA attacks | partial / staged | kernel/IOMMU-related posture not explicitly documented as its own tracker row | repo likely benefits from platform defaults, but this is not a clearly tracked governance item yet | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 | 21.7 Cold boot attacks | partial by encryption baseline | LUKS docs/install path | disk encryption helps, but repo does not claim a full cold-boot mitigation program | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
-| 22. Best practices | baseline | `README.md`, `PROJECT-STATE.md`, `docs/maps/PROFILE-POLICY.md`, `docs/maps/HARDENING-TRACKER.md` | repo governance explicitly treats hardening as layered, staged, and threat-model driven | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
+| 22. Best practices | baseline | `README.md`, `docs/governance/PROJECT-STATE.md`, `docs/maps/PROFILE-POLICY.md`, `docs/maps/HARDENING-TRACKER.md` | repo governance explicitly treats hardening as layered, staged, and threat-model driven | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 
 ## NixOS policy anchors
 
