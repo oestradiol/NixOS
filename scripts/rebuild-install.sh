@@ -116,7 +116,7 @@ for cmd in lsblk findmnt sgdisk mkfs.fat cryptsetup mkfs.btrfs mount umount \
   need_cmd "$cmd"
 done
 
-[[ -f "$REPO_ROOT/flake.nix" && -d "$REPO_ROOT/hosts/nixos" ]] \
+[[ -f "$REPO_ROOT/flake.nix" && -d "$REPO_ROOT/templates/default/hosts/nixos" ]] \
   || fail "Could not locate repo root from script path: $REPO_ROOT
 Run this script from inside your repo checkout."
 
@@ -239,16 +239,16 @@ else
 fi
 
 # Strip fileSystems, swapDevices, and boot.initrd.luks — the repo defines its own in fs-layout.nix
-strip_fs_and_swap < "$HW_RAW" > "$TARGET_REPO/hosts/nixos/hardware-target.nix"
+strip_fs_and_swap < "$HW_RAW" > "$TARGET_REPO/templates/default/hosts/nixos/hardware-target.nix"
 info "Wrote hardware-target.nix (fileSystems + swapDevices + boot.initrd.luks stripped)"
 
 echo
 if confirm_yes "Review hardware-target.nix before continuing?"; then
   echo "──────────────────────────────────────────────────"
-  nano "$TARGET_REPO/hosts/nixos/hardware-target.nix"
+  nano "$TARGET_REPO/templates/default/hosts/nixos/hardware-target.nix"
   echo "──────────────────────────────────────────────────"
   echo
-  confirm_yes "Does this look correct? Continue?" || { echo "Aborted. Fix manually at: $TARGET_REPO/hosts/nixos/hardware-target.nix"; exit 1; }
+  confirm_yes "Does this look correct? Continue?" || { echo "Aborted. Fix manually at: $TARGET_REPO/templates/default/hosts/nixos/hardware-target.nix"; exit 1; }
 fi
 
 # ── Phase 5: User passwords ────────────────────────────────────────────

@@ -2,7 +2,7 @@
   home.stateVersion = "26.05";
 
   imports = [
-    ../desktop/shell.nix
+    ./shell.nix
   ];
 
   gtk = {

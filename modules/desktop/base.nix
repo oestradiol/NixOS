@@ -1,23 +1,23 @@
 { config, pkgs, lib, ... }:
 {
   imports = [
-    ../desktop/theme.nix
-    ../desktop/greeter.nix
-    ../desktop/plasma.nix
-    ../desktop/hyprland.nix
-    # i18n layer (BR locale/keymap + JP fcitx5/mozc). Each subsystem
-    # self-gates on its myOS.i18n.<layer>.enable knob.
-    ../desktop/i18n.nix
     # Daily flake-update + rebuild-boot timer. Self-gated on
     # myOS.autoUpdate.enable (default true).
     ../desktop/auto-update.nix
-    # Gaming stack (Steam, gamescope, gamemode, NT sync). Self-gated on
-    # myOS.gaming.enable (default false; daily profile sets true).
-    ../desktop/gaming.nix
     # Controller support is self-gated on myOS.gaming.controllers.enable
     # (default false). Imported unconditionally so the option is visible
     # on every profile (paranoid sets it explicitly to false).
     ../desktop/controllers.nix
+    # Gaming stack (Steam, gamescope, gamemode, NT sync). Self-gated on
+    # myOS.gaming.enable (default false; daily profile sets true).
+    ../desktop/gaming.nix
+    ../desktop/greeter.nix
+    ../desktop/hyprland.nix
+    # i18n layer (BR locale/keymap + JP fcitx5/mozc). Each subsystem
+    # self-gates on its myOS.i18n.<layer>.enable knob.
+    ../desktop/i18n.nix
+    ../desktop/plasma.nix
+    ../desktop/theme.nix
     # VR is gated on myOS.gaming.vr.enable (default follows
     # myOS.gaming.enable). Imported unconditionally so myOS.vr.* options
     # are visible on every profile (governance assertions reference them).

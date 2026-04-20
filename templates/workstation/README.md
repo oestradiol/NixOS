@@ -23,7 +23,7 @@ sudo nixos-rebuild switch --flake .#workstation
 ## What you still have to do
 
 - supply a `hosts/<host>/fs-layout.nix` or equivalent matching your
-  disk layout (the upstream reference at `hosts/nixos/fs-layout.nix`
+  disk layout (the upstream reference at `templates/default/hosts/nixos/fs-layout.nix`
   is a good starting point)
 - put real identity values in a gitignored override (see
   `accounts/player.local.nix.example` upstream)
