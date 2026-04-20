@@ -26,7 +26,7 @@ sudo nixos-rebuild switch --flake .#workstation
   disk layout (the upstream reference at `templates/default/hosts/nixos/fs-layout.nix`
   is a good starting point)
 - put real identity values in a gitignored override (see
-  `accounts/player.local.nix.example` upstream)
+  `templates/default/accounts/player.local.nix.example` upstream)
 - decide whether to add the paranoid specialisation; if yes, copy the
   upstream `profiles/paranoid.nix` pattern
 
