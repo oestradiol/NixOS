@@ -172,8 +172,20 @@ in {
             type = lib.types.nullOr lib.types.str;
             default = null;
             description = ''
-              PipeWire source alias for the user's physical microphone.
-              Used by per-user shell aliases like `echo_mic`.
+              PipeWire / ALSA source name for the user's physical
+              microphone (the `source=` argument to the pactl
+              module-loopback invocation behind `echo_mic`). When null,
+              the `echo_mic` shell alias is not emitted.
+            '';
+          };
+          audio.micLoopbackSink = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = ''
+              Optional explicit sink name for the `echo_mic` loopback.
+              When null, pactl chooses the default sink. Set when the
+              operator's audio stack has several outputs and a specific
+              one must receive the monitor stream.
             '';
           };
           workspace.autoUpdateRepoPath = lib.mkOption {

@@ -1,0 +1,19 @@
+# Sample: per-install system-level overrides. Copy to
+# `hosts/nixos/local.nix` (gitignored) to use.
+#
+# Anything here is merged into the operator's host config. Typical uses:
+#
+#   - hardware UUIDs / partlabels that differ per install
+#   - experimental toggles you want on this machine but not upstream
+#   - locale / hostname / timezone that the forked defaults don't match
+#
+# The file is imported conditionally by hosts/nixos/default.nix; when it
+# does not exist the import is a no-op.
+{ ... }:
+{
+  # myOS.host.hostName = "my-laptop";
+  # myOS.host.timeZone = "America/Sao_Paulo";
+  # myOS.i18n.japanese.enable  = true;
+  # myOS.i18n.brazilian.enable = true;
+  # myOS.autoUpdate.enable     = true;
+}

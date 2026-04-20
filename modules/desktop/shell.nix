@@ -1,4 +1,18 @@
-{ config, pkgs, ... }: {
+{ config, lib, osConfig, pkgs, ... }:
+let
+  # Stage 5: per-user identity leaks (mic alias) are now read from
+  # myOS.users.<name>.identity.audio.micSourceAlias via osConfig. The
+  # legacy hardcoded Fifine source-name is gone from the tracked tree;
+  # operators set it in a gitignored accounts/<name>.local.nix.
+  userCfg    = osConfig.myOS.users.${config.home.username} or { };
+  micSource  = userCfg.identity.audio.micSourceAlias or null;
+  micSink    = userCfg.identity.audio.micLoopbackSink or null;
+  echoMicCmd =
+    if micSource == null then null
+    else
+      let sinkArg = if micSink == null then "" else " sink=${micSink}";
+      in "pactl load-module module-loopback latency_msec=200 source=${micSource}${sinkArg}";
+in {
   # ── Zsh (was other/zsh.nix) ───────────────────────────────────
   programs.zsh = {
     enable = true;
@@ -15,9 +29,9 @@
       path = "${config.home.homeDirectory}/.zsh_history";
     };
 
-    shellAliases = {
-      echo_mic = "pactl load-module module-loopback latency_msec=200 source=alsa_input.usb-3142_Fifine_Microphone-00.mono-fallback sink=alsa_output.pci-0000_09_00.4.analog-stereo";
-
+    shellAliases = lib.optionalAttrs (echoMicCmd != null) {
+      echo_mic = echoMicCmd;
+    } // {
       # ── nixos-rebuild family ──────────────────────────────────────
       # Rationale: the system ships two configurations (paranoid toplevel +
       # daily specialisation). A single `nixos-rebuild switch` without

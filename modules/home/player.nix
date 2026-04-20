@@ -1,4 +1,12 @@
-{ config, pkgs, lib, ... }: {
+{ config, osConfig, pkgs, lib, ... }:
+let
+  # Stage 5: git identity is read from the framework's per-user identity
+  # options (populated by a gitignored accounts/<name>.local.nix). The
+  # tracked tree carries no personal identity.
+  userCfg = osConfig.myOS.users.${config.home.username} or { };
+  gitName  = userCfg.identity.git.name  or null;
+  gitEmail = userCfg.identity.git.email or null;
+in {
   imports = [
     ./common.nix
   ];
@@ -12,10 +20,12 @@
     setSessionVariables = false;
   };
 
-  programs.git.settings = {
-    user.name = "Elaina";
-    user.email = "48662592+oestradiol@users.noreply.github.com";
-  };
+  # Only configure git user.* when the framework identity is populated;
+  # otherwise leave the fields unset so forkers start from a clean slate.
+  programs.git.settings = lib.mkMerge [
+    (lib.mkIf (gitName  != null) { user.name  = gitName; })
+    (lib.mkIf (gitEmail != null) { user.email = gitEmail; })
+  ];
 
   home.packages = with pkgs; [
     eza
