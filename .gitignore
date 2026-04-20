@@ -18,3 +18,8 @@ secrets/*.pub
 hosts/nixos/local.nix
 LOCAL-NOTES.md
 switch.log
+
+# Operator-local user identity overrides (git name/email, mic alias,
+# workspace paths). Imported conditionally by accounts/<name>.nix when
+# present. Stage 5 policy: tracked files carry no personal identity.
+accounts/*.local.nix

@@ -1,0 +1,16 @@
+# Sample: operator-local identity for `ghost`. Copy to
+# `accounts/ghost.local.nix` (gitignored) and fill in your own values.
+#
+# `ghost` is the hardened workspace persona; typically nothing needs to
+# be set here — the identity slots default to null and the framework
+# simply does not configure the corresponding user-space features.
+# Populate a slot only when you actually want it on the hardened profile.
+{ ... }:
+{
+  myOS.users.ghost.identity = {
+    # git.name  = "Ada Lovelace";
+    # git.email = "ada@example.com";
+
+    # audio.micSourceAlias = "alsa_input.usb-XXXX_MyMic-00.mono-fallback";
+  };
+}
