@@ -323,7 +323,7 @@ Two override layers, both gitignored. Neither uses a magic filename — they are
 System-axis operator overrides live here. Examples:
 
 ```nix
-# hosts/nixos/local.nix — gitignored
+# templates/default/hosts/nixos/local.nix — gitignored
 {
   myOS.i18n.japanese.enable = true;
   myOS.i18n.brazilian.enable = true;
@@ -499,7 +499,7 @@ After Stage 3: no service is turned on "just because". Every enabled feature has
 
 **Exit criteria:**
 - Repo produces same derivation as before Stage 4 (default ghost/player identity).
-- `grep -rn '"player"\|"ghost"' modules/ profiles/ tests/lib/ hosts/nixos/fs-layout.nix` returns only default values in `accounts/*.nix` and the activation-predicate defaults.
+- `grep -rn '"player"\|"ghost"' modules/ profiles/ tests/lib/ templates/default/hosts/nixos/fs-layout.nix` returns only default values in `accounts/*.nix` and the activation-predicate defaults.
 - Adding a synthetic test user via `myOS.users.alice = { ... }` in a test fixture works with zero other edits.
 
 ### Stage 5 — Identity separation
@@ -511,7 +511,7 @@ After Stage 3: no service is turned on "just because". Every enabled feature has
 - `modules/desktop/auto-update.nix` reads `config.myOS.users.<active-daily-user>.identity.workspace.autoUpdateRepoPath`.
 - `accounts/player.local.nix` (gitignored) added to operator's machine with current identity.
 - `accounts/ghost.local.nix` (gitignored) with ghost's identity.
-- `hosts/nixos/local.nix` (gitignored) with system-level overrides (jp, br, hostname, tz).
+- `templates/default/hosts/nixos/local.nix` (gitignored) with system-level overrides (jp, br, hostname, tz).
 - `example/{local.nix,player.local.nix,ghost.local.nix}.sample` (tracked) showing the pattern.
 
 ### Stage 6 — Framework separation (flake outputs + templates)
@@ -615,7 +615,7 @@ in {
 | file | change |
 |---|---|
 | `modules/core/debug.nix` | NEW — options + warnings wiring |
-| `modules/core/default.nix` (or `hosts/nixos/default.nix` imports) | add `./modules/core/debug.nix` to imports |
+| `modules/core/default.nix` (or templates import it) | add `./modules/core/debug.nix` to imports |
 | `modules/core/users.nix` | revert ad-hoc edits; guard cross-profile password on debug knob; guard ghost wheel on debug knob |
 | `modules/security/governance.nix` | guard the wheel assertion on debug knob |
 | `tests/lib/eval-cache.nix` | add `myOS.debug.*` attrs |
@@ -633,7 +633,7 @@ The operator has reshaped (v2):
 - **D2 (user abstraction)** — supersedes into the full two-axis decoupling (§2).
 - **D3 (profile naming)** — keep `paranoid` / `daily` (well-documented, descriptive).
 - **D4 (personal data)** — move to gitignored `*.local.nix` files under `accounts/` and `hosts/<host>/`.
-- **D5 (jp/br defaults)** — finer knobs (D5c), all default to current behaviour to preserve the operator's machine; operator's `hosts/nixos/local.nix` (gitignored) explicitly sets `myOS.i18n.japanese.enable = true` and `myOS.i18n.brazilian.enable = true`; published fork defaults are off.
+- **D5 (jp/br defaults)** — finer knobs (D5c), all default to current behaviour to preserve the operator's machine; operator's `templates/default/hosts/nixos/local.nix` (gitignored) explicitly sets `myOS.i18n.japanese.enable = true` and `myOS.i18n.brazilian.enable = true`; published fork defaults are off.
 
 All design decisions have been resolved:
 

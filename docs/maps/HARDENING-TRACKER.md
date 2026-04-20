@@ -131,10 +131,10 @@ Status values:
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| `/` on tmpfs | baseline | keep | `hosts/nixos/fs-layout.nix`, `docs/maps/FEATURES.md` | impermanence model |
-| `/` tmpfs size | baseline (16G) | keep ≥8G | `hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | 4G was empirically too small for KDE + VR + IDE; tmpfs is RAM-backed, cap is upper bound only |
-| `/tmp` on its own tmpfs | baseline | keep | `hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | isolates /tmp spikes from /var/lib / /run / /root / home-manager profile paths |
-| `/tmp` nosuid+nodev | baseline | keep | `hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | defense-in-depth |
+| `/` on tmpfs | baseline | keep | `templates/default/hosts/nixos/fs-layout.nix`, `docs/maps/FEATURES.md` | impermanence model |
+| `/` tmpfs size | baseline (16G) | keep ≥8G | `templates/default/hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | 4G was empirically too small for KDE + VR + IDE; tmpfs is RAM-backed, cap is upper bound only |
+| `/tmp` on its own tmpfs | baseline | keep | `templates/default/hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | isolates /tmp spikes from /var/lib / /run / /root / home-manager profile paths |
+| `/tmp` nosuid+nodev | baseline | keep | `templates/default/hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | defense-in-depth |
 | `boot.tmp.cleanOnBoot = true` | baseline | keep | `modules/security/base.nix`, `tests/static/170-fs-layout.sh` | wipes /tmp across boots |
 | `/var/lib/logrotate` persisted | baseline | keep | `modules/security/impermanence.nix` | without it `logrotate.service` fails on tmpfs-full root |
 
