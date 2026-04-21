@@ -1,8 +1,18 @@
 { config, lib, ... }:
 let
   persistRoot = config.myOS.persistence.root;
-  isDaily = config.myOS.profile == "daily";
-  isParanoid = config.myOS.profile == "paranoid";
+  sec = config.myOS.security;
+
+  # Posture detection from configuration properties, not profile names.
+  # Hardened posture = strict sandboxing + impermanence + disabled SMT etc.
+  # Relaxed posture = compatible sandboxing + may allow X11 etc.
+  isHardenedPosture = sec.sandbox.browsers && sec.impermanence.enable && sec.disableSMT;
+  isRelaxedPosture = !isHardenedPosture;
+
+  # Legacy aliases for backward compatibility (deprecated, will be removed)
+  isDaily = isRelaxedPosture;
+  isParanoid = isHardenedPosture;
+
   # Debug-mode relaxations (see modules/core/debug.nix). Each flag only
   # takes effect when myOS.debug.enable is also true.
   debug = config.myOS.debug;
@@ -13,22 +23,18 @@ let
   activeUsers = lib.filterAttrs (_: u: u._activeOn) enabledUsers;
   activeUsersList = builtins.attrValues activeUsers;
 
-  # Structural assertions: wheel-restricted users on paranoid
-  # (replaces the hardcoded "ghost not in wheel" assertion)
-  paranoidWheelViolations = lib.filterAttrs (n: u:
+  # Structural assertions: wheel-restricted users on hardened posture
+  hardenedWheelViolations = lib.filterAttrs (n: u:
     u._activeOn && !u.allowWheel && builtins.elem "wheel" config.users.users.${n}.extraGroups
   ) (lib.filterAttrs (_: u: u.enable) config.myOS.users);
 
-  # Structural profile-posture invariants, derived from user framework
-  # properties rather than literal names:
-  #   - daily posture requires a permissive user (wheel + persistent home)
-  #   - paranoid posture requires a hardened user (no wheel + tmpfs home)
-  # These replace the previous "daily user 'player' must exist" /
-  # "paranoid user 'ghost' must exist" name assertions (Stage 4c).
-  dailyPostureUsers = lib.filterAttrs (_: u:
+  # Structural posture invariants:
+  #   - relaxed posture requires a permissive user (wheel + persistent home)
+  #   - hardened posture requires a locked-down user (no wheel + tmpfs home)
+  relaxedPostureUsers = lib.filterAttrs (_: u:
     u._activeOn && u.allowWheel && u.home.persistent
   ) activeUsers;
-  paranoidPostureUsers = lib.filterAttrs (_: u:
+  hardenedPostureUsers = lib.filterAttrs (_: u:
     u._activeOn && !u.allowWheel && !u.home.persistent
   ) activeUsers;
 in {
@@ -38,37 +44,35 @@ in {
       assertion = activeUsersList != [];
       message = "Governance invariant: at least one user must be active on profile '${config.myOS.profile}'.";
     }
-    # Structural: daily posture requires a permissive persistent-home user
-    # (replaces name-based "daily user 'player' must exist").
+    # Structural: relaxed posture requires a permissive persistent-home user
     {
-      assertion = !isDaily || dailyPostureUsers != {};
-      message = "Governance invariant: daily profile requires at least one active user with allowWheel=true and home.persistent=true.";
+      assertion = !isRelaxedPosture || relaxedPostureUsers != {};
+      message = "Governance invariant: relaxed posture (sandbox.browsers=false or impermanence disabled) requires at least one active user with allowWheel=true and home.persistent=true.";
     }
-    # Structural: paranoid posture requires a locked-down tmpfs-home user
-    # (replaces name-based "paranoid user 'ghost' must exist").
+    # Structural: hardened posture requires a locked-down tmpfs-home user
     {
-      assertion = !isParanoid || paranoidPostureUsers != {};
-      message = "Governance invariant: paranoid profile requires at least one active user with allowWheel=false and home.persistent=false.";
+      assertion = !isHardenedPosture || hardenedPostureUsers != {};
+      message = "Governance invariant: hardened posture (sandbox.browsers=true + impermanence + disableSMT) requires at least one active user with allowWheel=false and home.persistent=false.";
     }
     {
       assertion = !config.services.xserver.enable;
       message = "X server must be disabled system-wide (Wayland-only stack).";
     }
     {
-      assertion = !isParanoid || config.myOS.security.sandbox.browsers;
-      message = "Paranoid profile must use sandboxed browsers exclusively (no base Firefox).";
+      assertion = !isHardenedPosture || config.myOS.security.sandbox.browsers;
+      message = "Hardened posture must use sandboxed browsers exclusively (no base Firefox).";
     }
     {
-      assertion = !isParanoid || config.myOS.security.impermanence.enable;
-      message = "Paranoid profile must keep impermanence enabled.";
+      assertion = !isHardenedPosture || config.myOS.security.impermanence.enable;
+      message = "Hardened posture must keep impermanence enabled.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.agenix.enable;
-      message = "Paranoid profile must keep secrets management enabled.";
+      assertion = !isHardenedPosture || config.myOS.security.agenix.enable;
+      message = "Hardened posture must keep secrets management enabled.";
     }
     {
-      assertion = !isParanoid || (!config.programs.steam.enable);
-      message = "Paranoid profile must not enable Steam.";
+      assertion = !isHardenedPosture || (!config.programs.steam.enable);
+      message = "Hardened posture must not enable Steam.";
     }
     {
       assertion = !(config.myOS.security.secureBoot.enable && config.boot.loader.grub.enable);
@@ -86,96 +90,95 @@ in {
       assertion = config.services.greetd.enable;
       message = "This design assumes greetd is enabled as the Wayland-native display manager.";
     }
-    # Structural wheel governance: on paranoid, no active user with
+    # Structural wheel governance: on hardened posture, no active user with
     # allowWheel=false may be in the wheel group (unless debug override).
-    # Stage 4c: generalized from hardcoded "ghost" check to any allowWheel=false user.
     {
-      assertion = !isParanoid || paranoidWheelRelaxed || (paranoidWheelViolations == {});
-      message = "Paranoid user must not be in the wheel group by default.";
+      assertion = !isHardenedPosture || paranoidWheelRelaxed || (hardenedWheelViolations == {});
+      message = "Hardened posture user must not be in the wheel group by default.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.disableSMT;
-      message = "Paranoid profile must enable disableSMT (nosmt=force).";
+      assertion = !isHardenedPosture || config.myOS.security.disableSMT;
+      message = "Hardened posture must enable disableSMT (nosmt=force).";
     }
     {
-      assertion = !isParanoid || config.myOS.security.usbRestrict;
-      message = "Paranoid profile must enable USB restriction (authorized_default=2).";
+      assertion = !isHardenedPosture || config.myOS.security.usbRestrict;
+      message = "Hardened posture must enable USB restriction (authorized_default=2).";
     }
     {
-      assertion = !isParanoid || config.myOS.security.auditd;
-      message = "Paranoid profile must enable audit daemon.";
+      assertion = !isHardenedPosture || config.myOS.security.auditd;
+      message = "Hardened posture must enable audit daemon.";
     }
     {
-      assertion = !isParanoid || config.security.audit.enable != false;
-      message = "Paranoid profile must enable the Linux audit subsystem, not just auditd.";
+      assertion = !isHardenedPosture || config.security.audit.enable != false;
+      message = "Hardened posture must enable the Linux audit subsystem, not just auditd.";
     }
     {
-      assertion = !isParanoid || !config.myOS.security.auditRules.enable || config.security.audit.rules != [ ];
-      message = "When paranoid profile enables repo audit rules, the resulting audit rule set must be non-empty.";
+      assertion = !isHardenedPosture || !config.myOS.security.auditRules.enable || config.security.audit.rules != [ ];
+      message = "When hardened posture enables repo audit rules, the resulting audit rule set must be non-empty.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.sandbox.vms;
-      message = "Paranoid profile must enable VM tooling layer.";
+      assertion = !isHardenedPosture || config.myOS.security.sandbox.vms;
+      message = "Hardened posture must enable VM tooling layer.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.kernelHardening.initOnFree;
-      message = "Paranoid profile must enable initOnFree kernel hardening.";
+      assertion = !isHardenedPosture || config.myOS.security.kernelHardening.initOnFree;
+      message = "Hardened posture must enable initOnFree kernel hardening.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.kernelHardening.pageAllocShuffle;
-      message = "Paranoid profile must enable pageAllocShuffle kernel hardening.";
+      assertion = !isHardenedPosture || config.myOS.security.kernelHardening.pageAllocShuffle;
+      message = "Hardened posture must enable pageAllocShuffle kernel hardening.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.kernelHardening.kexecLoadDisabled;
-      message = "Paranoid profile must disable kexec_load (kernel.kexec_load_disabled=1).";
+      assertion = !isHardenedPosture || config.myOS.security.kernelHardening.kexecLoadDisabled;
+      message = "Hardened posture must disable kexec_load (kernel.kexec_load_disabled=1).";
     }
     {
-      assertion = !isParanoid || config.myOS.security.kernelHardening.sysrqRestrict;
-      message = "Paranoid profile must restrict SysRq key (kernel.sysrq).";
+      assertion = !isHardenedPosture || config.myOS.security.kernelHardening.sysrqRestrict;
+      message = "Hardened posture must restrict SysRq key (kernel.sysrq).";
     }
     {
-      assertion = !isParanoid || (config.myOS.security.kernelHardening.ioUring == 2);
-      message = "Paranoid profile must disable io_uring (kernel.io_uring_disabled=2).";
+      assertion = !isHardenedPosture || (config.myOS.security.kernelHardening.ioUring == 2);
+      message = "Hardened posture must disable io_uring (kernel.io_uring_disabled=2).";
     }
     {
-      assertion = !isParanoid || !config.programs.gamescope.enable;
-      message = "Paranoid profile must not enable gamescope.";
+      assertion = !isHardenedPosture || !config.programs.gamescope.enable;
+      message = "Hardened posture must not enable gamescope.";
     }
     {
-      assertion = !isParanoid || !config.programs.gamemode.enable;
-      message = "Paranoid profile must not enable gamemode.";
+      assertion = !isHardenedPosture || !config.programs.gamemode.enable;
+      message = "Hardened posture must not enable gamemode.";
     }
     {
-      assertion = !isParanoid || !config.services.wivrn.enable;
-      message = "Paranoid profile must not enable wivrn.";
+      assertion = !isHardenedPosture || !config.services.wivrn.enable;
+      message = "Hardened posture must not enable wivrn.";
     }
     {
-      assertion = !isDaily || !config.myOS.security.hardenedMemory.enable;
-      message = "Daily profile must not enable hardened memory allocator.";
+      assertion = !isRelaxedPosture || !config.myOS.security.hardenedMemory.enable;
+      message = "Relaxed posture must not enable hardened memory allocator.";
     }
     {
       assertion = builtins.elem config.myOS.gpu [ "nvidia" "amd" "none" ];
       message = "GPU option must be set to 'nvidia', 'amd', or 'none'.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.persistMachineId;
-      message = "Paranoid profile must persist machine-id.";
+      assertion = !isHardenedPosture || config.myOS.security.persistMachineId;
+      message = "Hardened posture must persist machine-id.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.machineIdValue == null;
-      message = "Paranoid profile must keep a unique host machine-id.";
+      assertion = !isHardenedPosture || config.myOS.security.machineIdValue == null;
+      message = "Hardened posture must keep a unique host machine-id.";
     }
     {
-      assertion = !isParanoid || !config.myOS.security.sandbox.x11;
-      message = "Paranoid profile must keep X11 disabled inside bubblewrap sandboxes.";
+      assertion = !isHardenedPosture || !config.myOS.security.sandbox.x11;
+      message = "Hardened posture must keep X11 disabled inside bubblewrap sandboxes.";
     }
     {
-      assertion = !isParanoid || config.myOS.security.sandbox.wayland;
-      message = "Paranoid profile must keep Wayland enabled inside bubblewrap sandboxes.";
+      assertion = !isHardenedPosture || config.myOS.security.sandbox.wayland;
+      message = "Hardened posture must keep Wayland enabled inside bubblewrap sandboxes.";
     }
     {
-      assertion = !isDaily || config.myOS.security.sandbox.x11;
-      message = "Daily profile must make the X11 compatibility relaxation explicit.";
+      assertion = !isRelaxedPosture || config.myOS.security.sandbox.x11;
+      message = "Relaxed posture must make the X11 compatibility relaxation explicit.";
     }
     # ── Network-surface invariants (pen-test pass 2026-04) ────────
     {
@@ -192,12 +195,12 @@ in {
       '';
     }
     {
-      # WiVRn advertises via mDNS/avahi when enabled. Paranoid profile does not
-      # import desktop/vr.nix, but the daily profile must never broadcast
+      # WiVRn advertises via mDNS/avahi when enabled. Hardened posture does not
+      # import desktop/vr.nix, but relaxed posture must never broadcast
       # unless the operator explicitly opted in.
-      assertion = !isDaily || config.myOS.vr.lanDiscovery.enable || !config.services.avahi.enable;
+      assertion = !isRelaxedPosture || config.myOS.vr.lanDiscovery.enable || !config.services.avahi.enable;
       message = ''
-        Governance invariant: daily profile must not enable avahi unless
+        Governance invariant: relaxed posture must not enable avahi unless
         myOS.vr.lanDiscovery.enable = true. Upstream nixpkgs wivrn.nix hard-sets
         services.avahi.enable; the override in modules/desktop/vr.nix depends on
         myOS.vr.lanDiscovery — if you ever see this message, a new module is
@@ -205,9 +208,9 @@ in {
       '';
     }
     {
-      # Paranoid profile has no VR stack and therefore no reason to run avahi.
-      assertion = !isParanoid || !config.services.avahi.enable;
-      message = "Paranoid profile must not enable avahi (no VR/mDNS use case).";
+      # Hardened posture has no VR stack and therefore no reason to run avahi.
+      assertion = !isHardenedPosture || !config.services.avahi.enable;
+      message = "Hardened posture must not enable avahi (no VR/mDNS use case).";
     }
     {
       # Daily LAN discovery (if enabled) must be scoped to declared interfaces.
