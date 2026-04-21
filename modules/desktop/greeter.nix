@@ -6,16 +6,9 @@ let
 in {
   config = lib.mkIf (cfg != "none") {
     # ── greetd + regreet (Wayland-native greeter) ────────────────────
-    services.greetd = {
-      enable = true;
-      settings = {
-        default_session = {
-          command = "${pkgs.cage}/bin/cage -s -- ${pkgs.regreet}/bin/regreet";
-          user = "greeter";
-        };
-      };
-    };
-
+    # Stylix automatically configures greetd with regreet when
+    # programs.regreet.enable = true, so we don't set a custom command.
+    services.greetd.enable = true;
     programs.regreet.enable = true;
   };
 }
