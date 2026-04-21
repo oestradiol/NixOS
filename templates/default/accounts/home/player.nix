@@ -1,4 +1,4 @@
-{ config, osConfig, pkgs, lib, ... }:
+{ config, osConfig, pkgs, lib, inputs, ... }:
 let
   # Stage 5: git identity is read from the framework's per-user identity
   # options (populated by a gitignored accounts/<name>.local.nix). The
@@ -7,7 +7,7 @@ let
   gitName  = userCfg.identity.git.name  or null;
   gitEmail = userCfg.identity.git.email or null;
 in {
-  imports = [ hardening.home-common ];
+  imports = [ inputs.hardening.nixosModules.home-common ];
 
   home.username = "player";
   home.homeDirectory = "/home/player";

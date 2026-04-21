@@ -14,12 +14,15 @@
 let
   cfg = config.myOS.autoUpdate;
 
-  # Active users that actually set identity.workspace.autoUpdateRepoPath.
-  candidates = lib.filterAttrs (_: u:
+  # Prefer the active profile's user, but fall back to any configured
+  # account so a paranoid default profile can still inherit the daily
+  # operator's flake path for unattended updates.
+  configuredCandidates = lib.filterAttrs (_: u:
     u.enable
-    && (u._activeOn or false)
     && (u.identity.workspace.autoUpdateRepoPath or null) != null
   ) (config.myOS.users or { });
+  activeCandidates = lib.filterAttrs (_: u: u._activeOn or false) configuredCandidates;
+  candidates = if activeCandidates != { } then activeCandidates else configuredCandidates;
   candidateNames = lib.attrNames candidates;
   firstCandidate =
     if candidateNames == [ ] then null
@@ -44,9 +47,10 @@ in {
       description = ''
         Run the daily flake-update + rebuild-boot timer. The timer is
         only actually installed when a `repoPath` + `invokingUser` can
-        be resolved (from `myOS.users.<name>.identity.workspace` on an
-        active user, or from explicit overrides below); otherwise this
-        is a no-op.
+        be resolved (from `myOS.users.<name>.identity.workspace` on a
+        configured user, preferring the active profile and otherwise
+        falling back to another configured account, or from explicit
+        overrides below); otherwise this is a no-op.
       '';
     };
     repoPath = lib.mkOption {
@@ -56,8 +60,9 @@ in {
       description = ''
         Filesystem path to the flake that should be updated and rebuilt.
         When null (the tracked default), the path is derived from the
-        first active user with `identity.workspace.autoUpdateRepoPath`
-        set. Set explicitly in `hosts/<host>/local.nix` to override.
+        first configured user with `identity.workspace.autoUpdateRepoPath`
+        set, preferring the active profile when one exists. Set
+        explicitly in `hosts/<host>/local.nix` to override.
       '';
     };
     invokingUser = lib.mkOption {
@@ -67,8 +72,9 @@ in {
       description = ''
         Unix user whose identity is assumed for the `nix flake update`
         half of the rebuild (the rebuild-boot half runs as root). When
-        null, uses the first active user with
-        `identity.workspace.autoUpdateRepoPath` set.
+        null, uses the first configured user with
+        `identity.workspace.autoUpdateRepoPath` set, preferring the
+        active profile when one exists.
       '';
     };
     flakeAttr = lib.mkOption {
