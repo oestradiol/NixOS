@@ -12,14 +12,14 @@ secrets/*.pub
 *.qcow2
 *.img
 
-# Operator-local, per-install overrides (hardware UUIDs, experimental tweaks,
+# Includes:
+# - Operator-local, per-install overrides (hardware UUIDs, experimental tweaks,
 # personal notes). Imported conditionally by hosts/nixos/default.nix when
 # present; intentionally never published.
-hosts/nixos/local.nix
-LOCAL-NOTES.md
-switch.log
-
-# Operator-local user identity overrides (git name/email, mic alias,
+# - Operator-local user identity overrides (git name/email, mic alias,
 # workspace paths). Imported conditionally by accounts/<name>.nix when
 # present. Stage 5 policy: tracked files carry no personal identity.
-accounts/*.local.nix
+**/*.local.nix
+
+# Template lockfiles are local/operator state.
+**/flake.lock

@@ -9,8 +9,9 @@ in {
   imports = [
     ./fs-layout.nix
     ./hardware-target.nix
-    ../accounts/ghost.nix
-    ../accounts/player.nix
+    ../../accounts/ghost.nix
+    ../../accounts/player.nix
+    inputs.hardening.nixosModules.profile-paranoid
   ] ++ lib.optional (builtins.pathExists localOverride) localOverride;
 
   # networking.hostName / time.timeZone are now applied by

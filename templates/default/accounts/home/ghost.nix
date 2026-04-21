@@ -1,5 +1,5 @@
-{ pkgs, ... }: {
-  imports = [ hardening.home-common ];
+{ inputs, pkgs, ... }: {
+  imports = [ inputs.hardening.nixosModules.home-common ];
 
   home.username = "ghost";
   home.homeDirectory = "/home/ghost";
