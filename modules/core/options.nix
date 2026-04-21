@@ -22,9 +22,14 @@
     };
 
     profile = lib.mkOption {
-      type = lib.types.enum [ "daily" "paranoid" ];
+      type = lib.types.str;
       default = "paranoid";
-      description = "Current trust / posture profile.";
+      description = ''
+        Active system posture profile. Framework provides "paranoid" and "daily"
+        as reference profiles, but instances may declare custom profiles (e.g.,
+        AKS uses "agent"). Governance assertions validate profile properties
+        (hardening level, user constraints) rather than hardcoded names.
+      '';
     };
 
     desktopEnvironment = lib.mkOption {
