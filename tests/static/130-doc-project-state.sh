@@ -29,9 +29,7 @@ done
 describe "user expectations match profile (templates/default reference implementation)"
 # PROJECT-STATE says /home/player persistent daily, /home/ghost tmpfs paranoid.
 # Stage 4b moved the Btrfs subvol names into accounts/*.nix as the
-# `home.btrfsSubvol` attribute; fs-layout.nix reads them via the
-# framework. The reference implementation is now in templates/default/.
-fs="$REPO_ROOT/templates/default/hosts/nixos/fs-layout.nix"
+# `home.btrfsSubvol` attribute; the framework storage module reads them.
 accounts="$REPO_ROOT/templates/default/accounts"
 if grep -rFq 'btrfsSubvol = "@home-daily"' "$accounts" 2>/dev/null; then
   pass "accounts/ declares @home-daily"
@@ -43,7 +41,7 @@ if grep -rFq 'btrfsSubvol = "@home-paranoid"' "$accounts" 2>/dev/null; then
 else
   fail "accounts/ missing @home-paranoid subvol binding"
 fi
-if grep -Fq 'fsType = "tmpfs"' "$fs"; then pass "tmpfs root present"; else fail "tmpfs root missing"; fi
+assert_eq "$(nix_eval 'fileSystems./.fsType')" '"tmpfs"' "tmpfs root present"
 
 describe "audit status: paranoid baseline audit + staged custom rules"
 as="$REPO_ROOT/docs/maps/AUDIT-STATUS.md"

@@ -30,6 +30,7 @@ Anything in `docs/pipeline/POST-STABILITY.md` is intentionally non-blocking for 
 - one encrypted LUKS2 root device
 - Btrfs subvolumes under LUKS
 - tmpfs root
+- framework-owned storage defaults exposed through `myOS.storage.*`
 - impermanence-managed persisted state under `/persist`
 - one default profile plus one boot specialization
 - Secure Boot and TPM remain staged until after first stable boot and validation
@@ -53,9 +54,9 @@ Anything in `docs/pipeline/POST-STABILITY.md` is intentionally non-blocking for 
 flake.nix (exports nixosModules library)
 templates/default/ (reference implementation)
 ├── hosts/nixos/default.nix
-│   ├── templates/default/hosts/nixos/fs-layout.nix
 │   ├── templates/default/hosts/nixos/hardware-target.nix
 │   ├── modules/core/options.nix (via hardening.nixosModules)
+│   ├── modules/core/storage-layout.nix
 │   ├── modules/core/boot.nix
 │   ├── modules/core/users.nix
 │   ├── modules/desktop/base.nix
@@ -137,7 +138,8 @@ Current support boundary:
 - KDE Plasma 6 + greetd/regreet (Wayland-native) remain the desktop target
 - NVIDIA remains enabled initially for target-hardware reliability
 - Windows is not part of the steady-state design
-- swap remains zram plus an 8 GiB Btrfs swapfile on the daily profile
+- swap remains zram plus an 8 GiB Btrfs swapfile when `myOS.storage.swap.enable`
+  is turned on (the reference `daily` profile does this)
 - daily keeps Steam, VR, Signal, Bitwarden, and general social/desktop compatibility in scope
 - paranoid forbids Steam, VR, and Vesktop by default; Signal remains in scope through Flatpak
 - controllers are enabled on daily and disabled on paranoid

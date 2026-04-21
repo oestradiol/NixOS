@@ -58,6 +58,7 @@
     nixosModules = {
       default = { imports = [
         ./modules/core/options.nix
+        ./modules/core/storage-layout.nix
         ./modules/core/boot.nix
         ./modules/core/debug.nix
         ./modules/core/host.nix
@@ -70,7 +71,17 @@
       ]; };
 
       # Core
+      core = { imports = [
+        ./modules/core/options.nix
+        ./modules/core/storage-layout.nix
+        ./modules/core/boot.nix
+        ./modules/core/debug.nix
+        ./modules/core/host.nix
+        ./modules/core/users.nix
+        ./modules/core/users-framework.nix
+      ]; };
       core-options                  = ./modules/core/options.nix;
+      core-storage-layout           = ./modules/core/storage-layout.nix;
       core-boot                     = ./modules/core/boot.nix;
       core-debug                    = ./modules/core/debug.nix;
       core-host                     = ./modules/core/host.nix;
@@ -94,6 +105,7 @@
       gpu-amd                       = ./modules/gpu/amd.nix;
 
       # Home
+      desktop-shell                 = ./modules/home/shell.nix;
       home-shell                    = ./modules/home/shell.nix;
       home-common                   = ./modules/home/common.nix;
 

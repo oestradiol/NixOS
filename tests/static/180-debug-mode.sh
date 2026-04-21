@@ -72,8 +72,6 @@ let
   hardening = flake.outputs.nixosModules;
   baseModules = [
     { nixpkgs.config.allowUnfree = true;
-      fileSystems."/" = { device = "tmpfs"; fsType = "tmpfs"; };
-      fileSystems."/persist" = { device = "/dev/disk/by-label/persist"; fsType = "btrfs"; neededForBoot = true; };
       boot.loader.grub.enable = false;
       boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
       boot.kernelModules = [ "kvm-amd" ];
@@ -96,7 +94,7 @@ NIXEOF
   nix_expr=${nix_expr//REPO_ROOT/$REPO_ROOT}
   nix_expr=${nix_expr//ATTR_PATH/$attr}
   nix_expr=${nix_expr//EXTRA_MODULE/$extraModule}
-  nix --extra-experimental-features 'nix-command flakes' eval --impure --json --expr "$nix_expr" 2>/dev/null
+  nix --extra-experimental-features 'nix-command flakes' eval --impure --json --no-write-lock-file --expr "$nix_expr" 2>/dev/null
 }
 
 _debug_eval_daily() {
@@ -117,8 +115,6 @@ let
   hardening = flake.outputs.nixosModules;
   baseModules = [
     { nixpkgs.config.allowUnfree = true;
-      fileSystems."/" = { device = "tmpfs"; fsType = "tmpfs"; };
-      fileSystems."/persist" = { device = "/dev/disk/by-label/persist"; fsType = "btrfs"; neededForBoot = true; };
       boot.loader.grub.enable = false;
       boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
       boot.kernelModules = [ "kvm-amd" ];
@@ -141,7 +137,7 @@ NIXEOF
   nix_expr=${nix_expr//REPO_ROOT/$REPO_ROOT}
   nix_expr=${nix_expr//ATTR_PATH/$attr}
   nix_expr=${nix_expr//EXTRA_MODULE/$extraModule}
-  nix --extra-experimental-features 'nix-command flakes' eval --impure --json --expr "$nix_expr" 2>/dev/null
+  nix --extra-experimental-features 'nix-command flakes' eval --impure --json --no-write-lock-file --expr "$nix_expr" 2>/dev/null
 }
 
 describe 'debug.crossProfileLogin.enable: lifts the account locks'

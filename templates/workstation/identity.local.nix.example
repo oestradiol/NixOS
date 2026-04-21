@@ -1,0 +1,10 @@
+# Sample: gitignored identity override for the default `alice` account.
+# Copy to `identity.local.nix` and replace the placeholder values.
+{ ... }:
+{
+  myOS.users.alice.identity = {
+    git.name = "Ada Lovelace";
+    git.email = "ada@example.com";
+    workspace.autoUpdateRepoPath = "/home/alice/dotfiles";
+  };
+}

@@ -131,10 +131,10 @@ Status values:
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| `/` on tmpfs | baseline | keep | `templates/default/hosts/nixos/fs-layout.nix`, `docs/maps/FEATURES.md` | impermanence model |
-| `/` tmpfs size | baseline (16G) | keep ≥8G | `templates/default/hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | 4G was empirically too small for KDE + VR + IDE; tmpfs is RAM-backed, cap is upper bound only |
-| `/tmp` on its own tmpfs | baseline | keep | `templates/default/hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | isolates /tmp spikes from /var/lib / /run / /root / home-manager profile paths |
-| `/tmp` nosuid+nodev | baseline | keep | `templates/default/hosts/nixos/fs-layout.nix`, `tests/static/170-fs-layout.sh` | defense-in-depth |
+| `/` on tmpfs | baseline | keep | `modules/core/storage-layout.nix`, `docs/maps/FEATURES.md` | impermanence model |
+| `/` tmpfs size | baseline (16G) | keep ≥8G | `modules/core/storage-layout.nix`, `tests/static/170-fs-layout.sh` | 4G was empirically too small for KDE + VR + IDE; tmpfs is RAM-backed, cap is upper bound only |
+| `/tmp` on its own tmpfs | baseline | keep | `modules/core/storage-layout.nix`, `tests/static/170-fs-layout.sh` | isolates /tmp spikes from /var/lib / /run / /root / home-manager profile paths |
+| `/tmp` nosuid+nodev | baseline | keep | `modules/core/storage-layout.nix`, `tests/static/170-fs-layout.sh` | defense-in-depth |
 | `boot.tmp.cleanOnBoot = true` | baseline | keep | `modules/security/base.nix`, `tests/static/170-fs-layout.sh` | wipes /tmp across boots |
 | `/var/lib/logrotate` persisted | baseline | keep | `modules/security/impermanence.nix` | without it `logrotate.service` fails on tmpfs-full root |
 
@@ -142,11 +142,11 @@ Status values:
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| specialisation-aware `flake-switch-*` aliases | baseline | keep | `modules/desktop/shell.nix`, `tests/static/160-flake-aliases.sh`, `tests/bugs/030-flake-switch-alias.sh` | single `flake-switch` without `--specialisation` silently targeted paranoid and tripped profile-mount-invariants |
-| smart default `flake-switch` (branches on booted spec) | baseline | keep | `modules/desktop/shell.nix` | zero-surprise default that matches the booted profile |
-| `flake-rollback` (panic button) | baseline | keep | `modules/desktop/shell.nix` | re-applies `/run/current-system` when a `test` or `switch` misbehaves |
-| `flake-dry` (`dry-activate`) | baseline | keep | `modules/desktop/shell.nix` | inspect without applying |
-| `--show-trace` on every rebuild alias | baseline | keep while in test phase | `modules/desktop/shell.nix`, `tests/bugs/030-flake-switch-alias.sh` | actionable failures during the debug phase; reconsider once stability is established |
+| specialisation-aware `flake-switch-*` aliases | baseline | keep | `modules/home/shell.nix`, `tests/static/160-flake-aliases.sh`, `tests/bugs/030-flake-switch-alias.sh` | single `flake-switch` without `--specialisation` silently targeted paranoid and tripped profile-mount-invariants |
+| smart default `flake-switch` (branches on booted spec) | baseline | keep | `modules/home/shell.nix` | zero-surprise default that matches the booted profile |
+| `flake-rollback` (panic button) | baseline | keep | `modules/home/shell.nix` | re-applies `/run/current-system` when a `test` or `switch` misbehaves |
+| `flake-dry` (`dry-activate`) | baseline | keep | `modules/home/shell.nix` | inspect without applying |
+| `--show-trace` on every rebuild alias | baseline | keep while in test phase | `modules/home/shell.nix`, `tests/bugs/030-flake-switch-alias.sh` | actionable failures during the debug phase; reconsider once stability is established |
 
 ## Secrets, auditing, monitoring
 

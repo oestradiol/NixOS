@@ -7,7 +7,6 @@ let
   localOverride = ./local.nix;
 in {
   imports = [
-    ./fs-layout.nix
     ./hardware-target.nix
     ../../accounts/ghost.nix
     ../../accounts/player.nix
@@ -17,6 +16,13 @@ in {
   # networking.hostName / time.timeZone are now applied by
   # modules/core/host.nix via myOS.host.* options.
   system.stateVersion = "26.05";
+
+  # Auto-update configuration
+  myOS.autoUpdate = {
+    enable = true;
+    repoPath = ".";
+    invokingUser = "player";
+  };
 
   environment.systemPackages = with pkgs; [
     comma

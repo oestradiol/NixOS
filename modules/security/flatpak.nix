@@ -20,7 +20,7 @@ in {
 
   systemd.services.flatpak-repo = {
     wantedBy = [ "multi-user.target" ];
-    after = [ "network-online.target" ];
+    after = [ "network-online.target" "nss-lookup.target" ];
     wants = [ "network-online.target" ];
     path = [ pkgs.flatpak ];
     script = ''
@@ -35,6 +35,10 @@ in {
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      Restart = "on-failure";
+      RestartSec = "30s";
+      StartLimitInterval = "300s";
+      StartLimitBurst = 5;
       NoNewPrivileges = true;
       PrivateTmp = true;
       PrivateDevices = true;

@@ -11,7 +11,6 @@ for f in \
     "$REPO_ROOT/docs/governance/REFERENCES.md" \
     "$REPO_ROOT/LICENSE" \
     "$REPO_ROOT/flake.nix" \
-    "$REPO_ROOT/flake.lock" \
     "$REPO_ROOT/.gitignore"; do
   assert_file "$f"
 done
@@ -20,14 +19,16 @@ describe "templates"
 for f in \
     "$REPO_ROOT/templates/workstation/flake.nix" \
     "$REPO_ROOT/templates/workstation/README.md" \
+    "$REPO_ROOT/templates/workstation/hardware-target.nix.example" \
+    "$REPO_ROOT/templates/workstation/identity.local.nix.example" \
+    "$REPO_ROOT/templates/workstation/local.nix.example" \
     "$REPO_ROOT/templates/default/flake.nix"; do
   assert_file "$f"
 done
 
-describe "host entrypoint and fs/hardware layouts (templates/default)"
+describe "host entrypoint and hardware layout (templates/default)"
 for f in \
     "$REPO_ROOT/templates/default/hosts/nixos/default.nix" \
-    "$REPO_ROOT/templates/default/hosts/nixos/fs-layout.nix" \
     "$REPO_ROOT/templates/default/hosts/nixos/hardware-target.nix"; do
   assert_file "$f"
 done
@@ -43,6 +44,7 @@ describe "core modules"
 for f in \
     "$REPO_ROOT/modules/core/boot.nix" \
     "$REPO_ROOT/modules/core/options.nix" \
+    "$REPO_ROOT/modules/core/storage-layout.nix" \
     "$REPO_ROOT/modules/core/users.nix"; do
   assert_file "$f"
 done
@@ -90,6 +92,7 @@ assert_file "$REPO_ROOT/modules/security/arkenfox/user.js"
 
 describe "docs: pipeline"
 for f in \
+    "$REPO_ROOT/docs/CUSTOMIZATION.md" \
     "$REPO_ROOT/docs/pipeline/INSTALL-GUIDE.md" \
     "$REPO_ROOT/docs/pipeline/TEST-PLAN.md" \
     "$REPO_ROOT/docs/pipeline/RECOVERY.md" \

@@ -25,7 +25,6 @@ templates/default/
 ├── flake.nix              # Entry point: nixosConfigurations.nixos
 ├── hosts/nixos/           # Host-specific configuration
 │   ├── default.nix        # Main host config, imports profiles
-│   ├── fs-layout.nix      # Disk/partition layout
 │   ├── hardware-target.nix # CPU, kernel modules, firmware
 │   └── local.nix.example  # Template for local overrides
 └── accounts/              # User account definitions
@@ -43,10 +42,10 @@ This template is already wired into the framework flake. To build:
 
 ```bash
 # From repo root
-sudo nixos-rebuild switch --flake .#nixos
+sudo nixos-rebuild switch --flake ./templates/default#nixos
 ```
 
-The `nixos` configuration uses this template by default.
+The reference `nixos` configuration lives in this template flake.
 
 ## Forking/adapting this template
 
@@ -64,9 +63,12 @@ To use this as a starting point for your own machine:
    # Edit: git email, user name, any personal paths
    ```
 
-3. **Configure disk layout** in `hosts/nixos/fs-layout.nix`:
-   - Update LUKS device UUIDs
-   - Adjust Btrfs subvolume layout for your disks
+3. **Keep or override the default storage model**:
+   - If you follow the framework install conventions, no storage edits are
+     required: boot label `NIXBOOT`, encrypted root partlabel `NIXCRYPT`,
+     Btrfs subvolumes `@nix`, `@persist`, `@log`, and optional `@swap`
+   - If your machine differs, override `myOS.storage.*` in
+     `hosts/nixos/local.nix`
 
 4. **Adjust hardware** in `hosts/nixos/hardware-target.nix`:
    - CPU microcode (AMD vs Intel)
@@ -78,7 +80,7 @@ To use this as a starting point for your own machine:
 
 Files in this directory are **instance-specific**:
 - User identities (`accounts/*.local.nix`)
-- Disk UUIDs and hardware quirks (`hosts/nixos/local.nix`)
+- Storage device overrides and hardware quirks (`hosts/nixos/local.nix`)
 - Hostname and system-specific wiring
 
 Framework code (reusable across instances) lives at repo root:

@@ -13,13 +13,13 @@ All scripts use `set -euo pipefail`. Review them before running.
 
 | Script | Purpose | When to Run | Risk |
 |---|---|---|---|
-| `rebuild-install.sh` | Guided installer for this repo: partition, encrypt, create subvolumes, mount, copy repo, generate hardware scan, run `nixos-install`, and prompt for user passwords | Before first install, from the installer ISO | **Destructive** |
+| `rebuild-install.sh` | Guided installer for a selected flake/config: resolve the pinned framework source, choose a template path, derive storage + password-hash targets from evaluated config, format the selected EFI/LUKS partitions, stage the flake, generate hardware config, and run `nixos-install` | Before first install, from the installer ISO | **Destructive** |
 | `post-install-secureboot-tpm.sh` | Stage Secure Boot key creation/enrollment and print the remaining TPM step | Only after the first stable encrypted baseline already exists | Medium |
 | `audit-tutorial.sh` | Read-only static repo checks plus a runtime-check handoff | Any time | Low |
 
 ## What scripts do not do
 - they do not replace `docs/pipeline/INSTALL-GUIDE.md`
-- they still expect you to review the updated `hardware-target.nix`, secret-file paths, and runtime test-plan surfaces before treating the machine as stable
+- they still expect you to review the generated `hardware-target.nix`, secret-file paths, and runtime test-plan surfaces before treating the machine as stable
 - they do not replace `docs/pipeline/TEST-PLAN.md`
 - they do not make staged features baseline-ready automatically
 

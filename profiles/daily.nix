@@ -16,6 +16,8 @@
     # follow the master gate automatically.
   };
 
+  myOS.storage.swap.enable = lib.mkForce true;
+
   myOS.security = {
     impermanence.enable = lib.mkForce true;
     agenix.enable = lib.mkForce true;

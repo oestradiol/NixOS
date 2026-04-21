@@ -1,33 +1,18 @@
 #!/usr/bin/env bash
-# Static: filesystem layout invariants.
-#
-# History: the original design used a 4G tmpfs for / and inherited /tmp from /.
-# That cap was empirically too small for a KDE Plasma 6 + Windsurf + VR +
-# Spotify session; once /tmp filled, /var/lib writes started failing and
-# home-manager activation silently dropped the user-profile symlink target.
-#
-# Current policy:
-#   - / on tmpfs, size capped (currently 16G, never less than 8G)
-#   - /tmp on its own tmpfs so a /tmp spike cannot starve /var/lib, /run, /root
-#   - /tmp mount is nosuid + nodev (defense-in-depth)
-#   - boot.tmp.cleanOnBoot must stay true (wipe session cruft on boot)
+# Static: storage-layout invariants.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
 require_cmd grep || exit 0
+_tc_ensure_jq || { skip "jq unavailable"; exit 0; }
 
-fs="$REPO_ROOT/templates/default/hosts/nixos/fs-layout.nix"
+storage="$REPO_ROOT/modules/core/storage-layout.nix"
 base="$REPO_ROOT/modules/security/base.nix"
-assert_file "$fs"
+assert_file "$storage"
 assert_file "$base"
 
 describe "/ is tmpfs with adequate capacity"
-if grep -Eq 'fileSystems\."/"\s*=\s*\{' "$fs"; then
-  pass "/ mount is declared"
-else
-  fail "/ mount is not declared"
-fi
-# Parse size= from the options list. Accept 8G, 16G, 32G, etc., reject 4G.
-size_line=$(awk '/fileSystems\."\/"\s*=/,/\};/' "$fs" | grep -oE 'size=[0-9]+[GM]' | head -1 || true)
+assert_eq "$(nix_eval 'fileSystems./.fsType')" '"tmpfs"' "/ mount is tmpfs"
+size_line=$(nix_eval 'fileSystems./.options' | jq_cmd -r '.[] | select(startswith("size="))' | head -1 || true)
 if [[ -z "$size_line" ]]; then
   fail "/ tmpfs size is not declared"
 else
@@ -47,18 +32,14 @@ else
 fi
 
 describe "/tmp has its own tmpfs"
-# The /tmp split prevents a /tmp spike from starving the rest of the tmpfs root.
-if awk '/fileSystems\."\/tmp"\s*=/,/\};/' "$fs" | grep -q 'fsType = "tmpfs"'; then
-  pass "/tmp is a dedicated tmpfs"
-else
-  fail "/tmp is NOT a dedicated tmpfs — any /tmp spike will fill the root fs"
-fi
-if awk '/fileSystems\."\/tmp"\s*=/,/\};/' "$fs" | grep -q 'nosuid'; then
+assert_eq "$(nix_eval 'fileSystems./tmp.fsType')" '"tmpfs"' "/tmp is a dedicated tmpfs"
+tmp_opts=$(nix_eval 'fileSystems./tmp.options')
+if jq_cmd -e '. | index("nosuid")' <<<"$tmp_opts" >/dev/null 2>&1; then
   pass "/tmp mount carries nosuid"
 else
   fail "/tmp mount missing nosuid (defense-in-depth)"
 fi
-if awk '/fileSystems\."\/tmp"\s*=/,/\};/' "$fs" | grep -q 'nodev'; then
+if jq_cmd -e '. | index("nodev")' <<<"$tmp_opts" >/dev/null 2>&1; then
   pass "/tmp mount carries nodev"
 else
   fail "/tmp mount missing nodev (defense-in-depth)"
@@ -71,12 +52,29 @@ else
   fail "boot.tmp.cleanOnBoot must be true — without it /tmp accumulates across boots"
 fi
 
-describe "profile subvolumes stay declared"
-# The dual home Btrfs subvolumes + swap subvol must keep their names stable.
-for sv in '@home-daily' '@home-paranoid' '@persist' '@nix' '@log'; do
-  if grep -Fq "$sv" "$fs"; then
-    pass "Btrfs subvol declared: $sv"
-  else
-    fail "Btrfs subvol missing from fs-layout: $sv"
-  fi
-done
+describe "storage module remains the implementation surface"
+if grep -Fq 'options.myOS.storage' "$storage"; then
+  pass "myOS.storage options are declared in the framework module"
+else
+  fail "myOS.storage options missing from storage-layout.nix"
+fi
+
+describe "reference profile home mounts stay structurally correct"
+assert_eq "$(nix_eval_daily 'fileSystems./home/player.fsType')" '"btrfs"' "daily: player home is persistent btrfs"
+assert_eq "$(nix_eval_daily 'fileSystems./persist/home/ghost.fsType')" 'null' "daily: ghost backing home is absent"
+assert_eq "$(nix_eval 'fileSystems./home/player.fsType')" 'null' "paranoid: player home is absent"
+assert_eq "$(nix_eval 'fileSystems./home/ghost.fsType')" '"tmpfs"' "paranoid: ghost home is tmpfs"
+assert_eq "$(nix_eval 'fileSystems./persist/home/ghost.fsType')" '"btrfs"' "paranoid: ghost backing home is persistent btrfs"
+
+describe "profile-mount-invariants script checks inactive mounts"
+daily_script=$(nix_eval_daily 'systemd.services.profile-mount-invariants.script')
+assert_contains "$daily_script" "! mountpoint -q /home/ghost || exit 1" "daily script forbids /home/ghost"
+assert_contains "$daily_script" "! mountpoint -q /persist/home/ghost || exit 1" "daily script forbids /persist/home/ghost"
+paranoid_script=$(nix_eval 'systemd.services.profile-mount-invariants.script')
+assert_contains "$paranoid_script" "! mountpoint -q /home/player || exit 1" "paranoid script forbids /home/player"
+
+describe "disk-backed swap is gated by myOS.storage.swap.enable"
+assert_eq "$(nix_eval 'myOS.storage.swap.enable')" 'false' "paranoid: disk-backed swap disabled by default"
+assert_eq "$(nix_eval_daily 'myOS.storage.swap.enable')" 'true' "daily: disk-backed swap enabled"
+assert_eq "$(nix_eval 'fileSystems./swap.fsType')" 'null' "paranoid: /swap mount absent"
+assert_eq "$(nix_eval_daily 'fileSystems./swap.fsType')" '"btrfs"' "daily: /swap mount present"

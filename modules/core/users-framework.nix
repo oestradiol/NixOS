@@ -80,9 +80,9 @@ in {
           type = lib.types.nullOr lib.types.int;
           default = null;
           description = ''
-            Explicit UID. Required when fs-layout.nix or another module
-            must know the numeric ID before NixOS allocates one (e.g.
-            tmpfs home-dir ownership).
+            Explicit UID. Required when the framework storage layout or
+            another module must know the numeric ID before NixOS
+            allocates one (e.g. tmpfs home-dir ownership).
           '';
         };
         shell = lib.mkOption {
