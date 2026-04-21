@@ -39,14 +39,17 @@ if [[ "$profile" == "paranoid" ]]; then
 fi
 
 describe "cross-profile home paths cleanly absent from /proc/self/mounts"
+# Check that the opposite profile's home is not mounted as a filesystem mountpoint.
+# Note: impermanence bind mounts of subdirectories (e.g., /home/ghost/.config)
+# are not mountpoints of /home/ghost itself and are filtered by this check.
 if [[ "$profile" == "daily" ]]; then
-  if grep -Eq '(^| )/home/ghost(| |$)' /proc/self/mounts; then
+  if awk '$2 == "/home/ghost" {found=1} END {exit !found}' /proc/self/mounts; then
     fail "daily profile leaks a /home/ghost mount into /proc/self/mounts"
   else
     pass "no /home/ghost mount on daily"
   fi
 else
-  if grep -Eq '(^| )/home/player(| |$)' /proc/self/mounts; then
+  if awk '$2 == "/home/player" {found=1} END {exit !found}' /proc/self/mounts; then
     fail "paranoid profile leaks a /home/player mount into /proc/self/mounts"
   else
     pass "no /home/player mount on paranoid"

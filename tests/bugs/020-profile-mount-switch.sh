@@ -5,7 +5,7 @@
 #   "Failed to stop home-player.mount"
 #   "Failed to start profile-mount-invariants.service"
 #
-# Root cause: the `flake-switch` alias in modules/desktop/shell.nix targets
+# Root cause: the `flake-switch` alias in modules/home/shell.nix targets
 # the flake output `.#nixos`, which is the PARANOID toplevel. When the user
 # runs the alias while booted into the DAILY specialisation, the activation
 # tries to switch the live system to paranoid: it stops home-player.mount
@@ -17,7 +17,7 @@
 # place (an alias that respects the current specialisation).
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
-shell_nix="$REPO_ROOT/modules/desktop/shell.nix"
+shell_nix="$REPO_ROOT/modules/home/shell.nix"
 switch_log="$REPO_ROOT/switch.log"
 
 describe "symptoms recorded in switch.log (historical — fix landed 2026-04)"
@@ -26,7 +26,7 @@ describe "symptoms recorded in switch.log (historical — fix landed 2026-04)"
 #   (a) file absent  — operator cleared it after a clean rebuild   (PASS)
 #   (b) file present, symptoms absent — log was rotated or trimmed (PASS)
 #   (c) file present, symptoms present — historical evidence      (WARN)
-# Never FAIL here: the bug's code fix lives in modules/desktop/shell.nix and
+# Never FAIL here: the bug's code fix lives in modules/home/shell.nix and
 # is covered by the other describe blocks in this file plus bugs/030.
 if [[ ! -f "$switch_log" ]]; then
   pass "switch.log absent (historical artefact cleared)"

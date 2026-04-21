@@ -12,16 +12,26 @@ Confirm the following before starting:
 - `ghost` = hardened workspace account
 
 ### 2. Storage plan
-You are about to install the repo's expected layout:
-- EFI partition labeled `NIXBOOT`
-- LUKS2 partition labeled `NIXCRYPT`
-- Btrfs subvolumes for `@nix`, `@persist`, `@log`, `@swap`, `@home-daily`, `@home-paranoid`
-- tmpfs root
+The installer supports one storage topology in this pass:
+- one EFI partition
+- one LUKS2 root partition
+- Btrfs subvolumes under that encrypted root
+- tmpfs `/`
+
+If you keep the framework defaults, the expected identifiers are:
+- EFI label `NIXBOOT`
+- encrypted root partlabel `NIXCRYPT`
+- Btrfs subvolumes `@nix`, `@persist`, `@log`, optional `@swap`
+
+Per-user home subvolumes are derived from `myOS.users.*`, not hardcoded
+in the script.
 
 ### 3. Secrets and local data
 Before install or immediately after first boot, know where these will live:
-- user passwords are set declaratively via hashedPasswordFile pointing to /persist/secrets/{player,ghost}-password.hash
-- the install script will prompt for passwords and write the hashed files
+- user passwords are set declaratively via any discovered `hashedPasswordFile`
+  paths in the selected config and its specialisations
+- the install script will prompt only for those discovered password-hash
+  targets and write the hashed files under the staged root
 - any agenix-managed secret files you will actually use
 - Mullvad app credentials/workflow if you use the app path immediately
 - if you later enable the staged self-owned WireGuard path: private key, optional preshared key, tunnel address, server public key, and pinned literal endpoint `IP:port`
@@ -57,35 +67,56 @@ Stop and fix these before running the install script:
 
 ### 1. Prepare the disk
 - boot the NixOS installer
-- run `scripts/rebuild-install.sh` from the installer ISO
-- it will prompt for destructive confirmation, the LUKS passphrase, run the filesystem setup, copy the repo into `/mnt/etc/nixos`, generate a hardware scan, optionally run `nix flake check`, run `nixos-install`, and offer to set `player`/`ghost` passwords in the installed system
-- confirm `/mnt`, `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, and `/mnt/boot` are mounted as expected if you stop before install
+- run `scripts/rebuild-install.sh` from the installer ISO or from the
+  framework/downstream checkout you want to install
+- the script will ask for:
+  - target flake path or URL
+  - framework template path
+  - `nixosConfiguration` attribute
+  - EFI partition device
+  - encrypted root partition device
+- it then evaluates the selected config, derives storage + password-hash
+  targets from that config, formats the selected partitions, stages the
+  flake into `/mnt/etc/nixos`, generates `hardware-target.nix`, optionally
+  runs `nix flake check`, and runs `nixos-install`
+- confirm `/mnt`, `/mnt/nix`, `/mnt/persist`, `/mnt/var/log`, and `/mnt/boot`
+  are mounted as expected if you stop before install
 
 ## 2. Review the staged repo
-- `rebuild-install.sh` copies the repo to `/mnt/etc/nixos` automatically
-- it updates `/mnt/etc/nixos/templates/default/hosts/nixos/hardware-target.nix` from the installer scan for review
+- `rebuild-install.sh` stages the selected flake source into `/mnt/etc/nixos`
+- if the flake consumes this framework as an input, the pinned framework
+  source is vendored into the staged tree so the install remains self-contained
+- it writes the generated hardware file at the template-relative
+  `hardware-target.nix` path before install
 - place or prepare host-local secrets outside git
 - review the generated files before treating the install as final
-- do not overwrite repo-owned layout, impermanence, or profile policy wholesale
+- do not overwrite repo-owned storage policy, impermanence, or profile policy wholesale
 - for a complete inventory of what this repo contains and how the profiles differ, see `docs/maps/FEATURES.md`
 
 ## 3. Install the system
-- if you let the script continue, it will run `nixos-install --flake /mnt/etc/nixos#nixos --no-root-passwd` for you
-- it can then immediately prompt for `player` and `ghost` passwords through `nixos-enter`
+- if you let the script continue, it will run
+  `nixos-install --flake <staged-flake>#<selected-config> --no-root-passwd`
+  for you
+- any declarative user passwords are written before `nixos-install`, based
+  on the `hashedPasswordFile` paths discovered from the evaluated config
 - reboot
-- at the boot menu, choose the `daily` specialization first for the first validation cycle
+- for the reference template, choose the `daily` specialization first for
+  the first validation cycle
 
 ## 4. First boot: canonical edits only
-Do not add a separate local override layer for basic identity. Make the first boot edits in the canonical tracked files.
+For the reference `templates/default` machine, keep the first boot focused
+on verification and only touch the sanctioned override points.
 
 Required first-boot edits:
-- set the hostname in `templates/default/hosts/nixos/default.nix` by changing `networking.hostName`
-- set git identity in the canonical shared Home Manager path: `modules/home/common.nix`
-- only move git identity into per-user files later if you intentionally want different identities per account
+- review `templates/default/hosts/nixos/hardware-target.nix`
+- set hostname or storage-device overrides in `templates/default/hosts/nixos/local.nix`
+- set identity in `templates/default/accounts/*.local.nix`
 
-Suggested commands after logging into the `daily` specialization:
+Suggested commands after logging into the `daily` specialization of the
+reference template:
 - `sudoedit /etc/nixos/templates/default/hosts/nixos/default.nix`
-- `sudoedit /etc/nixos/modules/home/common.nix`
+- `sudoedit /etc/nixos/templates/default/hosts/nixos/local.nix`
+- `sudoedit /etc/nixos/templates/default/accounts/player.local.nix`
 - `cd /etc/nixos && sudo nixos-rebuild switch --flake .#nixos --specialisation daily`
 
 The first boot goal is not “finish every hardening feature.” The first boot goal is:

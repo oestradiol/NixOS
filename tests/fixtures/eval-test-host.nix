@@ -7,8 +7,8 @@ in {
   imports = [
     # Minimal host configuration for testing
     {
-      # Mock fs-layout for testing (no actual disk dependencies)
-      fileSystems."/" = { device = "tmpfs"; fsType = "tmpfs"; };
+      # Use the framework-owned storage defaults; eval does not require the
+      # referenced devices to exist on disk.
       boot.loader.grub.enable = false;
       boot.loader.systemd-boot.enable = lib.mkForce false;
       

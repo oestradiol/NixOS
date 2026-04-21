@@ -1,0 +1,5 @@
+# Copy to `hardware-target.nix` if you want to keep a hand-written hardware
+# module. The installer will also generate this file automatically.
+{ ... }:
+{
+}

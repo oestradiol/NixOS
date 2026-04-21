@@ -9,8 +9,10 @@
 # name/email, mic alias, workspace path) lives in a gitignored
 # accounts/ghost.local.nix added in Stage 5.
 { pkgs, lib, ... }:
-{
-  imports = lib.optional (builtins.pathExists ./ghost.local.nix) ./ghost.local.nix;
+let
+  localFile = ./ghost.local.nix;
+in {
+  imports = lib.optional (builtins.pathExists localFile) localFile;
 
   myOS.users.ghost = {
     activeOnProfiles = [ "paranoid" ];

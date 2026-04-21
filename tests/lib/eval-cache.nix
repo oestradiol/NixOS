@@ -14,6 +14,7 @@
 let
   flake = builtins.getFlake flakePath;
   nixpkgs = flake.inputs.nixpkgs;
+  lib = nixpkgs.lib;
   system = "x86_64-linux";
   pkgs = nixpkgs.legacyPackages.${system};
   
@@ -31,11 +32,10 @@ let
       # Minimal mock config for testing (no disk dependencies)
       {
         nixpkgs.config.allowUnfree = true;
-        fileSystems."/" = { device = "tmpfs"; fsType = "tmpfs"; };
-        fileSystems."/persist" = { device = "/dev/disk/by-label/persist"; fsType = "btrfs"; neededForBoot = true; };
         boot.loader.grub.enable = false;
         boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
         boot.kernelModules = [ "kvm-amd" ];
+        system.stateVersion = "26.05";
 
         # Test users matching the old ghost/player structure
         myOS.users.player = {
@@ -114,6 +114,14 @@ let
       value = try cfg.users.users.${n}.hashedPassword; }
     { name = "users.users.${n}.extraGroups";
       value = try cfg.users.users.${n}.extraGroups; }
+    { name = "fileSystems./home/${n}.fsType";
+      value = try (lib.attrByPath [ "/home/${n}" "fsType" ] null cfg.fileSystems); }
+    { name = "fileSystems./home/${n}.options";
+      value = try (lib.attrByPath [ "/home/${n}" "options" ] null cfg.fileSystems); }
+    { name = "fileSystems.${cfg.myOS.persistence.root}/home/${n}.fsType";
+      value = try (lib.attrByPath [ "${cfg.myOS.persistence.root}/home/${n}" "fsType" ] null cfg.fileSystems); }
+    { name = "fileSystems.${cfg.myOS.persistence.root}/home/${n}.options";
+      value = try (lib.attrByPath [ "${cfg.myOS.persistence.root}/home/${n}" "options" ] null cfg.fileSystems); }
     { name = "myOS.users.${n}._activeOn";
       value = try cfg.myOS.users.${n}._activeOn; }
     { name = "myOS.users.${n}.allowWheel";
@@ -136,6 +144,11 @@ perUserEntries //
   "myOS.debug.crossProfileLogin.enable"                = try cfg.myOS.debug.crossProfileLogin.enable;
   "myOS.debug.paranoidWheel.enable"                    = try cfg.myOS.debug.paranoidWheel.enable;
   "myOS.debug.warnings.enable"                         = try cfg.myOS.debug.warnings.enable;
+  "myOS.storage.enable"                                = try cfg.myOS.storage.enable;
+  "myOS.storage.rootTmpfs.size"                        = try cfg.myOS.storage.rootTmpfs.size;
+  "myOS.storage.swap.enable"                           = try cfg.myOS.storage.swap.enable;
+  "myOS.storage.swap.sizeMiB"                          = try cfg.myOS.storage.swap.sizeMiB;
+  "myOS.storage.tmpTmpfs.options"                      = try cfg.myOS.storage.tmpTmpfs.options;
   "myOS.security.secureBoot.enable"                    = try cfg.myOS.security.secureBoot.enable;
   "myOS.security.tpm.enable"                           = try cfg.myOS.security.tpm.enable;
   "myOS.security.impermanence.enable"                  = try cfg.myOS.security.impermanence.enable;
@@ -210,6 +223,17 @@ perUserEntries //
   "boot.loader.systemd-boot.enable"                    = try cfg.boot.loader.systemd-boot.enable;
   "boot.loader.grub.enable"                            = try cfg.boot.loader.grub.enable;
   "boot.lanzaboote.enable"                             = try cfg.boot.lanzaboote.enable;
+  "fileSystems./.fsType"                               = try (lib.attrByPath [ "/" "fsType" ] null cfg.fileSystems);
+  "fileSystems./.options"                              = try (lib.attrByPath [ "/" "options" ] null cfg.fileSystems);
+  "fileSystems./boot.device"                           = try (lib.attrByPath [ "/boot" "device" ] null cfg.fileSystems);
+  "fileSystems./nix.fsType"                            = try (lib.attrByPath [ "/nix" "fsType" ] null cfg.fileSystems);
+  "fileSystems./nix.options"                           = try (lib.attrByPath [ "/nix" "options" ] null cfg.fileSystems);
+  "fileSystems./persist.fsType"                        = try (lib.attrByPath [ "/persist" "fsType" ] null cfg.fileSystems);
+  "fileSystems./persist.options"                       = try (lib.attrByPath [ "/persist" "options" ] null cfg.fileSystems);
+  "fileSystems./tmp.fsType"                            = try (lib.attrByPath [ "/tmp" "fsType" ] null cfg.fileSystems);
+  "fileSystems./tmp.options"                           = try (lib.attrByPath [ "/tmp" "options" ] null cfg.fileSystems);
+  "fileSystems./swap.fsType"                           = try (lib.attrByPath [ "/swap" "fsType" ] null cfg.fileSystems);
+  "systemd.services.profile-mount-invariants.script"   = try cfg.systemd.services.profile-mount-invariants.script;
 
   # ── security + services ──────────────────────────────────────────────
   "security.apparmor.enable"                           = try cfg.security.apparmor.enable;

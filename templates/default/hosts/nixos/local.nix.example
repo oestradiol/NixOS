@@ -13,6 +13,8 @@
 {
   # myOS.host.hostName = "my-laptop";
   # myOS.host.timeZone = "America/Sao_Paulo";
+  # myOS.storage.devices.boot = "/dev/disk/by-label/MYBOOT";
+  # myOS.storage.devices.cryptroot = "/dev/disk/by-partlabel/MYCRYPT";
   # myOS.i18n.japanese.enable  = true;
   # myOS.i18n.brazilian.enable = true;
   # myOS.autoUpdate.enable     = true;

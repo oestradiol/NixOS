@@ -7,8 +7,10 @@
 # `allowWheel = true` adds the wheel group automatically; do not list
 # it in `extraGroups` directly.
 { pkgs, lib, ... }:
-{
-  imports = lib.optional (builtins.pathExists ./player.local.nix) ./player.local.nix;
+let
+  localFile = ./player.local.nix;
+in {
+  imports = lib.optional (builtins.pathExists localFile) localFile;
 
   myOS.users.player = {
     activeOnProfiles = [ "daily" ];

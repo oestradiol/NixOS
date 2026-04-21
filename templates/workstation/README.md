@@ -16,22 +16,30 @@ sudo nixos-rebuild switch --flake .#workstation
 
 - NixOS 26.05 baseline with the framework's hardening substrate
 - Plasma 6 on greetd, safe-firefox sandbox, flatpak, ClamAV + AIDE
-- impermanence-ready root (you still supply the disk layout)
+- the framework-owned storage baseline by default:
+  LUKS root, tmpfs `/`, Btrfs `/nix` + `/persist` + `/var/log`, optional
+  disk-backed swap, and per-user home mounts derived from `myOS.users.*`
 - one permissive user on the `daily` posture (`allowWheel = true`,
   persistent home)
 
 ## What you still have to do
 
-- supply a `hosts/<host>/fs-layout.nix` or equivalent matching your
-  disk layout (the upstream reference at `templates/default/hosts/nixos/fs-layout.nix`
-  is a good starting point)
-- put real identity values in a gitignored override (see
-  `templates/default/accounts/player.local.nix.example` upstream)
+- keep the install conventions if you want zero storage edits:
+  `NIXBOOT`, `NIXCRYPT`, and the default `@nix` / `@persist` / `@log`
+  subvolumes
+- or override storage through `myOS.storage.*` in `local.nix`
+- put real identity values in the gitignored `identity.local.nix`
 - decide whether to add the paranoid specialisation; if yes, copy the
   upstream `profiles/paranoid.nix` pattern
 
 ## Customising further
 
 Every `myOS.*` option declared by the framework is documented in
-`docs/CUSTOMIZATION.md` upstream. Cherry-pick additional
-`hardening.nixosModules.*` entries to grow the surface.
+`docs/CUSTOMIZATION.md` upstream. The template ships example overrides:
+
+- `hardware-target.nix.example`
+- `identity.local.nix.example`
+- `local.nix.example`
+
+Cherry-pick additional `hardening.nixosModules.*` entries to grow the
+surface.

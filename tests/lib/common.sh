@@ -395,7 +395,7 @@ _tc_prime_one() {
   if ! _tc_cache_stale "$out"; then return 0; fi
   local err
   err=$(nix --extra-experimental-features 'nix-command flakes' \
-    eval --impure --json \
+    eval --impure --json --no-write-lock-file \
     --expr "import $REPO_ROOT/tests/lib/eval-cache.nix { flakePath = \"$REPO_ROOT\"; profile = \"$profile\"; }" \
     2>&1 > "$out.tmp")
   local rc=$?
