@@ -1,9 +1,6 @@
 { config, pkgs, lib, ... }:
 {
   imports = [
-    # Daily flake-update + rebuild-boot timer. Self-gated on
-    # myOS.autoUpdate.enable (default true).
-    ../desktop/auto-update.nix
     # Controller support is self-gated on myOS.gaming.controllers.enable
     # (default false). Imported unconditionally so the option is visible
     # on every profile (paranoid sets it explicitly to false).
@@ -72,9 +69,6 @@
     dates = "weekly";
     options = "--delete-older-than 7d";
   };
-  # ── Automatic system updates ────────────────────────────────────
-  # Moved to modules/desktop/auto-update.nix (myOS.autoUpdate.*).
-
   # ── Audio (was audio.nix) ─────────────────────────────────────
   services.pulseaudio.enable = false;
   services.pipewire = {

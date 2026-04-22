@@ -71,7 +71,6 @@ grep -r "age.secrets" /etc/nixos/ 2>/dev/null || true
 ```
 
 **Fix**:
-- Missing `*.local.nix` files: Copy from `.example` templates
 - Syntax errors: Run `nix flake check` for detailed trace
 - Secret placeholders: Either populate secrets or disable the feature
 

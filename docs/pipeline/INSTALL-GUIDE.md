@@ -252,9 +252,8 @@ nixos-install --flake /mnt/etc/nixos#yourconfig --no-root-passwd
 
 After reboot:
 1. Log in as your configured user
-2. Edit identity in `identity.local.nix`
-3. Review `hardware-target.nix` for accuracy
-4. Run: `sudo nixos-rebuild switch --flake /etc/nixos#workstation`
+2. Review `hardware-target.nix` for accuracy
+3. Run: `sudo nixos-rebuild switch --flake /etc/nixos#workstation`
 
 ### Default Template Users
 
@@ -264,9 +263,8 @@ After reboot:
 3. Make canonical edits only:
    ```bash
    sudoedit /etc/nixos/templates/default/hosts/nixos/hardware-target.nix
-   sudoedit /etc/nixos/templates/default/hosts/nixos/local.nix
-   sudoedit /etc/nixos/templates/default/accounts/player.local.nix
-   sudoedit /etc/nixos/templates/default/accounts/ghost.local.nix
+   sudoedit /etc/nixos/templates/default/accounts/player.nix
+   sudoedit /etc/nixos/templates/default/accounts/ghost.nix
    ```
 4. Rebuild: `sudo nixos-rebuild switch --flake /etc/nixos#nixos --specialisation daily`
 

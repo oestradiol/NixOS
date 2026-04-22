@@ -111,17 +111,15 @@ Import only the hardening surface you need:
 All 40 `nixosModules.*` outputs are documented in `flake.nix`.
 
 ### C. Fork-and-own (full adaptation)
-Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `templates/default/hosts/`, `templates/default/accounts/`, and `*.local.nix` are your instance.
+Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `templates/default/hosts/` and `templates/default/accounts/` are your instance.
 
-### Identity separation
-Operator-specific values (git email, mic aliases, repo paths) live in gitignored `*.local.nix` files alongside the tracked account definitions:
-- `templates/default/accounts/*.local.nix` (per-account identity; the default template demonstrates this pattern)
-- `templates/default/hosts/nixos/local.nix` (system-level hardware quirks)
+## Identity separation
 
-Tracked files contain only framework-level defaults and structural wiring. Forks may use any user naming scheme.
+Operator-specific values (git email, mic aliases, repo paths) are set directly in account definitions:
+- `templates/default/accounts/player.nix` — daily user identity
+- `templates/default/accounts/ghost.nix` — paranoid user identity
 
-## Operator-local overrides
-`templates/default/hosts/nixos/default.nix` conditionally imports `local.nix` when that file exists. The path is **gitignored** and is the right place for per-install hardware quirks (external-drive UUIDs, experimental toggles, transient workarounds) that must never be published. If the file is absent, the import list is a no-op.
+Forks may use any user naming scheme and identity values.
 
 ## Testing
 The repo ships a three-layer test suite runnable offline:

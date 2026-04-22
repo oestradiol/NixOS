@@ -68,8 +68,7 @@ If you prefer manual control over the install process:
 - keep the install conventions if you want zero storage edits:
   `NIXBOOT`, `NIXCRYPT`, and the default `@nix` / `@persist` / `@log`
   subvolumes
-- or override storage through `myOS.storage.*` in `local.nix`
-- put real identity values in the gitignored `identity.local.nix`
+- or override storage through `myOS.storage.*` in your host config
 - decide whether to add the paranoid specialisation; if yes, copy the
   upstream `profiles/paranoid.nix` pattern
 
@@ -79,8 +78,6 @@ Every `myOS.*` option declared by the framework is documented in
 `docs/CUSTOMIZATION.md` upstream. The template ships example overrides:
 
 - `hardware-target.nix.example`
-- `identity.local.nix.example`
-- `local.nix.example`
 
 Cherry-pick additional `hardening.nixosModules.*` entries to grow the
 surface.

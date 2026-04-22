@@ -6,12 +6,7 @@
 #
 # `allowWheel = true` adds the wheel group automatically; do not list
 # it in `extraGroups` directly.
-{ pkgs, lib, ... }:
-let
-  localFile = ./player.local.nix;
-in {
-  imports = lib.optional (builtins.pathExists localFile) localFile;
-
+{ pkgs, ... }: {
   myOS.users.player = {
     activeOnProfiles = [ "daily" ];
     description = "Daily desktop";
@@ -31,5 +26,13 @@ in {
       btrfsSubvol = "@home-daily";
     };
     homeManagerConfig = ./home/player.nix;
+
+    identity = {
+      git.name  = "Elaina";
+      git.email = "48662592+oestradiol@users.noreply.github.com";
+
+      audio.micSourceAlias   = "alsa_input.usb-3142_Fifine_Microphone-00.mono-fallback";
+      audio.micLoopbackSink  = "alsa_output.pci-0000_09_00.4.analog-stereo";
+    };
   };
 }

@@ -4,16 +4,7 @@
 # framework (modules/core/users-framework.nix). The system side
 # (Unix account, profile locking, home-manager binding) is wired by
 # modules/core/users.nix reading this attrset.
-#
-# Forkers: copy this file and tweak it. Operator identity (git
-# name/email, mic alias, workspace path) lives in a gitignored
-# accounts/ghost.local.nix added in Stage 5.
-{ pkgs, lib, ... }:
-let
-  localFile = ./ghost.local.nix;
-in {
-  imports = lib.optional (builtins.pathExists localFile) localFile;
-
+{ pkgs, ... }: {
   myOS.users.ghost = {
     activeOnProfiles = [ "paranoid" ];
     description = "Hardened workspace";

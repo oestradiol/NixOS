@@ -90,7 +90,6 @@
 
       # Desktop
       desktop                       = ./modules/desktop/base.nix;
-      desktop-auto-update           = ./modules/desktop/auto-update.nix;
       desktop-controllers           = ./modules/desktop/controllers.nix;
       desktop-gaming                = ./modules/desktop/gaming.nix;
       desktop-greeter               = ./modules/desktop/greeter.nix;

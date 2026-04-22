@@ -1,9 +1,6 @@
 { config, lib, osConfig, pkgs, ... }:
 let
-  # Stage 5: per-user identity leaks (mic alias) are now read from
-  # myOS.users.<name>.identity.audio.micSourceAlias via osConfig. The
-  # legacy hardcoded Fifine source-name is gone from the tracked tree;
-  # operators set it in a gitignored accounts/<name>.local.nix.
+  # Per-user identity for mic alias read from myOS.users.<name>.identity.audio.micSourceAlias
   userCfg    = osConfig.myOS.users.${config.home.username} or { };
   micSource  = userCfg.identity.audio.micSourceAlias or null;
   micSink    = userCfg.identity.audio.micLoopbackSink or null;
