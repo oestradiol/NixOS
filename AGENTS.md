@@ -11,9 +11,8 @@ Read these in order:
 2. `README.md`
 3. `docs/maps/AUDIT-STATUS.md`
 4. `docs/maps/README.md`
-5. `docs/pipeline/PRE-INSTALL.md`
-6. `docs/pipeline/INSTALL-GUIDE.md`
-7. `docs/pipeline/TEST-PLAN.md`
+5. `docs/pipeline/INSTALL-GUIDE.md`
+6. `docs/pipeline/TEST-PLAN.md`
 
 If the task crosses the framework / instance / workspace boundary, also read:
 

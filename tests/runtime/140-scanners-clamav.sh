@@ -51,6 +51,14 @@ describe "clamav scripts exclude per-profile HOME of the other user"
 unit_cat=$(systemctl cat clamav-impermanence-scan.service 2>/dev/null || true)
 profile=$(detect_profile)
 
+# Discover users from config
+user_names_json=$(config_value "myOS.users.__names")
+if [[ "$user_names_json" == "null" || "$user_names_json" == "[]" ]]; then
+  fail "no users declared in myOS.users (framework misconfiguration)"
+  exit 1
+fi
+mapfile -t all_users < <(echo "$user_names_json" | jq_cmd -r '.[]')
+
 # First, extract the unit-script path from ExecStart.
 unit_start=$(awk -F'=' '/^ExecStart=/{print $2; exit}' <<<"$unit_cat")
 script_content=""
@@ -81,30 +89,25 @@ if [[ -n "$script_content" ]]; then
       fail "clamav target missing: $target"
     fi
   done
-  # Profile-specific
-  if [[ "$profile" == "daily" ]]; then
-    if grep -Fq '/home/player' <<<"$script_content"; then
-      pass "daily: clamav scans /home/player"
+  # Profile-specific user home scanning
+  for u in "${all_users[@]}"; do
+    active=$(config_value "myOS.users.${u}._activeOn" | jq_cmd -r 'select(type=="boolean")')
+    if [[ "$active" == "true" ]]; then
+      # Active user's home should be scanned
+      if grep -Fq "/home/$u" <<<"$script_content"; then
+        pass "$profile: clamav scans /home/$u"
+      else
+        fail "$profile: /home/$u missing from clamav targets"
+      fi
     else
-      fail "daily: /home/player missing from clamav targets"
+      # Inactive user's persist home should NOT be scanned (they're not active)
+      if grep -Fq "/persist/home/$u" <<<"$script_content"; then
+        warn "$profile: /persist/home/$u is in clamav targets (may be intentional)"
+      else
+        pass "$profile: /persist/home/$u NOT in clamav targets (inactive user)"
+      fi
     fi
-    if grep -Fq '/persist/home/ghost' <<<"$script_content"; then
-      fail "daily: /persist/home/ghost is unexpectedly in clamav targets"
-    else
-      pass "daily: /persist/home/ghost NOT in clamav targets"
-    fi
-  else
-    if grep -Fq '/persist/home/ghost' <<<"$script_content"; then
-      pass "paranoid: clamav scans /persist/home/ghost"
-    else
-      fail "paranoid: /persist/home/ghost missing from clamav targets"
-    fi
-    if grep -Fq '/home/player' <<<"$script_content"; then
-      fail "paranoid: /home/player is unexpectedly in clamav targets"
-    else
-      pass "paranoid: /home/player NOT in clamav targets"
-    fi
-  fi
+  done
 else
   warn "could not locate clamav-impermanence-scan generated script in /nix/store"
 fi

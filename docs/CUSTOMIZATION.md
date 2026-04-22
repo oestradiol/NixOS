@@ -17,8 +17,7 @@ Use for host identity and locale defaults:
 - `myOS.host.timeZone`
 - `myOS.host.defaultLocale`
 
-The reference template exposes `templates/default/hosts/nixos/local.nix`
-as the gitignored place for these per-install edits.
+The framework exposes a gitignored place for these per-install edits.
 
 ### `myOS.users.<name>.*`
 
@@ -36,11 +35,10 @@ Reference patterns:
 - `templates/default/accounts/*.nix` for the two-account split
 - `templates/workstation/flake.nix` for a single-user inline declaration
 
-Identity and operator-local values belong in gitignored files such as:
+Identity and operator-local values belong in gitignored `*.local.nix` files alongside the tracked account definitions. The default template uses:
 
-- `templates/default/accounts/player.local.nix`
-- `templates/default/accounts/ghost.local.nix`
-- `templates/workstation/identity.local.nix`
+- `templates/default/accounts/*.local.nix` (per-account identity)
+- `templates/workstation/identity.local.nix` (single-user template)
 
 ### `myOS.storage.*`
 

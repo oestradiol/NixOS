@@ -17,7 +17,7 @@ for f in README.md PROJECT-STATE.md REFERENCES.md docs/maps/AUDIT-STATUS.md docs
 done
 
 echo "== 3. Persistence / identity surfaces =="
-grep -R 'environment.persistence\|fileSystems\."/persist"\|/home/player\|/home/ghost\|machine-id' -n hosts modules docs || true
+grep -R 'environment.persistence\|fileSystems\."/persist"\|/home/[^/]*\|machine-id' -n hosts modules docs || true
 
 echo "== 4. Secure Boot / TPM surfaces =="
 grep -R "lanzaboote\|secureBoot\|tpm\|cryptenroll\|systemd-boot" -n hosts modules docs scripts || true

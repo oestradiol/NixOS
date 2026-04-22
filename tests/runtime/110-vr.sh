@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# Runtime: WiVRn VR layer (daily only).
+# Runtime: WiVRn VR layer.
+# Template-agnostic: checks myOS.gaming.vr.enable instead of profile.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
-needs_profile daily
+# Check if VR feature is enabled
+vr_enabled=$(config_value "myOS.gaming.vr.enable" | jq_cmd -r 'select(type=="boolean")')
+if [[ "$vr_enabled" != "true" ]]; then
+  skip "myOS.gaming.vr.enable != true - VR not configured"
+  exit 0
+fi
 
 describe "wivrn service declared + state"
 # services.wivrn enables a user unit; it may be inactive until a VR client

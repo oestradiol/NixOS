@@ -27,12 +27,22 @@ doc_claims "impermanence"
 doc_claims "lanzaboote module available"
 doc_claims "agenix module available"
 
-describe "user model claims match users.nix"
-doc_claims "\`player\` = daily user"
-doc_claims "\`ghost\` = hardened user"
+describe "user model claims match users.nix (template-agnostic)"
+# Verify the framework's user binding mechanism works using test fixture users
+# (templates may define any user names; we test the framework behavior, not template content)
+doc_claims "immutable users (declarative password management via hashedPasswordFile)"
+doc_claims "root account lock path supported"
+doc_claims "profile-user binding enforced via account locking"
 
-assert_contains "$(nix_eval 'users.users.player.shell')" 'zsh' "player.shell is zsh"
-assert_contains "$(nix_eval 'users.users.ghost.shell')"  'zsh' "ghost.shell  is zsh"
+# Verify test users from eval-cache.nix have correct shells (template-agnostic check)
+assert_contains "$(nix_eval 'users.users.test_daily.shell')" 'zsh' "test_daily.shell is zsh"
+assert_contains "$(nix_eval 'users.users.test_paranoid.shell')" 'zsh' "test_paranoid.shell is zsh"
+
+# Verify active user detection works
+test_daily_active="$(nix_eval 'myOS.users.test_daily._activeOn')"
+test_paranoid_active="$(nix_eval 'myOS.users.test_paranoid._activeOn')"
+info "test_daily._activeOn = $test_daily_active (paranoid profile)"
+info "test_paranoid._activeOn = $test_paranoid_active (paranoid profile)"
 
 describe "browser claims"
 # FEATURES.md uses a list form; check for the list entries rather than a prose

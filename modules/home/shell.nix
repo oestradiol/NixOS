@@ -37,9 +37,9 @@ in {
       # daily specialisation). A single `nixos-rebuild switch` without
       # `--specialisation` ALWAYS targets the toplevel. Running it from a
       # booted daily session therefore silently swaps the live config to
-      # paranoid, which tries to stop home-player.mount while player is
-      # logged in and trips profile-mount-invariants. These aliases make
-      # the choice explicit (see switch.log + tests/bugs/020).
+      # paranoid, which tries to stop the daily profile's home mounts while
+      # users are logged in and trips profile-mount-invariants. These aliases
+      # make the choice explicit (see switch.log + tests/bugs/020).
       #
       # IMPORTANT: For daily, use --specialisation daily to activate the daily specialisation.
       # This avoids PAM breakage by ensuring the correct profile is activated.

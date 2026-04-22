@@ -21,7 +21,7 @@ in {
   systemd.services.flatpak-repo = {
     wantedBy = [ "multi-user.target" ];
     after = [ "network-online.target" "nss-lookup.target" ];
-    wants = [ "network-online.target" ];
+    wants = [ "network-online.target" "nss-lookup.target" ];
     path = [ pkgs.flatpak ];
     script = ''
       flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -32,13 +32,15 @@ in {
       # flatpak install -y flathub dev.vencord.Vesktop
       # flatpak install -y flathub md.obsidian.Obsidian
     '';
+    unitConfig = {
+      StartLimitIntervalSec = "300s";
+      StartLimitBurst = 5;
+    };
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
       Restart = "on-failure";
       RestartSec = "30s";
-      StartLimitInterval = "300s";
-      StartLimitBurst = 5;
       NoNewPrivileges = true;
       PrivateTmp = true;
       PrivateDevices = true;

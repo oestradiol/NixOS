@@ -98,13 +98,16 @@ in {
         description = "Daily automatic Nix flake update and boot entry rebuild";
         after = [ "network-online.target" "nss-lookup.target" ];
         wants = [ "network-online.target" ];
+        unitConfig = {
+          StartLimitIntervalSec = "600s";
+          StartLimitBurst = 3;
+        };
         serviceConfig = {
           Type = "oneshot";
           Restart = "on-failure";
           RestartSec = "60s";
-          StartLimitInterval = "600s";
-          StartLimitBurst = 3;
-          ExecStart = "/bin/sh -c 'cd ${repoPath} && sudo -u ${invokingUser} ${pkgs.nix}/bin/nix flake update --flake . && ${pkgs.nixos-rebuild}/bin/nixos-rebuild boot --flake .#${cfg.flakeAttr}'";
+          WorkingDirectory = repoPath;
+          ExecStart = "/bin/sh -c 'sudo -u ${invokingUser} ${pkgs.nix}/bin/nix flake update --flake . && ${pkgs.nixos-rebuild}/bin/nixos-rebuild boot --flake .#${cfg.flakeAttr}'";
         };
       };
 

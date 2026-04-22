@@ -10,14 +10,12 @@ assert_file "$ps"
 
 describe "PROJECT-STATE baseline split"
 for claim in \
-    "\`paranoid\`: instantiates that shared base as the default hardened workstation baseline" \
-    "\`daily\`: instantiates that shared base as the explicit relaxation layer" \
+    "\`paranoid\`: the default hardened workstation profile with strongest workstation-safe settings" \
+    "\`daily\`: the explicit relaxation specialization for gaming/social/recovery-friendly use" \
     "one encrypted LUKS2 root device" \
     "Btrfs subvolumes under LUKS" \
     "tmpfs root" \
     "impermanence-managed persisted state under \`/persist\`" \
-    "\`player\` is the normal daily account" \
-    "\`ghost\` is the hardened workspace account" \
     "Firefox Sync remains disabled by policy"; do
   if grep -Fq "$claim" "$ps"; then
     pass "PROJECT-STATE claim: ${claim:0:80}"
@@ -26,10 +24,29 @@ for claim in \
   fi
 done
 
+describe "PROJECT-STATE user model (template-agnostic)"
+# Documentation should describe the two-axis model, not hardcode specific
+# template user names (the default template uses example user names, but docs
+# should describe the framework in template-agnostic terms)
+doc_has_two_axis_model=false
+if grep -Fq "two-axis" "$ps" || grep -Fq "myOS.users" "$ps" || grep -Fq "profile-user binding" "$ps"; then
+  doc_has_two_axis_model=true
+  pass "PROJECT-STATE describes framework user model (two-axis or myOS.users)"
+fi
+
+# Framework docs should NOT contain ghost/player - those are template-specific
+if grep -Fq "ghost" "$ps" || grep -Fq "player" "$ps"; then
+  fail "PROJECT-STATE contains template-specific user names (ghost/player); use template-agnostic language"
+fi
+
+if [[ "$doc_has_two_axis_model" == "false" ]]; then
+  fail "PROJECT-STATE missing user model description (should describe two-axis framework)"
+fi
+
 describe "user expectations match profile (templates/default reference implementation)"
-# PROJECT-STATE says /home/player persistent daily, /home/ghost tmpfs paranoid.
-# Stage 4b moved the Btrfs subvol names into accounts/*.nix as the
-# `home.btrfsSubvol` attribute; the framework storage module reads them.
+# The default template demonstrates the two-axis model with one persistent daily
+# user and one tmpfs-based paranoid user. The btrfsSubvol names are defined in
+# accounts/*.nix and read by the framework storage module.
 accounts="$REPO_ROOT/templates/default/accounts"
 if grep -rFq 'btrfsSubvol = "@home-daily"' "$accounts" 2>/dev/null; then
   pass "accounts/ declares @home-daily"

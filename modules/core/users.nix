@@ -62,7 +62,7 @@ in {
 
   users.users = lib.mapAttrs buildUser enabledUsers;
 
-  # Required when the active persona is non-wheel (e.g. paranoid/ghost):
+  # Required when the active persona is non-wheel (paranoid profile default):
   # no wheel user then has a password, and NixOS refuses activation
   # otherwise.
   users.allowNoPasswordLogin = !anyActiveWheel;

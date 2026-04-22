@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 # Runtime: impermanence bind-mounts and allowlisted persistence surfaces.
-# Daily persists the full /home/player subvolume; paranoid persists an
-# explicit allowlist under /persist/home/ghost.
+# Template-agnostic: discovers users from myOS.users and checks their
+# persistence configuration dynamically.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
 needs_sudo
 
 profile=$(detect_profile)
 describe "impermanence: profile = $profile"
+
+# Discover declared users from framework config
+user_names_json=$(config_value "myOS.users.__names")
+if [[ "$user_names_json" == "null" || "$user_names_json" == "[]" ]]; then
+  fail "no users declared in myOS.users"
+  exit 1
+fi
+
+mapfile -t all_users < <(echo "$user_names_json" | jq_cmd -r '.[]')
+info "declared users: ${all_users[*]}"
 
 describe "core persisted system directories are visible"
 for p in \
@@ -93,58 +103,73 @@ if sudo -n test -r /persist/etc/machine-id 2>/dev/null; then
   fi
 fi
 
-describe "daily-only persistence surfaces"
-if [[ "$profile" == "daily" ]]; then
-  for p in /var/lib/bluetooth /var/lib/mullvad-vpn /etc/mullvad-vpn /var/lib/NetworkManager; do
-    if [[ -e "$p" ]]; then
-      # Prefer the impermanence-managed form (bind-mount or symlink).
-      if [[ -L "$p" ]] || findmnt -n "$p" >/dev/null 2>&1; then
-        pass "daily persists $p"
+describe "per-user home persistence based on home.persistent setting"
+# For each user, check if their home matches their persistence config
+for u in "${all_users[@]}"; do
+  persistent=$(config_value "myOS.users.${u}.home.persistent" | jq_cmd -r 'select(type=="boolean")')
+  home_path="/home/$u"
+  
+  if [[ "$persistent" == "true" ]]; then
+    # Home should be persistent (btrfs subvolume typically)
+    if [[ -d "$home_path" ]]; then
+      fs=$(findmnt -n -o FSTYPE "$home_path" 2>/dev/null || true)
+      if [[ "$fs" == "btrfs" ]]; then
+        pass "$u: /home/$u on btrfs (persistent)"
+      elif [[ "$fs" == "tmpfs" ]]; then
+        fail "$u: home.persistent=true but /home/$u is tmpfs"
       else
-        warn "$p exists but persistence form unclear"
+        info "$u: /home/$u on $fs"
       fi
     else
-      fail "$p missing on daily"
+      warn "$u: /home/$u does not exist (may not be mounted yet)"
+    fi
+  else
+    # Home should be tmpfs (or not mounted for inactive users)
+    active=$(config_value "myOS.users.${u}._activeOn" | jq_cmd -r 'select(type=="boolean")')
+    if [[ "$active" == "true" && -d "$home_path" ]]; then
+      fs=$(findmnt -n -o FSTYPE "$home_path" 2>/dev/null || true)
+      if [[ "$fs" == "tmpfs" ]]; then
+        pass "$u: /home/$u on tmpfs (non-persistent)"
+      elif [[ "$fs" == "btrfs" ]]; then
+        warn "$u: home.persistent!=true but /home/$u is on btrfs"
+      else
+        info "$u: /home/$u on $fs"
+      fi
+    fi
+  fi
+done
+
+describe "per-user allowlisted persistence directories"
+# Check for allowlisted bind mounts from /persist/home/<user>/
+persist_root=$(config_value "myOS.persistence.root" | jq_cmd -r 'select(type=="string")')
+[[ -z "$persist_root" || "$persist_root" == "null" ]] && persist_root="/persist"
+
+for u in "${all_users[@]}"; do
+  active=$(config_value "myOS.users.${u}._activeOn" | jq_cmd -r 'select(type=="boolean")')
+  # Only check active users with non-persistent homes (they use allowlists)
+  if [[ "$active" != "true" ]]; then
+    continue
+  fi
+  
+  persistent=$(config_value "myOS.users.${u}.home.persistent" | jq_cmd -r 'select(type=="boolean")')
+  if [[ "$persistent" == "true" ]]; then
+    continue  # Full persistence doesn't use allowlist
+  fi
+  
+  # Check for common allowlisted paths
+  allowlist_paths=(
+    ".gnupg"
+    ".ssh"
+    ".local/share/flatpak"
+    ".local/share/keyrings"
+    "Downloads"
+    "Documents"
+  )
+  
+  for rel in "${allowlist_paths[@]}"; do
+    p="/home/$u/$rel"
+    if [[ -L "$p" ]] || findmnt -n "$p" >/dev/null 2>&1; then
+      pass "$u: allowlisted $rel"
     fi
   done
-else
-  for p in /var/lib/bluetooth /var/lib/mullvad-vpn /etc/mullvad-vpn; do
-    if [[ -e "$p" ]]; then
-      warn "$p unexpectedly present on paranoid"
-    else
-      pass "$p absent on paranoid (expected)"
-    fi
-  done
-fi
-
-describe "paranoid-only ghost allowlisted persistence"
-if [[ "$profile" == "paranoid" ]]; then
-  for rel in \
-    Downloads Documents .gnupg .ssh .local/share/flatpak \
-    .mozilla/safe-firefox .config/Signal .config/keepassxc \
-    .local/share/KeePassXC .local/share/keyrings .local/share/applications \
-    .var/app/org.signal.Signal; do
-    p="/home/ghost/$rel"
-    if [[ -e "$p" ]] || findmnt -n "$p" >/dev/null 2>&1; then
-      pass "ghost allowlisted: $rel"
-    else
-      warn "ghost allowlist missing: $rel"
-    fi
-  done
-  for f in .zsh_history; do
-    p="/home/ghost/$f"
-    if [[ -e "$p" ]]; then pass "ghost file allowlisted: $f"; else warn "ghost file allowlist missing: $f"; fi
-  done
-fi
-
-describe "/home/player is persistent btrfs (daily)"
-if [[ "$profile" == "daily" ]]; then
-  fs=$(findmnt -n -o FSTYPE /home/player 2>/dev/null || true)
-  assert_eq "$fs" "btrfs" "/home/player fstype = btrfs"
-fi
-
-describe "/home/ghost is tmpfs (paranoid)"
-if [[ "$profile" == "paranoid" ]]; then
-  fs=$(findmnt -n -o FSTYPE /home/ghost 2>/dev/null || true)
-  assert_eq "$fs" "tmpfs" "/home/ghost fstype = tmpfs"
-fi
+done

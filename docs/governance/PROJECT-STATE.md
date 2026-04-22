@@ -3,15 +3,21 @@
 Canonical current state: actual architecture, profile split, implemented support boundary, current-stage pipeline, explicit deferred work, and removed/rejected ideas.
 
 ## 1. Repository role
-One NixOS installation with one shared hardening base, two boot states, and two users:
-- shared `base`: the non-bootable policy substrate encoded across `modules/core/*`, `modules/security/*`, and shared desktop plumbing (instantiated via templates/default/hosts/nixos/)
-- `paranoid`: instantiates that shared base as the default hardened workstation baseline for the `ghost` user
-- `daily`: instantiates that shared base as the explicit relaxation layer for the `player` user
+One NixOS installation with one shared hardening base and orthogonal profile/user axes:
+- shared `base`: the non-bootable policy substrate encoded across `modules/core/*`, `modules/security/*`, and shared desktop plumbing (instantiated via templates)
+- `paranoid`: the default hardened workstation profile with strongest workstation-safe settings
+- `daily`: the explicit relaxation specialization for gaming/social/recovery-friendly use
+
+The framework uses a two-axis model:
+- **System axis** (`myOS.profile`): kernel, services, sandbox policy, firewall, etc.
+- **User axis** (`myOS.users.<name>`): home-manager, shell, identity, groups, home layout
 
 Canonical policy reading:
 - `base` should be as hardened as possible, but it is not instantiated alone
-- `paranoid` should soften `base` only enough to remain a real workstation for `ghost`, while staying as hardened and private as the current desktop/workstation model allows
-- `daily` should soften `base` only enough for `player` to handle socialization, gaming, and ordinary recovery-friendly use, while staying as hardened and private as that use case realistically allows
+- `paranoid` should soften `base` only enough to remain a real workstation, while staying as hardened and private as the current desktop/workstation model allows
+- `daily` should soften `base` only enough for socialization, gaming, and ordinary recovery-friendly use, while staying as hardened and private as that use case realistically allows
+
+The default template demonstrates this model with one persistent daily user and one tmpfs-based paranoid user, but forks may define any user names and profile bindings.
 
 This repo is not trying to be a high-assurance appliance.
 It is a hardened desktop/workstation with explicit same-kernel, desktop-integration, and usability limits.
@@ -36,11 +42,12 @@ Anything in `docs/pipeline/POST-STABILITY.md` is intentionally non-blocking for 
 - Secure Boot and TPM remain staged until after first stable boot and validation
 
 ### Users and home model
-- `player` is the normal daily account
-- `ghost` is the hardened workspace account
-- `/home/player` is a fully persistent Btrfs subvolume on daily
-- `/home/ghost` is tmpfs on paranoid, with explicit allowlisted persistence into `/persist/home/ghost`
-- inactive profile home filesystems are intentionally left unmounted, and a boot-time invariant service checks that cross-profile home mounts are absent
+- Users are declared via `myOS.users.<name>` with `activeOnProfiles` determining which profile activates them
+- Daily-style users typically have `home.persistent = true` for Btrfs-backed homes
+- Paranoid-style users typically have `home.persistent = false` for tmpfs homes with allowlisted persistence under `/persist/home/<name>`
+- Inactive profile home filesystems are intentionally left unmounted, and a boot-time invariant service checks that cross-profile home mounts are absent
+
+The default template demonstrates this with separate daily and paranoid users, but the framework accepts any user names.
 
 ### Browser model
 - daily Firefox is the normal `programs.firefox` path configured through Firefox enterprise policies
@@ -84,8 +91,7 @@ templates/default/ (reference implementation)
 │       ├── modules/desktop/gaming.nix
 │       │   ├── modules/desktop/vr.nix
 │       │   └── modules/desktop/controllers.nix
-├── home-manager modules (templates/default/accounts/home/)
-│   ├── ghost.nix, player.nix (per-user)
+├── home-manager modules (templates define per-user imports)
 │   └── common.nix (shared baseline via hardening.home-common)
 └── flake inputs (home-manager, stylix, impermanence, lanzaboote, agenix)
 ```
@@ -147,7 +153,7 @@ Current support boundary:
 - `nosmt=force` stays paranoid-only
 - `init_on_free=1` stays paranoid-only
 - wrapped daily apps remain same-kernel containment only
-- profile-user binding is enforced via account locking (daily locks ghost, paranoid locks player); the experimental PAM approach remains disabled
+- profile-user binding is enforced via account locking (active users are unlocked on their profiles, inactive users are locked); the experimental PAM approach remains disabled
 
 ## 5. Current pipeline
 

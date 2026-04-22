@@ -21,34 +21,37 @@ assert_eq "$(nix_eval 'myOS.debug.warnings.enable')"          'true'  "warnings 
 assert_eq "$(nix_eval_daily 'myOS.debug.warnings.enable')"    'true'  "warnings defaults true (daily)"
 
 describe "default state preserves the current profile-user binding"
-# Paranoid: ghost has a password file, player is locked.
-assert_eq "$(nix_eval 'users.users.player.hashedPasswordFile')" 'null' \
-  "paranoid: player.hashedPasswordFile is null (locked)"
-pw=$(nix_eval 'users.users.player.hashedPassword')
-assert_eq "$pw" '"!"' "paranoid: player.hashedPassword = \"!\" (locked)"
-ghost_pwf=$(nix_eval 'users.users.ghost.hashedPasswordFile')
-assert_eq "$ghost_pwf" '"/persist/secrets/ghost-password.hash"' \
-  "paranoid: ghost.hashedPasswordFile points at ghost-password.hash"
-ghost_pw=$(nix_eval 'users.users.ghost.hashedPassword')
-assert_eq "$ghost_pw" 'null' "paranoid: ghost.hashedPassword is null (unlocked)"
+# Test fixture users: test_paranoid (active on paranoid), test_daily (active on daily)
+# These are synthetic test users defined in tests/lib/eval-cache.nix for testing framework behavior.
 
-# Daily: player has a password file, ghost is locked.
-assert_eq "$(nix_eval_daily 'users.users.ghost.hashedPasswordFile')" 'null' \
-  "daily: ghost.hashedPasswordFile is null (locked)"
-ghost_pw_d=$(nix_eval_daily 'users.users.ghost.hashedPassword')
-assert_eq "$ghost_pw_d" '"!"' "daily: ghost.hashedPassword = \"!\" (locked)"
-player_pwf=$(nix_eval_daily 'users.users.player.hashedPasswordFile')
-assert_eq "$player_pwf" '"/persist/secrets/player-password.hash"' \
-  "daily: player.hashedPasswordFile points at player-password.hash"
-player_pw_d=$(nix_eval_daily 'users.users.player.hashedPassword')
-assert_eq "$player_pw_d" 'null' "daily: player.hashedPassword is null (unlocked)"
+# Paranoid profile: test_paranoid active, test_daily locked
+assert_eq "$(nix_eval 'users.users.test_daily.hashedPasswordFile')" 'null' \
+  "paranoid: test_daily.hashedPasswordFile is null (locked)"
+pw=$(nix_eval 'users.users.test_daily.hashedPassword')
+assert_eq "$pw" '"!"' "paranoid: test_daily.hashedPassword = \"!\" (locked)"
+paranoid_pwf=$(nix_eval 'users.users.test_paranoid.hashedPasswordFile')
+assert_eq "$paranoid_pwf" '"/persist/secrets/test_paranoid-password.hash"' \
+  "paranoid: test_paranoid.hashedPasswordFile points at test_paranoid-password.hash"
+paranoid_pw=$(nix_eval 'users.users.test_paranoid.hashedPassword')
+assert_eq "$paranoid_pw" 'null' "paranoid: test_paranoid.hashedPassword is null (unlocked)"
 
-describe "default state: ghost is NOT in wheel on paranoid"
-ghost_groups=$(nix_eval 'users.users.ghost.extraGroups')
-if jq_cmd -e '. | index("wheel")' <<<"$ghost_groups" >/dev/null 2>&1; then
-  fail "default paranoid eval: ghost has 'wheel' in extraGroups" "$ghost_groups"
+# Daily profile: test_daily active, test_paranoid locked
+assert_eq "$(nix_eval_daily 'users.users.test_paranoid.hashedPasswordFile')" 'null' \
+  "daily: test_paranoid.hashedPasswordFile is null (locked)"
+paranoid_pw_d=$(nix_eval_daily 'users.users.test_paranoid.hashedPassword')
+assert_eq "$paranoid_pw_d" '"!"' "daily: test_paranoid.hashedPassword = \"!\" (locked)"
+daily_pwf=$(nix_eval_daily 'users.users.test_daily.hashedPasswordFile')
+assert_eq "$daily_pwf" '"/persist/secrets/test_daily-password.hash"' \
+  "daily: test_daily.hashedPasswordFile points at test_daily-password.hash"
+daily_pw_d=$(nix_eval_daily 'users.users.test_daily.hashedPassword')
+assert_eq "$daily_pw_d" 'null' "daily: test_daily.hashedPassword is null (unlocked)"
+
+describe "default state: test_paranoid is NOT in wheel on paranoid (allowWheel=false)"
+paranoid_groups=$(nix_eval 'users.users.test_paranoid.extraGroups')
+if jq_cmd -e '. | index("wheel")' <<<"$paranoid_groups" >/dev/null 2>&1; then
+  fail "default paranoid eval: test_paranoid has 'wheel' in extraGroups" "$paranoid_groups"
 else
-  pass "default paranoid eval: ghost does NOT have 'wheel' in extraGroups"
+  pass "default paranoid eval: test_paranoid does NOT have 'wheel' in extraGroups"
 fi
 
 # ── Active-state (debug.enable=true) checks ───────────────────────────────
@@ -75,8 +78,8 @@ let
       boot.loader.grub.enable = false;
       boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
       boot.kernelModules = [ "kvm-amd" ];
-      myOS.users.player = { activeOnProfiles = [ "daily" ]; description = "Daily"; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = true; home.persistent = true; };
-      myOS.users.ghost = { activeOnProfiles = [ "paranoid" ]; description = "Ghost"; uid = 1001; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = false; home.persistent = false; };
+      myOS.users.test_daily = { activeOnProfiles = [ "daily" ]; description = "Test Daily"; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = true; home.persistent = true; };
+      myOS.users.test_paranoid = { activeOnProfiles = [ "paranoid" ]; description = "Test Paranoid"; uid = 1001; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = false; home.persistent = false; };
     }
     agenix.nixosModules.default
     impermanence.nixosModules.impermanence
@@ -118,8 +121,8 @@ let
       boot.loader.grub.enable = false;
       boot.loader.systemd-boot.enable = nixpkgs.lib.mkForce false;
       boot.kernelModules = [ "kvm-amd" ];
-      myOS.users.player = { activeOnProfiles = [ "daily" ]; description = "Daily"; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = true; home.persistent = true; };
-      myOS.users.ghost = { activeOnProfiles = [ "paranoid" ]; description = "Ghost"; uid = 1001; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = false; home.persistent = false; };
+      myOS.users.test_daily = { activeOnProfiles = [ "daily" ]; description = "Test Daily"; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = true; home.persistent = true; };
+      myOS.users.test_paranoid = { activeOnProfiles = [ "paranoid" ]; description = "Test Paranoid"; uid = 1001; shell = pkgs.zsh; extraGroups = [ "networkmanager" "video" "audio" ]; allowWheel = false; home.persistent = false; };
     }
     agenix.nixosModules.default
     impermanence.nixosModules.impermanence
@@ -142,29 +145,29 @@ NIXEOF
 
 describe 'debug.crossProfileLogin.enable: lifts the account locks'
 cross='{ myOS.debug = { enable = true; crossProfileLogin.enable = true; warnings.enable = false; }; }'
-ppw=$(_debug_eval 'users.users.player.hashedPasswordFile' "$cross")
-assert_eq "$ppw" '"/persist/secrets/player-password.hash"' \
-  'paranoid + crossProfileLogin: player.hashedPasswordFile is set (cross-profile)'
-ppwh=$(_debug_eval 'users.users.player.hashedPassword' "$cross")
-assert_eq "$ppwh" 'null' \
-  'paranoid + crossProfileLogin: player.hashedPassword is null (lock lifted)'
-gpw=$(_debug_eval 'users.users.ghost.hashedPasswordFile' "$cross")
-assert_eq "$gpw" '"/persist/secrets/ghost-password.hash"' \
-  'paranoid + crossProfileLogin: ghost.hashedPasswordFile still set'
-gpw_d=$(_debug_eval_daily 'users.users.ghost.hashedPasswordFile' "$cross")
-assert_eq "$gpw_d" '"/persist/secrets/ghost-password.hash"' \
-  'daily + crossProfileLogin: ghost.hashedPasswordFile is set (cross-profile)'
-gpwh_d=$(_debug_eval_daily 'users.users.ghost.hashedPassword' "$cross")
-assert_eq "$gpwh_d" 'null' \
-  'daily + crossProfileLogin: ghost.hashedPassword is null (lock lifted)'
+daily_pwf_cross=$(_debug_eval 'users.users.test_daily.hashedPasswordFile' "$cross")
+assert_eq "$daily_pwf_cross" '"/persist/secrets/test_daily-password.hash"' \
+  'paranoid + crossProfileLogin: test_daily.hashedPasswordFile is set (cross-profile)'
+daily_pw_cross=$(_debug_eval 'users.users.test_daily.hashedPassword' "$cross")
+assert_eq "$daily_pw_cross" 'null' \
+  'paranoid + crossProfileLogin: test_daily.hashedPassword is null (lock lifted)'
+paranoid_pwf_cross=$(_debug_eval 'users.users.test_paranoid.hashedPasswordFile' "$cross")
+assert_eq "$paranoid_pwf_cross" '"/persist/secrets/test_paranoid-password.hash"' \
+  'paranoid + crossProfileLogin: test_paranoid.hashedPasswordFile still set'
+paranoid_pwf_cross_d=$(_debug_eval_daily 'users.users.test_paranoid.hashedPasswordFile' "$cross")
+assert_eq "$paranoid_pwf_cross_d" '"/persist/secrets/test_paranoid-password.hash"' \
+  'daily + crossProfileLogin: test_paranoid.hashedPasswordFile is set (cross-profile)'
+paranoid_pw_cross_d=$(_debug_eval_daily 'users.users.test_paranoid.hashedPassword' "$cross")
+assert_eq "$paranoid_pw_cross_d" 'null' \
+  'daily + crossProfileLogin: test_paranoid.hashedPassword is null (lock lifted)'
 
 describe "debug.paranoidWheel.enable: adds wheel + relaxes governance"
 wheel_mod='{ myOS.debug = { enable = true; paranoidWheel.enable = true; warnings.enable = false; }; }'
-ghost_groups_wheel=$(_debug_eval 'users.users.ghost.extraGroups' "$wheel_mod")
-if jq_cmd -e '. | index("wheel")' <<<"$ghost_groups_wheel" >/dev/null 2>&1; then
-  pass "paranoid + paranoidWheel: ghost has 'wheel' in extraGroups"
+paranoid_groups_wheel=$(_debug_eval 'users.users.test_paranoid.extraGroups' "$wheel_mod")
+if jq_cmd -e '. | index("wheel")' <<<"$paranoid_groups_wheel" >/dev/null 2>&1; then
+  pass "paranoid + paranoidWheel: test_paranoid has 'wheel' in extraGroups"
 else
-  fail "paranoid + paranoidWheel: ghost missing 'wheel' in extraGroups" "$ghost_groups_wheel"
+  fail "paranoid + paranoidWheel: test_paranoid missing 'wheel' in extraGroups" "$paranoid_groups_wheel"
 fi
 
 # With paranoidWheel on, the governance assertion should not fire.
@@ -180,20 +183,20 @@ fi
 describe "sub-flag without master gate is a no-op"
 # crossProfileLogin=true but enable=false: behaviour must match the default.
 sub_only='{ myOS.debug = { enable = false; crossProfileLogin.enable = true; }; }'
-ppw_noop=$(_debug_eval 'users.users.player.hashedPasswordFile' "$sub_only")
-assert_eq "$ppw_noop" 'null' \
-  'sub-flag without master gate: player.hashedPasswordFile still null on paranoid'
-ppwh_noop=$(_debug_eval 'users.users.player.hashedPassword' "$sub_only")
-assert_eq "$ppwh_noop" '"!"' \
-  'sub-flag without master gate: player.hashedPassword still "!" on paranoid'
+daily_pwf_noop=$(_debug_eval 'users.users.test_daily.hashedPasswordFile' "$sub_only")
+assert_eq "$daily_pwf_noop" 'null' \
+  'sub-flag without master gate: test_daily.hashedPasswordFile still null on paranoid'
+daily_pw_noop=$(_debug_eval 'users.users.test_daily.hashedPassword' "$sub_only")
+assert_eq "$daily_pw_noop" '"!"' \
+  'sub-flag without master gate: test_daily.hashedPassword still "!" on paranoid'
 
-# paranoidWheel=true but enable=false: ghost must still not be in wheel.
+# paranoidWheel=true but enable=false: test_paranoid must still not be in wheel.
 wheel_noop='{ myOS.debug = { enable = false; paranoidWheel.enable = true; }; }'
-ghost_groups_noop=$(_debug_eval 'users.users.ghost.extraGroups' "$wheel_noop")
-if jq_cmd -e '. | index("wheel")' <<<"$ghost_groups_noop" >/dev/null 2>&1; then
-  fail 'sub-flag without master gate: ghost has wheel' "$ghost_groups_noop"
+paranoid_groups_noop=$(_debug_eval 'users.users.test_paranoid.extraGroups' "$wheel_noop")
+if jq_cmd -e '. | index("wheel")' <<<"$paranoid_groups_noop" >/dev/null 2>&1; then
+  fail 'sub-flag without master gate: test_paranoid has wheel' "$paranoid_groups_noop"
 else
-  pass 'sub-flag without master gate: ghost still not in wheel'
+  pass 'sub-flag without master gate: test_paranoid still not in wheel'
 fi
 
 describe "warnings.enable: activation warning surface when relaxations are on"

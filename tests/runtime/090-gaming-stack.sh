@@ -1,10 +1,32 @@
 #!/usr/bin/env bash
-# Runtime: Steam + gamescope + gamemode + NT sync on daily only.
+# Runtime: Steam + gamescope + gamemode + NT sync.
+# Template-agnostic: checks myOS.gaming.enable instead of profile name.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
-needs_profile daily
+# Check if gaming is enabled in this configuration
+gaming_enabled=$(config_value "myOS.gaming.enable" | jq_cmd -r 'select(type=="boolean")')
+if [[ "$gaming_enabled" != "true" ]]; then
+  skip "myOS.gaming.enable != true - gaming not configured"
+  exit 0
+fi
 
-describe "Steam + steam-run wrappers"
+# Discover active users (template-agnostic)
+mapfile -t active_users < <(detect_active_users)
+
+if [[ ${#active_users[@]} -eq 0 ]]; then
+  warn "no active users found"
+  daily_user=""  # Will fall back to checks without user verification
+else
+  daily_user="${active_users[0]}"
+  info "testing with active user: $daily_user"
+fi
+
+describe "Steam + steam-run wrappers (myOS.gaming.steam.enable)"
+steam_enabled=$(config_value "myOS.gaming.steam.enable" | jq_cmd -r 'select(type=="boolean")')
+if [[ "$steam_enabled" != "true" ]]; then
+  info "myOS.gaming.steam.enable != true - Steam not configured"
+fi
+
 for c in steam steam-run; do
   if command -v "$c" >/dev/null 2>&1; then
     pass "$c in PATH"
@@ -13,7 +35,7 @@ for c in steam steam-run; do
   fi
 done
 
-describe "gamescope + gamemode"
+describe "gamescope + gamemode (myOS.gaming.gamescope/gamemode.enable)"
 for c in gamescope gamemoderun; do
   if command -v "$c" >/dev/null 2>&1; then
     pass "$c in PATH"
@@ -47,7 +69,8 @@ assert_sysctl "kernel.sched_cfs_bandwidth_slice_us"   "3000"
 assert_sysctl "kernel.split_lock_mitigate"            "0"
 assert_sysctl "kernel.sched_rt_runtime_us"            "-1"
 
-describe "NT sync kernel module"
+describe "NT sync kernel module (gaming feature)"
+# NT sync is a gaming feature, enabled via myOS.gaming.* options
 assert_module_loaded ntsync
 if [[ -c /dev/ntsync ]]; then
   pass "/dev/ntsync exists"
@@ -64,20 +87,24 @@ else
 fi
 if getent group gamemode >/dev/null; then
   pass "gamemode group exists"
-  if id -nG player | grep -qw gamemode; then
-    pass "player is in gamemode group"
-  else
-    fail "player missing from gamemode group"
+  if [[ -n "$daily_user" ]]; then
+    if id -nG "$daily_user" | grep -qw gamemode; then
+      pass "$daily_user is in gamemode group"
+    else
+      fail "$daily_user missing from gamemode group"
+    fi
   fi
 else
   fail "gamemode group missing"
 fi
 if getent group realtime >/dev/null; then
   pass "realtime group exists"
-  if id -nG player | grep -qw realtime; then
-    pass "player is in realtime group"
-  else
-    fail "player missing from realtime group (VR RT prio)"
+  if [[ -n "$daily_user" ]]; then
+    if id -nG "$daily_user" | grep -qw realtime; then
+      pass "$daily_user is in realtime group"
+    else
+      fail "$daily_user missing from realtime group (VR RT prio)"
+    fi
   fi
 else
   fail "realtime group missing"

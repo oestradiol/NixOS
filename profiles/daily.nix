@@ -6,8 +6,8 @@
   myOS.gpu = lib.mkForce "nvidia";
   myOS.desktopEnvironment = lib.mkForce "plasma";
 
-  # home-manager binding for player is now owned by templates/default/accounts/player.nix
-  # via myOS.users.player.homeManagerConfig (activated on active profiles).
+  # home-manager binding for daily-profile users is owned by the template's
+  # accounts/*.nix files via myOS.users.<name>.homeManagerConfig.
 
   myOS.gaming = {
     enable = lib.mkForce true;          # master gate for the gaming stack
@@ -17,6 +17,13 @@
   };
 
   myOS.storage.swap.enable = lib.mkForce true;
+
+  # Daily networking features
+  myOS.networking.wakeOnLan.enable = lib.mkForce true;
+  myOS.networking.mullvadAppMode.enable = lib.mkForce true;
+
+  # Relaxed privacy posture for compatibility
+  myOS.privacy.posture = lib.mkForce "relaxed";
 
   myOS.security = {
     impermanence.enable = lib.mkForce true;

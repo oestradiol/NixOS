@@ -63,9 +63,8 @@ Post-stability work can add:
 
 ## 7. Electron app sandboxing
 Current state:
-- VRCX and Windsurf (Electron apps) fail in bubblewrap sandbox despite --no-sandbox, /dev/shm, /tmp access
-- VRCX crashes with ThreadPoolForeg error
-- Windsurf fails to launch GUI despite process running
+- Electron apps fail in bubblewrap sandbox despite --no-sandbox, /dev/shm, /tmp access
+- Common failures: ThreadPoolForeg errors, GUI launch failures despite process running
 - Wrappers disabled and deferred 2026-04-16
 
 Post-stability work:

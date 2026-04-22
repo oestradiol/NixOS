@@ -23,7 +23,7 @@ claim() {
 }
 
 describe "HARDENING-TRACKER documented states"
-claim "two-account split (\`ghost\` / \`player\`)" "baseline"
+claim "two-axis profile+user model" "baseline"
 claim "root account locked" "baseline"
 claim "profile-user binding via account locking" "baseline"
 claim "PAM profile-binding" "rejected"

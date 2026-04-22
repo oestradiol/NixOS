@@ -8,7 +8,7 @@
 # and every such draft tripped sudo / su / login on target hardware.
 #
 # The current profile/user binding policy is enforced by **account locking**
-# (see modules/core/users.nix: daily locks `ghost`, paranoid locks `player`),
+# (see modules/core/users.nix: each profile locks users not active on it),
 # which is simpler, safer, and achieves the same effect. See
 # docs/maps/HARDENING-TRACKER.md row "PAM profile-binding" (rejected).
 #
@@ -19,7 +19,7 @@
     type = lib.types.bool;
     default = false;
     description = ''
-      EXPERIMENTAL: Enforce user/profile binding via PAM (daily=player, paranoid=ghost).
+      EXPERIMENTAL: Enforce user/profile binding via PAM (deprecated, use account locking).
     '';
   };
 

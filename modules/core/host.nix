@@ -43,6 +43,24 @@
         different hardware must override this (e.g. `eno1`, `enp2s0`).
       '';
     };
+
+    networking.wakeOnLan.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable Wake-on-LAN on the primary interface. Opens UDP 9 for WoL
+        compatibility on the LAN interface only.
+      '';
+    };
+
+    networking.mullvadAppMode.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Use Mullvad VPN app mode (GUI + daemon) instead of self-owned WireGuard.
+        Disabled automatically when using self-owned WireGuard path.
+      '';
+    };
   };
 
   config = {

@@ -78,10 +78,11 @@ Check:
 
 If debugging, change one wrapper surface at a time.
 
-## 10. `safe-vrcx` or `safe-windsurf` fails
+## 10. Electron app wrapper fails
 Check:
 - portal/file chooser path
 - D-Bus filtering assumptions
+- app-specific Electron flags (e.g., --no-sandbox, --disable-gpu)
 - X11/Wayland compatibility
 - wrapper persistence assumptions
 
@@ -95,11 +96,11 @@ Check:
 
 ## 12. Cross-profile filesystem isolation looks wrong
 Check:
-- `mountpoint /home/player`
-- `mountpoint /home/ghost`
-- `mountpoint /persist/home/ghost`
+- `mountpoint /home/<daily-user>`
+- `mountpoint /home/<paranoid-user>`
+- `mountpoint /persist/home/<paranoid-user>`
 - `systemctl status profile-mount-invariants`
 
 Expected:
-- daily: `/home/player` mounted, `/home/ghost` and `/persist/home/ghost` not mounted
-- paranoid: `/home/ghost` and `/persist/home/ghost` mounted, `/home/player` not mounted
+- daily: daily user home mounted, paranoid user home paths not mounted
+- paranoid: paranoid user home and persist paths mounted, daily user home not mounted

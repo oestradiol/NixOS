@@ -6,10 +6,51 @@ the upstream repo's paranoid + daily specialisation split.
 
 ## Bootstrap
 
+### Quick Start (Existing NixOS System)
+
+If you already have NixOS installed and want to switch to this framework:
+
 ```bash
 nix flake init -t github:oestradiol/NixOS#workstation
 $EDITOR flake.nix               # hostName, GPU, user identity
 sudo nixos-rebuild switch --flake .#workstation
+```
+
+### New Install (From NixOS Installer ISO)
+
+Use the guided install script:
+
+```bash
+# From NixOS installer, fetch and run the install script
+curl -L -o rebuild-install.sh https://raw.githubusercontent.com/oestradiol/NixOS/main/scripts/rebuild-install.sh
+chmod +x rebuild-install.sh
+sudo ./rebuild-install.sh
+
+# The script will:
+# - Ask for this template (templates/workstation)
+# - Ask for the workstation nixosConfiguration
+# - Format disk (EFI + LUKS + Btrfs)
+# - Generate hardware config
+# - Prompt for user password
+# - Run nixos-install
+```
+
+See `docs/pipeline/INSTALL-GUIDE.md` for detailed phase-by-phase documentation.
+
+### Manual Install
+
+If you prefer manual control over the install process:
+
+```bash
+# 1. Partition: EFI + LUKS2 root
+# 2. Open LUKS and create Btrfs filesystem
+# 3. Create subvolumes: @nix, @persist, @log
+# 4. Mount tmpfs root and Btrfs subvolumes
+# 5. Stage this template to /mnt/etc/nixos
+# 6. Generate hardware-target.nix
+# 7. nixos-install --flake /mnt/etc/nixos#workstation
+
+# See INSTALL-GUIDE.md for full manual steps
 ```
 
 ## What you get

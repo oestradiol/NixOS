@@ -1,8 +1,25 @@
 #!/usr/bin/env bash
-# Runtime: Bluetooth + controller plumbing (daily only).
+# Runtime: Bluetooth + controller plumbing.
+# Template-agnostic: checks myOS.gaming.controllers.enable instead of profile.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
-needs_profile daily
+# Check if controllers feature is enabled
+controllers_enabled=$(config_value "myOS.gaming.controllers.enable" | jq_cmd -r 'select(type=="boolean")')
+if [[ "$controllers_enabled" != "true" ]]; then
+  skip "myOS.gaming.controllers.enable != true - controllers not configured"
+  exit 0
+fi
+
+# Discover active users (template-agnostic)
+mapfile -t active_users < <(detect_active_users)
+
+if [[ ${#active_users[@]} -eq 0 ]]; then
+  warn "no active users found"
+  daily_user=""
+else
+  daily_user="${active_users[0]}"
+  info "testing with active user: $daily_user"
+fi
 
 describe "bluetooth stack"
 # bluetooth.service should be active if a bluetooth adapter is present
@@ -80,11 +97,15 @@ else
   warn "/dev/uinput not present (may appear only when uinput module loads)"
 fi
 
-describe "player is in input/render/audio/video groups"
-for g in input render audio video networkmanager; do
-  if id -nG player | grep -qw "$g"; then
-    pass "player in $g"
-  else
-    fail "player missing from $g group"
-  fi
-done
+describe "active daily user is in input/render/audio/video groups"
+if [[ -z "$daily_user" ]]; then
+  skip "no daily user found - cannot verify group membership"
+else
+  for g in input render audio video networkmanager; do
+    if id -nG "$daily_user" | grep -qw "$g"; then
+      pass "$daily_user in $g"
+    else
+      fail "$daily_user missing from $g group"
+    fi
+  done
+fi

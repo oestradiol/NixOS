@@ -1,7 +1,5 @@
 { config, lib, pkgs, ... }:
 let
-  daily = config.myOS.profile == "daily";
-  paranoid = config.myOS.profile == "paranoid";
   scanCfg = config.myOS.security.scanners;
   scannerOptions = {
     options.myOS.security.scanners = {
@@ -98,8 +96,8 @@ let
   '';
 in {
   inherit (scannerOptions) options;
-  config = lib.mkIf (daily || paranoid) {
-    # --- DAILY IMPERMANENCE SCAN ---
+  config = lib.mkIf (scanCfg.clamav.enable || scanCfg.aide.enable) {
+    # --- IMPERMANENCE SCAN ---
     # Daily scan of all durable state - critical for security
     # Focuses on paths where malware or tampering can survive a reboot.
     systemd.services.clamav-impermanence-scan = lib.mkIf scanCfg.clamav.enable {

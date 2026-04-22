@@ -59,19 +59,83 @@ else
   fail "myOS.storage options missing from storage-layout.nix"
 fi
 
-describe "reference profile home mounts stay structurally correct"
-assert_eq "$(nix_eval_daily 'fileSystems./home/player.fsType')" '"btrfs"' "daily: player home is persistent btrfs"
-assert_eq "$(nix_eval_daily 'fileSystems./persist/home/ghost.fsType')" 'null' "daily: ghost backing home is absent"
-assert_eq "$(nix_eval 'fileSystems./home/player.fsType')" 'null' "paranoid: player home is absent"
-assert_eq "$(nix_eval 'fileSystems./home/ghost.fsType')" '"tmpfs"' "paranoid: ghost home is tmpfs"
-assert_eq "$(nix_eval 'fileSystems./persist/home/ghost.fsType')" '"btrfs"' "paranoid: ghost backing home is persistent btrfs"
+describe "profile home mounts are structurally correct (template-agnostic)"
+# Discover users from the framework's myOS.users configuration
+user_names_json=$(nix_eval 'myOS.users.__names')
+if [[ "$user_names_json" == "null" || "$user_names_json" == "[]" ]]; then
+  fail "no users declared in myOS.users"
+  exit 1
+fi
+
+# For each user, verify their home mount matches their persistence configuration
+mapfile -t all_users < <(echo "$user_names_json" | jq_cmd -r '.[]')
+for u in "${all_users[@]}"; do
+  active_paranoid=$(nix_eval "myOS.users.${u}._activeOn")
+  active_daily=$(nix_eval_daily "myOS.users.${u}._activeOn")
+  persistent=$(nix_eval "myOS.users.${u}.home.persistent")
+
+  # Check paranoid profile mount state
+  if [[ "$active_paranoid" == "true" ]]; then
+    # User is active on paranoid - their home should be mounted
+    fs_type=$(nix_eval "fileSystems./home/${u}.fsType")
+    if [[ "$persistent" == "true" ]]; then
+      assert_eq "$fs_type" '"btrfs"' "paranoid: ${u} home (persistent) is btrfs"
+    else
+      assert_eq "$fs_type" '"tmpfs"' "paranoid: ${u} home (tmpfs) is tmpfs"
+      # Check backing store for tmpfs homes
+      backing=$(nix_eval "fileSystems./persist/home/${u}.fsType")
+      assert_eq "$backing" '"btrfs"' "paranoid: ${u} backing home is persistent btrfs"
+    fi
+  else
+    # User is inactive on paranoid - their home should be absent
+    fs_type=$(nix_eval "fileSystems./home/${u}.fsType")
+    assert_eq "$fs_type" 'null' "paranoid: ${u} home is absent (inactive)"
+  fi
+
+  # Check daily profile mount state
+  if [[ "$active_daily" == "true" ]]; then
+    fs_type_daily=$(nix_eval_daily "fileSystems./home/${u}.fsType")
+    # Daily typically has persistent homes for active users
+    if [[ "$persistent" == "true" ]]; then
+      assert_eq "$fs_type_daily" '"btrfs"' "daily: ${u} home (persistent) is btrfs"
+    fi
+  else
+    # User inactive on daily - backing home should be absent if it's a tmpfs user
+    if [[ "$persistent" == "false" ]]; then
+      backing_daily=$(nix_eval_daily "fileSystems./persist/home/${u}.fsType")
+      assert_eq "$backing_daily" 'null' "daily: ${u} backing home is absent (tmpfs user inactive)"
+    fi
+  fi
+done
+pass "home mount structure validated for all users"
 
 describe "profile-mount-invariants script checks inactive mounts"
 daily_script=$(nix_eval_daily 'systemd.services.profile-mount-invariants.script')
-assert_contains "$daily_script" "! mountpoint -q /home/ghost || exit 1" "daily script forbids /home/ghost"
-assert_contains "$daily_script" "! mountpoint -q /persist/home/ghost || exit 1" "daily script forbids /persist/home/ghost"
 paranoid_script=$(nix_eval 'systemd.services.profile-mount-invariants.script')
-assert_contains "$paranoid_script" "! mountpoint -q /home/player || exit 1" "paranoid script forbids /home/player"
+
+# Verify scripts check for inactive users on each profile
+for u in "${all_users[@]}"; do
+  active_paranoid=$(nix_eval "myOS.users.${u}._activeOn")
+  active_daily=$(nix_eval_daily "myOS.users.${u}._activeOn")
+
+  if [[ "$active_daily" != "true" ]]; then
+    # User inactive on daily - daily script should forbid their home
+    if [[ "$daily_script" == *"! mountpoint -q /home/${u}"* ]]; then
+      pass "daily script forbids /home/${u} (inactive user)"
+    else
+      fail "daily script missing check for inactive user /home/${u}"
+    fi
+  fi
+
+  if [[ "$active_paranoid" != "true" ]]; then
+    # User inactive on paranoid - paranoid script should forbid their home
+    if [[ "$paranoid_script" == *"! mountpoint -q /home/${u}"* ]]; then
+      pass "paranoid script forbids /home/${u} (inactive user)"
+    else
+      fail "paranoid script missing check for inactive user /home/${u}"
+    fi
+  fi
+done
 
 describe "disk-backed swap is gated by myOS.storage.swap.enable"
 assert_eq "$(nix_eval 'myOS.storage.swap.enable')" 'false' "paranoid: disk-backed swap disabled by default"

@@ -10,6 +10,14 @@ else
 fi
 
 describe "/etc/aide.conf contents match policy"
+# Discover users from config
+user_names_json=$(config_value "myOS.users.__names")
+if [[ "$user_names_json" == "null" || "$user_names_json" == "[]" ]]; then
+  fail "no users declared in myOS.users (framework misconfiguration)"
+  exit 1
+fi
+mapfile -t all_users < <(echo "$user_names_json" | jq_cmd -r '.[]')
+
 if [[ -r /etc/aide.conf ]]; then
   pass "/etc/aide.conf readable"
   # Must include boot chain + profile links + persisted identity surfaces.
@@ -36,13 +44,11 @@ if [[ -r /etc/aide.conf ]]; then
     fi
   done
   # Must NOT include noisy home/app/log trees.
-  forbidden=(
-    "/home/player "
-    "/home/ghost "
-    "/var/log "
-    "/tmp "
-    "/var/tmp "
-  )
+  # Build forbidden list from user names + standard noisy paths
+  forbidden=("/var/log " "/tmp " "/var/tmp ")
+  for u in "${all_users[@]}"; do
+    forbidden+=("/home/$u ")
+  done
   for f in "${forbidden[@]}"; do
     if grep -Fq "$f" /etc/aide.conf; then
       fail "aide.conf watches noisy path: $f"

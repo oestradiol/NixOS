@@ -7,12 +7,18 @@
   myOS.gpu = "nvidia";
   myOS.desktopEnvironment = "plasma";
 
-  # home-manager binding for ghost is now owned by templates/default/accounts/ghost.nix
-  # via myOS.users.ghost.homeManagerConfig (activated on active profiles).
+  # home-manager binding for paranoid-profile users is owned by the template's
+  # accounts/*.nix files via myOS.users.<name>.homeManagerConfig.
 
   myOS.gaming = {
     controllers.enable = false;
   };
+
+  # High privacy posture for anti-fingerprinting
+  myOS.privacy.posture = "high";
+
+  # Paranoid uses self-owned WireGuard (staged), not Mullvad app mode
+  myOS.networking.mullvadAppMode.enable = false;
 
   myOS.security = {
     impermanence.enable = true;

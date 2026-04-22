@@ -2,8 +2,8 @@
 # Regression test for Bug B1: `flake-switch` not specialisation-aware.
 #
 # Symptom: from inside a booted daily session, running `flake-switch` silently
-# swaps the live config to paranoid, which tries to stop home-player.mount
-# while player is logged in. profile-mount-invariants then fails and the
+# swaps the live config to paranoid, which tries to stop the daily user's home mount
+# while they are logged in. profile-mount-invariants then fails and the
 # activation exits rc=4 (see switch.log:49-67).
 #
 # Root cause: a single alias `flake-switch = nixos-rebuild switch --flake .#nixos`

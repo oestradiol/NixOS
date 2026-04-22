@@ -6,7 +6,7 @@ This file maps the current repo security model. It is not a proof document.
 
 ### Claims the repo can reasonably make
 - root is ephemeral when impermanence is enabled
-- `player` and `ghost` have distinct home models
+- users active on different profiles have distinct home persistence models (template-defined)
 - inactive profile home filesystems are not mounted, and boot-time invariants check that separation
 - the paranoid profile defaults to sandboxed browsers
 - daily uses normal Firefox with repo-managed enterprise policies
@@ -72,7 +72,7 @@ Daily uses normal Firefox instead of sandboxed browsers for its main browser pat
 Daily re-enables X11 inside wrappers for compatibility.
 
 ### 3.3 `sandbox.apps = true`
-Daily enables wrapped non-Flatpak apps like VRCX and Windsurf.
+Daily enables wrapped non-Flatpak apps via the sandbox framework.
 
 ### 3.4 `sandbox.vms = false`
 Daily disables the VM tooling layer.

@@ -65,8 +65,7 @@ describe "account-locking invariants in users.nix"
 # Profile-user binding via account locking is the canonical mechanism.
 # The conditions carry a debug-mode escape hatch (crossProfile) that lifts
 # both locks together; default state (crossProfile=false) preserves the
-# original paranoid↔ghost / daily↔player binding.
-# Stage 4b generalized this: active users (u._activeOn) get hashedPasswordFile,
+# binding where active users on a profile get hashedPasswordFile and
 # inactive users get the locked "!" sentinel.
 if grep -Fq 'hashedPasswordFile = lib.mkIf (u._activeOn || crossProfile)' "$users_nix" \
    && grep -Fq 'hashedPassword = lib.mkIf (!u._activeOn && !crossProfile) "!"' "$users_nix"; then

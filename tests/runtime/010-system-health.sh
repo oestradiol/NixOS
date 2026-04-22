@@ -53,7 +53,7 @@ describe "journal: no boot-level errors from critical subsystems"
 # as info only (every desktop produces some).
 crit=$(journalctl -b -p 3 --no-pager 2>/dev/null \
   | grep -v 'run-user-' \
-  | grep -v 'Failed to stop home-player.mount' \
+  | grep -vE 'Failed to stop home-[^/]+\.mount' \
   || true)
 if [[ -z "$crit" ]]; then
   pass "no err/crit entries since boot"
