@@ -1,8 +1,6 @@
 { config, osConfig, pkgs, lib, inputs, ... }:
 let
-  # Stage 5: git identity is read from the framework's per-user identity
-  # options (populated by a gitignored accounts/<name>.local.nix). The
-  # tracked tree carries no personal identity.
+  # Git identity is read from the framework's per-user identity options.
   userCfg = osConfig.myOS.users.${config.home.username} or { };
   gitName  = userCfg.identity.git.name  or null;
   gitEmail = userCfg.identity.git.email or null;

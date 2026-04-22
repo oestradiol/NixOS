@@ -214,8 +214,6 @@ perUserEntries //
   "myOS.host.timeZone"                                 = try cfg.myOS.host.timeZone;
   "myOS.host.defaultLocale"                            = try cfg.myOS.host.defaultLocale;
   "myOS.networking.primaryInterface"                   = try cfg.myOS.networking.primaryInterface;
-  "myOS.autoUpdate.enable"                             = try cfg.myOS.autoUpdate.enable;
-  "myOS.autoUpdate.repoPath"                           = try cfg.myOS.autoUpdate.repoPath;
   "myOS.privacy.posture"                               = try cfg.myOS.privacy.posture;
   "myOS.security.vm.storageRoot"                       = try cfg.myOS.security.vm.storageRoot;
   "myOS.security.vm.natNetworkName"                  = try cfg.myOS.security.vm.natNetworkName;

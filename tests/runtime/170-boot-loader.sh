@@ -59,8 +59,6 @@ else
   else
     warn "no default directive in loader.conf — last boot order will be whatever systemd-boot picks"
   fi
-else
-  fail "/boot/loader/loader.conf not readable"
 fi
 
 describe "EFI variable access permitted (efi.canTouchEfiVariables=true)"

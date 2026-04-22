@@ -70,7 +70,7 @@ for u in "${all_users[@]}"; do
     if [[ "$persistent" == "true" ]]; then
       # Persistent home should be a Btrfs subvolume
       # Subvolume name may be @home-<username> OR @home-<profile> (e.g., @home-daily)
-      local opts; opts=$(findmnt -n -o OPTIONS "/home/$u" 2>/dev/null || true)
+      opts=$(findmnt -n -o OPTIONS "/home/$u" 2>/dev/null || true)
       if [[ "$opts" == *"subvol=/@home-${u}"* || "$opts" == *"subvol=@home-${u}"* ]]; then
         pass "/home/$u -> subvol @home-${u}"
       elif [[ "$opts" == *"subvol=/@home-${profile}"* || "$opts" == *"subvol=@home-${profile}"* ]]; then

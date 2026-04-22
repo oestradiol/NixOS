@@ -154,7 +154,7 @@ in {
           '';
         };
 
-        # ── Identity (populated by Stage 5 *.local.nix; default null) ─
+        # ── Identity (default null; set in account definition) ─
         identity = {
           git = {
             name = lib.mkOption {
@@ -186,14 +186,6 @@ in {
               When null, pactl chooses the default sink. Set when the
               operator's audio stack has several outputs and a specific
               one must receive the monitor stream.
-            '';
-          };
-          workspace.autoUpdateRepoPath = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = ''
-              Filesystem path to the user's flake clone. Consumed by
-              modules/desktop/auto-update.nix.
             '';
           };
         };

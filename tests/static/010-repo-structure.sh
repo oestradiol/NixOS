@@ -20,8 +20,6 @@ for f in \
     "$REPO_ROOT/templates/workstation/flake.nix" \
     "$REPO_ROOT/templates/workstation/README.md" \
     "$REPO_ROOT/templates/workstation/hardware-target.nix.example" \
-    "$REPO_ROOT/templates/workstation/identity.local.nix.example" \
-    "$REPO_ROOT/templates/workstation/local.nix.example" \
     "$REPO_ROOT/templates/default/flake.nix"; do
   assert_file "$f"
 done

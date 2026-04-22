@@ -136,22 +136,22 @@ done
 
 describe "git config for active users"
 for u in "${active_users[@]}"; do
-  git_config="/home/${u}/.config/git/config"
-  git_config_alt="/home/${u}/.gitconfig"
-  if command -v git >/dev/null 2>&1 && [[ -r "$git_config" || -r "$git_config_alt" ]]; then
-    gc=$( (cat "$git_config" "$git_config_alt" 2>/dev/null || true) )
+  if command -v git >/dev/null 2>&1; then
+    # Use git config command to read user identity (handles both .gitconfig and .config/git/config)
+    git_name=$(git -C "/home/${u}" config --get user.name 2>/dev/null || true)
+    git_email=$(git -C "/home/${u}" config --get user.email 2>/dev/null || true)
     # Check for git identity - any identity is acceptable, we just verify git is configured
-    if grep -q 'user.name' <<<"$gc" 2>/dev/null; then
+    if [[ -n "$git_name" ]]; then
       pass "${u}: git user.name configured"
     else
       warn "${u}: git user.name not configured"
     fi
-    if grep -q 'user.email' <<<"$gc" 2>/dev/null; then
+    if [[ -n "$git_email" ]]; then
       pass "${u}: git user.email configured"
     else
       warn "${u}: git user.email not configured"
     fi
   else
-    info "${u}: git config not accessible"
+    info "${u}: git not in PATH"
   fi
 done

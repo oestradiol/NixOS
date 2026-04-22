@@ -5,7 +5,6 @@ template layer. The guiding rule is:
 
 - framework modules own reusable policy
 - templates own host/account composition
-- local overrides should live in gitignored `*.local.nix`
 
 ## Common override surfaces
 
@@ -35,11 +34,6 @@ Reference patterns:
 - `templates/default/accounts/*.nix` for the two-account split
 - `templates/workstation/flake.nix` for a single-user inline declaration
 
-Identity and operator-local values belong in gitignored `*.local.nix` files alongside the tracked account definitions. The default template uses:
-
-- `templates/default/accounts/*.local.nix` (per-account identity)
-- `templates/workstation/identity.local.nix` (single-user template)
-
 ### `myOS.storage.*`
 
 The framework storage module lives at `modules/core/storage-layout.nix`.
@@ -57,8 +51,7 @@ Its defaults match the reference install layout:
 If your machine follows the default install conventions, you do not need
 to edit storage at all.
 
-If it differs, put overrides in a gitignored host-local file, for
-example:
+If it differs, override directly in your host configuration:
 
 ```nix
 { ... }:

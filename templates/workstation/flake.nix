@@ -31,7 +31,6 @@
   outputs = inputs@{ self, nixpkgs, hardening, agenix, lanzaboote, stylix, home-manager, impermanence, ... }:
     let
       hardwareTarget = ./hardware-target.nix;
-      identityLocal = ./identity.local.nix;
       localOverride = ./local.nix;
     in {
     nixosConfigurations.workstation = nixpkgs.lib.nixosSystem {
@@ -57,7 +56,6 @@
         hardening.nixosModules.desktop                   # base.nix: Plasma 6 + greetd
         hardening.nixosModules.desktop-plasma
         hardening.nixosModules.desktop-theme
-        hardening.nixosModules.desktop-auto-update
 
         hardening.nixosModules.gpu-nvidia                # swap for gpu-amd as needed
 
@@ -86,8 +84,6 @@
           myOS.host.timeZone = "Etc/UTC";
 
           # Declare a single permissive user on the daily posture.
-          # Replace the identity values with your own, ideally in a
-          # gitignored `./identity.local.nix` that this flake imports.
           myOS.users.alice = {
             activeOnProfiles = [ "daily" ];
             description      = "Primary user";
@@ -99,15 +95,10 @@
             identity.git.email = "ada@example.com";
           };
 
-          # Tracked file carries no identity. Put real values in the
-          # gitignored ./identity.local.nix override instead.
-          # imports = [ ./identity.local.nix ];
-
           system.stateVersion = "26.05";
         }
       ]
       ++ nixpkgs.lib.optional (builtins.pathExists hardwareTarget) hardwareTarget
-      ++ nixpkgs.lib.optional (builtins.pathExists identityLocal) identityLocal
       ++ nixpkgs.lib.optional (builtins.pathExists localOverride) localOverride;
     };
   };

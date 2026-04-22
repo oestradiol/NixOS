@@ -1,9 +1,0 @@
-# Sample: gitignored host-local overrides for the workstation template.
-{ ... }:
-{
-  # myOS.host.hostName = "my-workstation";
-  # myOS.host.timeZone = "America/Sao_Paulo";
-  # myOS.storage.devices.boot = "/dev/disk/by-label/MYBOOT";
-  # myOS.storage.devices.cryptroot = "/dev/disk/by-partlabel/MYCRYPT";
-  # myOS.storage.swap.enable = true;
-}

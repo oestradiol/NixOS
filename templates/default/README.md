@@ -25,15 +25,13 @@ templates/default/
 ├── flake.nix              # Entry point: nixosConfigurations.nixos
 ├── hosts/nixos/           # Host-specific configuration
 │   ├── default.nix        # Main host config, imports profiles
-│   ├── hardware-target.nix # CPU, kernel modules, firmware
-│   └── local.nix.example  # Template for local overrides
+│   └── hardware-target.nix # CPU, kernel modules, firmware
 └── accounts/              # User account definitions
     ├── ghost.nix          # Paranoid profile user
     ├── player.nix         # Daily profile user
-    ├── home/              # Home-manager configurations
-    │   ├── ghost.nix
-    │   └── player.nix
-    └── *.local.nix.example # Templates for identity overrides
+    └── home/              # Home-manager configurations
+        ├── ghost.nix
+        └── player.nix
 ```
 
 ## Quick start (for this repo's maintainer)
@@ -56,19 +54,12 @@ To use this as a starting point for your own machine:
    cp -r templates/default/* /your/new/nixos-config/
    ```
 
-2. **Edit identity files** (create from examples):
-   ```bash
-   cp templates/default/accounts/player.local.nix.example \
-      /your/config/accounts/player.local.nix
-   # Edit: git email, user name, any personal paths
-   ```
-
-3. **Keep or override the default storage model**:
+2. **Keep or override the default storage model**:
    - If you follow the framework install conventions, no storage edits are
      required: boot label `NIXBOOT`, encrypted root partlabel `NIXCRYPT`,
      Btrfs subvolumes `@nix`, `@persist`, `@log`, and optional `@swap`
-   - If your machine differs, override `myOS.storage.*` in
-     `hosts/nixos/local.nix`
+   - If your machine differs, override `myOS.storage.*` directly in the
+     host config
 
 4. **Adjust hardware** in `hosts/nixos/hardware-target.nix`:
    - CPU microcode (AMD vs Intel)
@@ -79,8 +70,8 @@ To use this as a starting point for your own machine:
 ## Framework boundary
 
 Files in this directory are **instance-specific**:
-- User identities (`accounts/*.local.nix`)
-- Storage device overrides and hardware quirks (`hosts/nixos/local.nix`)
+- User account definitions (`accounts/*.nix`)
+- Storage device overrides and hardware quirks (`hosts/nixos/`)
 - Hostname and system-specific wiring
 
 Framework code (reusable across instances) lives at repo root:
