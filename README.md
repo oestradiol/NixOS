@@ -1,63 +1,83 @@
-# NixOS hardening repo
+# NixOS hardening framework
 
-Single-host NixOS repo with one default hardened profile and one explicit daily specialization.
+A composable, production-ready NixOS hardening framework with orthogonal profile+user axes.
 
-This is a personal hardened-desktop configuration, not a distribution and not a turnkey template. It is designed to be **honest** about what it enforces, what is merely staged, and what remains the operator's responsibility. Read `docs/governance/PROJECT-STATE.md` before adapting any part of it to another machine.
+**Not a distribution** — this is a library of hardening modules plus reference templates. It is designed to be **honest** about what it enforces, what is merely staged, and what remains the operator's responsibility.
+
+## Quick Start by Persona
+
+| I want... | Start here | Template |
+|-----------|------------|----------|
+| A secure, private Linux workstation with minimal effort | [`templates/workstation/README.md`](templates/workstation/README.md) | Single-user daily profile |
+| Maximum privacy with paranoid+daily split | [`templates/default/README.md`](templates/default/README.md) | Two-user paranoid+daily |
+| Deep customization / my own template | [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md) + [`docs/maps/PROFILE-POLICY.md`](docs/maps/PROFILE-POLICY.md) | Build your own |
+| To debug issues or fix failures | [`docs/pipeline/RECOVERY.md`](docs/pipeline/RECOVERY.md) + [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) | Any |
+
+**New users**: Start with the workstation template for fastest path to a hardened system.
+**Privacy-focused users**: Use the default template for paranoid profile isolation.
+
+Read [`docs/governance/PROJECT-STATE.md`](docs/governance/PROJECT-STATE.md) before adapting any part to another machine.
 
 ## Current repo state
 - `paranoid`: default hardened workstation baseline
 - `daily`: boot specialization for gaming, social, and recovery-friendly use
-- one installation, two users, one encrypted Btrfs/tmpfs-root system
-- inactive profile home filesystems are not mounted; a boot-time invariant check verifies that the other profile's home mount is absent
+- orthogonal profile+user axes: profiles define system posture, users define identity/persistence
+- one encrypted Btrfs/tmpfs-root system with cross-profile mount isolation
 - current stable target = complete `docs/pipeline/INSTALL-GUIDE.md` + `docs/pipeline/TEST-PLAN.md` on the real target machine
 - `docs/pipeline/POST-STABILITY.md` is non-blocking follow-up work after the stable baseline is already usable on the machine
 
 ## Canonical profile policy
 - `base`: shared hardening substrate only; not a standalone bootable profile
-- `paranoid`: instantiates `base` for the `ghost` workstation with the strongest current workstation-safe hardening/privacy posture
-- `daily`: instantiates `base` for the `player` workstation and softens only the controls needed for socialization, gaming, and recovery-friendly daily use
-- `ghost` and `player`: the respective hardened and daily accounts
+- `paranoid`: strongest workstation-safe hardening/privacy posture (staged as `nixosModules.profile-paranoid`)
+- `daily`: softens only the controls needed for socialization, gaming, and recovery-friendly daily use (staged as `nixosModules.profile-daily`)
+- Users are declared via `myOS.users.<name>` with `activeOnProfiles` determining profile bindings
+- The default template demonstrates one daily-style user (persistent home, wheel) + one paranoid-style user (tmpfs home, no wheel)
 
-## Governance maps
+## Documentation map
 
-Read in this order for policy model:
-1. `docs/maps/PROFILE-POLICY.md`
-2. `docs/maps/HARDENING-TRACKER.md`
-3. `docs/maps/SOURCE-COVERAGE.md`
+**Navigation hub**: [`docs/README.md`](docs/README.md) — central index of all documentation.
 
-Use these files for:
-- what `base`, `paranoid`, `daily`, `ghost`, and `player` mean
-- which knobs are baseline, relaxed, staged, deferred, or rejected
-- where each decision lives in code
-- which external sources influenced the decision
+### For users (getting started)
+1. [`templates/workstation/README.md`](templates/workstation/README.md) or [`templates/default/README.md`](templates/default/README.md)
+2. [`docs/pipeline/INSTALL-GUIDE.md`](docs/pipeline/INSTALL-GUIDE.md)
+3. [`docs/CUSTOMIZATION.md`](docs/CUSTOMIZATION.md)
+4. [`docs/pipeline/RECOVERY.md`](docs/pipeline/RECOVERY.md) + [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md)
 
-## Truth surfaces
-For agent entry, read `AGENTS.md` first.
+### For framework developers (understanding the system)
 
-Read in this order:
-1. `PROJECT-STATE.md`
+**Policy model** (read in order):
+1. [`docs/maps/PROFILE-POLICY.md`](docs/maps/PROFILE-POLICY.md) — Profile governance (base/paranoid/daily)
+2. [`docs/maps/HARDENING-TRACKER.md`](docs/maps/HARDENING-TRACKER.md) — Every hardening knob and its state
+3. [`docs/maps/SOURCE-COVERAGE.md`](docs/maps/SOURCE-COVERAGE.md) — External source influence mapping
+
+**Verification**:
+- [`docs/maps/AUDIT-STATUS.md`](docs/maps/AUDIT-STATUS.md) — What's proven vs pending
+- [`docs/maps/FEATURES.md`](docs/maps/FEATURES.md) — Complete feature inventory
+- [`docs/pipeline/TEST-PLAN.md`](docs/pipeline/TEST-PLAN.md) — Validation checklist
+- [`docs/pipeline/POST-STABILITY.md`](docs/pipeline/POST-STABILITY.md) — Deferred work after baseline
+
+## For agents (automated entry)
+
+For agent/AI entry, read `AGENTS.md` first, then:
+1. [`docs/governance/PROJECT-STATE.md`](docs/governance/PROJECT-STATE.md)
 2. `REFERENCES.md`
-3. `docs/maps/AUDIT-STATUS.md`
-4. `docs/pipeline/INSTALL-GUIDE.md`
-5. `docs/pipeline/TEST-PLAN.md`
-6. `docs/pipeline/POST-STABILITY.md`
-7. `docs/pipeline/RECOVERY.md`
+3. [`docs/maps/AUDIT-STATUS.md`](docs/maps/AUDIT-STATUS.md)
+4. [`docs/pipeline/INSTALL-GUIDE.md`](docs/pipeline/INSTALL-GUIDE.md)
+5. [`docs/pipeline/TEST-PLAN.md`](docs/pipeline/TEST-PLAN.md)
+6. [`docs/pipeline/POST-STABILITY.md`](docs/pipeline/POST-STABILITY.md)
+7. [`docs/pipeline/RECOVERY.md`](docs/pipeline/RECOVERY.md)
 
-## Code-derived maps
-- feature inventory → `docs/maps/FEATURES.md`
-- hardening knob ledger → `docs/maps/HARDENING-TRACKER.md`
-- security boundary map → `docs/maps/SECURITY-SURFACES.md`
-- source audit → `docs/maps/SOURCE-COVERAGE.md`
+## Repo structure
 
-## Repo map
-- architecture / policy / constraints / support boundary → `docs/governance/PROJECT-STATE.md`
-- external source ledger → `REFERENCES.md`
-- audit coverage / validation state / backlog → `docs/maps/AUDIT-STATUS.md`
-- operational pipeline → `docs/pipeline/`
-- framework (reusable modules + profiles) → `modules/`, `profiles/`
-- reference implementation (host + accounts) → `templates/default/`
-- test suite (static / runtime / bugs) → `tests/` (`tests/README.md`)
-- helper scripts only → `scripts/`
+| Path | Purpose |
+|------|---------|
+| `modules/`, `profiles/` | Framework library (reusable NixOS modules) |
+| `templates/default/` | Reference implementation (paranoid+daily split) |
+| `templates/workstation/` | Minimal single-user template |
+| `docs/` | Documentation hub |
+| `tests/` | Test suite (`tests/run.sh`) |
+| `scripts/` | Helper scripts only |
+| `flake.nix` | Framework exports (40 `nixosModules.*` outputs) |
 
 ## Framework consumption (Stage 6+)
 
@@ -88,18 +108,17 @@ Import only the hardening surface you need:
   };
 }
 ```
-All 41 `nixosModules.*` outputs are documented in `flake.nix`.
+All 40 `nixosModules.*` outputs are documented in `flake.nix`.
 
 ### C. Fork-and-own (full adaptation)
 Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `templates/default/hosts/`, `templates/default/accounts/`, and `*.local.nix` are your instance.
 
 ### Identity separation
-Operator-specific values (git email, mic aliases, repo paths) live in gitignored `*.local.nix` files:
-- `templates/default/accounts/player.local.nix` (created from `templates/default/accounts/player.local.nix.example`)
-- `templates/default/accounts/ghost.local.nix` (optional)
+Operator-specific values (git email, mic aliases, repo paths) live in gitignored `*.local.nix` files alongside the tracked account definitions:
+- `templates/default/accounts/*.local.nix` (per-account identity; the default template demonstrates this pattern)
 - `templates/default/hosts/nixos/local.nix` (system-level hardware quirks)
 
-Tracked files contain only framework-level defaults and structural wiring.
+Tracked files contain only framework-level defaults and structural wiring. Forks may use any user naming scheme.
 
 ## Operator-local overrides
 `templates/default/hosts/nixos/default.nix` conditionally imports `local.nix` when that file exists. The path is **gitignored** and is the right place for per-install hardware quirks (external-drive UUIDs, experimental toggles, transient workarounds) that must never be published. If the file is absent, the import list is a no-op.

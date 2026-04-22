@@ -73,12 +73,11 @@ for f in \
   assert_file "$f"
 done
 
-describe "template account home configs"
-for f in \
-    "$REPO_ROOT/templates/default/accounts/home/ghost.nix" \
-    "$REPO_ROOT/templates/default/accounts/home/player.nix"; do
-  assert_file "$f"
-done
+describe "template account structure"
+# Verify templates exist for forker reference; specific user names (like
+# ghost/player in the default template) are template-specific choices, not
+# framework requirements. Users may define any account names in their templates.
+assert_dir "$REPO_ROOT/templates/default/accounts/home"
 
 describe "security modules (fifteen files per NIX-IMPORT-TREE)"
 for f in \

@@ -4,7 +4,6 @@ let
   impermanenceEnabled = config.myOS.security.impermanence.enable;
   persistMachineId = config.myOS.security.persistMachineId;
   machineIdValue = config.myOS.security.machineIdValue;
-  profile = config.myOS.profile;
 in {
   options.myOS.security = {
     impermanence.enable = lib.mkEnableOption "tmpfs root + explicit persistence";
@@ -47,15 +46,17 @@ in {
           "/etc/NetworkManager/system-connections"
           "/var/lib/flatpak"
         ]
-        # Daily-only persistence: Bluetooth (controllers), Mullvad app state
-        ++ lib.optionals (profile == "daily") [
+        # Gaming/Bluetooth state: persist if controllers or bluetooth are enabled
+        ++ lib.optionals (config.myOS.gaming.controllers.enable or config.services.bluetooth.enable) [
           "/var/lib/bluetooth"
+        ]
+        # VPN state: persist if Mullvad is enabled
+        ++ lib.optionals config.services.mullvad-vpn.enable [
           "/var/lib/mullvad-vpn"
           "/etc/mullvad-vpn"
         ]
-        # NetworkManager full state: daily gets persistence (operational stability for Wi-Fi leases)
-        # paranoid gets minimal (connections only, state regenerates)
-        ++ lib.optionals (profile == "daily") [
+        # NetworkManager full state: persist when enabled (for Wi-Fi lease stability)
+        ++ lib.optionals config.networking.networkmanager.enable [
           "/var/lib/NetworkManager"
         ];
 

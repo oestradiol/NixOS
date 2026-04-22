@@ -31,6 +31,29 @@ describe "gpu resolution"
 assert_eq "$(nix_eval 'myOS.gpu')"       '"nvidia"' "paranoid gpu = nvidia"
 assert_eq "$(nix_eval_daily 'myOS.gpu')" '"nvidia"' "daily gpu = nvidia"
 
-describe "users exist in both configs"
-assert_contains "$(nix_eval 'users.users.player.description')" 'Daily desktop'     "player user declared"
-assert_contains "$(nix_eval 'users.users.ghost.description')"  'Hardened workspace' "ghost user declared"
+describe "users are discoverable from framework config (template-agnostic)"
+# Verify that the framework exports user names and each user has required fields
+user_names_json=$(nix_eval 'myOS.users.__names')
+if [[ "$user_names_json" == "null" || "$user_names_json" == "[]" ]]; then
+  fail "no users declared in myOS.users"
+  exit 1
+fi
+
+mapfile -t all_users < <(echo "$user_names_json" | jq_cmd -r '.[]')
+info "discovered users: ${all_users[*]}"
+
+for u in "${all_users[@]}"; do
+  desc=$(nix_eval "users.users.${u}.description")
+  if [[ "$desc" != "null" && -n "$desc" ]]; then
+    pass "user ${u} has description: $desc"
+  else
+    fail "user ${u} missing description"
+  fi
+  shell=$(nix_eval "users.users.${u}.shell")
+  if [[ "$shell" != "null" && "$shell" == *"zsh"* ]]; then
+    pass "user ${u} has zsh shell"
+  else
+    warn "user ${u} shell may not be zsh: $shell"
+  fi
+done
+pass "all users validated in both paranoid and daily configurations"

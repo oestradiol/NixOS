@@ -21,19 +21,21 @@ This is what the repo currently contains.
 
 ### Users and identity
 
-* `player` = daily user
-* `ghost` = hardened user
+* Two-axis model: system profile + user persona declared via `myOS.users.<name>`
+* Daily-style users: persistent home (`home.persistent = true`), wheel group allowed
+* Paranoid-style users: tmpfs home (`home.persistent = false`), no wheel by default
 * immutable users (declarative password management via hashedPasswordFile)
 * root account lock path supported
 * `sudo` wheel restriction when root is locked
 * persisted identity files via impermanence
 * machine-id persistence model present
+* Profile-user binding enforced via account locking (active users unlocked, inactive locked)
 
 ### Debug mode (`myOS.debug.*`)
 
 * master gate `myOS.debug.enable` (default OFF); sub-flags are no-ops without it
 * `myOS.debug.crossProfileLogin.enable`: sets `hashedPasswordFile` on both accounts regardless of profile (relaxes the profile-user account-lock binding)
-* `myOS.debug.paranoidWheel.enable`: adds `"wheel"` to ghost's `extraGroups` on paranoid and skips the matching governance assertion
+* `myOS.debug.paranoidWheel.enable`: adds `"wheel"` to paranoid users regardless of `allowWheel` setting, skipping the governance assertion
 * `myOS.debug.warnings.enable` (default ON): emits a NixOS activation warning per active relaxation, so debug state is visible on every rebuild
 * intended for local debugging and recovery only; must be off on any stable baseline or published fork
 
@@ -93,19 +95,17 @@ This is what the repo currently contains.
 * `/nix` on Btrfs `@nix`
 * `/persist` on Btrfs `@persist`
 * `/var/log` on Btrfs `@log`
-* paranoid:
+* paranoid-style users:
 
-  * `/home/ghost` on tmpfs
-  * `/persist/home/ghost` on Btrfs `@home-paranoid`
-* daily:
+  * tmpfs home with allowlisted persistence
+  * Btrfs `@home-paranoid` subvolume for persisted paths
+* daily-style users:
 
-  * `/home/player` on Btrfs `@home-daily`
-  * `/swap` on Btrfs `@swap`
-  * 8 GiB swapfile
+  * Btrfs `@home-daily` subvolume for persistent home
+  * `/swap` on Btrfs `@swap` with swapfile
 * boot-time mount invariant service:
 
-  * daily must not mount ghost home surfaces
-  * paranoid must not mount player home surface
+  * prevents cross-profile home mounts from being active simultaneously
 
 ### Desktop and session
 
@@ -250,9 +250,8 @@ This is what the repo currently contains.
 
 ### Daily app wrappers
 
-* `safe-vrcx`
-* `safe-windsurf`
-* desktop launchers for both
+* Sandbox wrappers for non-Flatpak Electron apps (template-specific)
+* desktop launchers
 * file chooser / portal talk allowances
 * persisted config/data/cache per app
 
@@ -308,7 +307,7 @@ This is what the repo currently contains.
 ### Paranoid
 
 * default boot profile
-* `ghost` user model
+* paranoid-style user model (tmpfs home, no wheel, locked-down)
 * tmpfs home + allowlisted persistence
 * sandboxed browsers on
 * sandboxed apps off
@@ -332,7 +331,7 @@ This is what the repo currently contains.
 ### Daily
 
 * specialization
-* `player` user model
+* daily-style user model (persistent home, wheel allowed)
 * persistent home
 * browser wrappers off
 * app wrappers on

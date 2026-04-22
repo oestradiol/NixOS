@@ -12,19 +12,20 @@ in {
       boot.loader.grub.enable = false;
       boot.loader.systemd-boot.enable = lib.mkForce false;
       
-      # Test users
-      myOS.users.player = {
+      # Test users (template-agnostic: verify framework behavior without
+      # hardcoding template-specific user names like player/ghost)
+      myOS.users.test_daily = {
         activeOnProfiles = [ "daily" ];
-        description = "Daily desktop";
+        description = "Test daily user";
         shell = pkgs.zsh;
         extraGroups = [ "networkmanager" "video" "audio" ];
         allowWheel = true;
         home.persistent = true;
       };
-      
-      myOS.users.ghost = {
+
+      myOS.users.test_paranoid = {
         activeOnProfiles = [ "paranoid" ];
-        description = "Hardened workspace";
+        description = "Test paranoid user";
         uid = 1001;
         shell = pkgs.zsh;
         extraGroups = [ "networkmanager" "video" "audio" ];

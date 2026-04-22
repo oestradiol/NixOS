@@ -51,10 +51,10 @@ in {
       type = lib.types.bool;
       default = false;
       description = ''
-        When both `myOS.debug.enable` and this flag are true: the paranoid
-        reference user (`ghost`) receives `"wheel"` in `extraGroups` and the
-        governance assertion "paranoid user must not be in wheel" is
-        skipped.
+        When both `myOS.debug.enable` and this flag are true: any user
+        active on the paranoid profile with `allowWheel = false` receives
+        `"wheel"` in `extraGroups` anyway, and the governance assertion
+        "paranoid-active users must not be in wheel" is skipped.
 
         Useful for emergency administration from the paranoid profile when
         the daily profile is unavailable. Should not remain enabled on a
@@ -84,8 +84,8 @@ in {
          + "set on every account regardless of profile and account-lock "
          + "invariants are relaxed.")
       ++ lib.optional (active "paranoidWheel")
-        ("myOS.debug.paranoidWheel.enable is ON: ghost has \"wheel\" in "
-         + "extraGroups on paranoid and the matching governance assertion "
-         + "is skipped.");
+        ("myOS.debug.paranoidWheel.enable is ON: paranoid-active users "
+         + "receive \"wheel\" in extraGroups and the matching governance "
+         + "assertion is skipped.");
   };
 }

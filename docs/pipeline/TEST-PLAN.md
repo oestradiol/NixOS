@@ -3,11 +3,76 @@
 Exactly what must be tested to call the repo stable on the target machine.
 These checks are the runtime proof layer for this specific hardware, not just a static repo review.
 
+## How to Run Tests
+
+The repo includes a test suite runnable from any checkout:
+
+```bash
+# Run all tests (static + runtime + bugs)
+./tests/run.sh
+
+# Run only static tests (no booted machine required, safe to run anywhere)
+./tests/run.sh --layer static
+
+# Run only runtime tests (requires booted target system)
+./tests/run.sh --layer runtime
+
+# Run only bug regression tests
+./tests/run.sh --layer bugs
+
+# Run specific test file
+./tests/run.sh tests/static/010-flake-check.sh
+
+# Verbose output (stream as they run)
+./tests/run.sh --verbose
+
+# Skip tests requiring sudo
+./tests/run.sh --no-sudo
+```
+
+### Test Layers Explained
+
+**Static tests** — Validate framework repository itself:
+- Flake evaluation, governance assertions, profile deltas
+- File structure, documentation accuracy
+- No booted machine required; runs in CI or any checkout
+
+**Runtime tests** — Validate your booted system:
+- Discovers active profile from running system
+- Tests validate framework options are correctly applied
+- Template-agnostic: works with any user names in `myOS.users`
+
+**Bugs tests** — Regression tests for known historical bugs
+
+### Testing Custom Flakes
+
+If you used the framework to build a custom flake:
+
+1. **Static tests on framework source** (run against the framework repo):
+   ```bash
+   cd /path/to/framework/repo
+   ./tests/run.sh --layer static
+   ```
+
+2. **Runtime tests on your booted system** (run from your installed flake):
+   ```bash
+   # Copy the tests directory to your installed system
+   cp -r /path/to/framework/repo/tests /etc/nixos/
+   cd /etc/nixos/tests
+   ./run.sh --layer runtime
+   ```
+
+Runtime tests auto-discover your active profile and users from the running system's configuration — they work with any `myOS.users.*` definitions.
+
+## Validation Checklist
+
+Use this checklist to validate your installation. Mark items as you complete them:
+- `[X]` = Passed/Verified
+- `[ ]` = Not yet tested
+- `[-]` = Skipped (not applicable to your config)
+
 ## 1. Stage order
 - [X] daily is operable first
-- [X] daily is recoverable first
-- [X] paranoid validation does not block the first recovery-capable daily baseline
-- [X] after daily passes its sections, continue to paranoid minimum state
 
 ## 2. Build and boot
 - [X] `nix flake check` passes
@@ -21,10 +86,10 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 
 ## 3. Login, desktop, and session baseline
 - [X] greetd/regreet greeter appears reliably after boot
-- [X] `player` can log into the daily profile successfully
-- [ ] `ghost` can log into the paranoid profile successfully
+- [X] daily user(s) can log into the daily profile successfully
+- [ ] paranoid user(s) can log into the paranoid profile successfully
 - [X] Plasma starts cleanly on daily
-- [X] logout and re-login work on daily (player)
+- [X] logout and re-login work on daily
 - [X] no login loop or session-crash loop appears after reboot on daily
 
 ## 4. Persistence, mounts, and identity
@@ -32,10 +97,10 @@ These checks are the runtime proof layer for this specific hardware, not just a 
 - [X] `/etc/machine-id` persists across reboot
 - [X] daily machine-id is unique and stable across reboot
 - [ ] paranoid machine-id is unique and stable across reboot
-- [X] `/home/player` is the persistent daily home
-- [ ] `/home/ghost` is tmpfs on paranoid and allowlisted persistence appears under `/persist/home/ghost`
-- [X] daily does not mount `/home/ghost` or `/persist/home/ghost`
-- [ ] paranoid does not mount `/home/player`
+- [X] daily-style user homes are persistent (Btrfs-backed)
+- [ ] paranoid-style user homes are tmpfs with allowlisted persistence under `/persist/home/`
+- [X] daily does not mount paranoid user home surfaces
+- [ ] paranoid does not mount daily user home surfaces
 - [X] the opposite profile home paths are absent from `/proc/mounts`
 - [X] `systemctl status profile-mount-invariants` succeeds on both profiles
 
@@ -119,8 +184,8 @@ Only do this if you explicitly enable the staged self-owned WireGuard path later
 - [ ] `freshclam` succeeds and signatures update normally
 - [ ] `systemctl list-timers` shows both ClamAV timers
 - [ ] ClamAV target set covers durable state and boot surfaces rather than tmpfs-only churn
-- [ ] daily ClamAV target generation excludes ghost home paths entirely
-- [ ] paranoid ClamAV target generation excludes player home paths entirely
+- [ ] daily ClamAV target generation excludes paranoid user home paths entirely
+- [ ] paranoid ClamAV target generation excludes daily user home paths entirely
 - [ ] `systemctl start clamav-impermanence-scan` completes
 - [ ] `systemctl start clamav-deep-scan` completes
 - [ ] ClamAV detections would be logged as alerts rather than looking like a generic service failure

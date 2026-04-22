@@ -37,19 +37,20 @@ let
         boot.kernelModules = [ "kvm-amd" ];
         system.stateVersion = "26.05";
 
-        # Test users matching the old ghost/player structure
-        myOS.users.player = {
+        # Test fixture users for framework testing (template-agnostic)
+        # These synthetic users verify the framework's profile binding behavior
+        myOS.users.test_daily = {
           activeOnProfiles = [ "daily" ];
-          description = "Daily desktop";
+          description = "Test Daily User";
           shell = pkgs.zsh;
           extraGroups = [ "networkmanager" "video" "audio" "input" "render" ];
           allowWheel = true;
           home.persistent = true;
         };
 
-        myOS.users.ghost = {
+        myOS.users.test_paranoid = {
           activeOnProfiles = [ "paranoid" ];
-          description = "Hardened workspace";
+          description = "Test Paranoid User";
           uid = 1001;
           shell = pkgs.zsh;
           extraGroups = [ "networkmanager" "video" "audio" "input" "render" ];
@@ -122,6 +123,8 @@ let
       value = try (lib.attrByPath [ "${cfg.myOS.persistence.root}/home/${n}" "fsType" ] null cfg.fileSystems); }
     { name = "fileSystems.${cfg.myOS.persistence.root}/home/${n}.options";
       value = try (lib.attrByPath [ "${cfg.myOS.persistence.root}/home/${n}" "options" ] null cfg.fileSystems); }
+    { name = "myOS.users.${n}._exists";
+      value = { ok = true; value = true; }; }
     { name = "myOS.users.${n}._activeOn";
       value = try cfg.myOS.users.${n}._activeOn; }
     { name = "myOS.users.${n}.allowWheel";
@@ -213,6 +216,11 @@ perUserEntries //
   "myOS.networking.primaryInterface"                   = try cfg.myOS.networking.primaryInterface;
   "myOS.autoUpdate.enable"                             = try cfg.myOS.autoUpdate.enable;
   "myOS.autoUpdate.repoPath"                           = try cfg.myOS.autoUpdate.repoPath;
+  "myOS.privacy.posture"                               = try cfg.myOS.privacy.posture;
+  "myOS.security.vm.storageRoot"                       = try cfg.myOS.security.vm.storageRoot;
+  "myOS.security.vm.natNetworkName"                  = try cfg.myOS.security.vm.natNetworkName;
+  "myOS.security.vm.isolatedNetworkName"               = try cfg.myOS.security.vm.isolatedNetworkName;
+  "myOS.security.vm.defaultBaseImageDir"               = try cfg.myOS.security.vm.defaultBaseImageDir;
 
   # ── boot ─────────────────────────────────────────────────────────────
   "boot.kernelParams"                                  = try cfg.boot.kernelParams;

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Runtime: sandbox wrappers. Paranoid ships safe-firefox / safe-tor /
-# safe-mullvad; daily does not (sandbox.browsers=false). Daily ships the
-# safe-* app wrappers (VRCX, Windsurf) only if sandbox.apps=true AND they're
-# enabled in sandboxed-apps.nix (they are commented out today).
+# safe-mullvad; daily does not (sandbox.browsers=false). Daily ships
+# safe-* app wrappers only if sandbox.apps=true AND they're
+# enabled in sandboxed-apps.nix (currently deferred).
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
 profile=$(detect_profile)
@@ -99,29 +99,14 @@ else
   fail "xdg-dbus-proxy not available in PATH or /nix/store"
 fi
 
-describe "sandboxed daily app wrappers (VRCX, Windsurf) — currently commented out"
-# modules/security/sandboxed-apps.nix has all four desktop items disabled
-# behind comments. This test documents that state so a future enablement is
+describe "sandboxed app wrappers — currently deferred"
+# modules/security/sandboxed-apps.nix has all app wrappers disabled
+# (commented out) due to Electron crashes in bubblewrap.
+# This test documents that state so a future enablement is
 # caught as a governance event.
 sa="$REPO_ROOT/modules/security/sandboxed-apps.nix"
-if grep -q '^\s*#\s*safeVrcxDaily' "$sa"; then
-  pass "safeVrcxDaily still commented out in sandboxed-apps.nix"
+if grep -q 'Deferred.*Electron' "$sa" || grep -q 'environment.systemPackages = \[ \]' "$sa"; then
+  pass "App wrappers remain deferred in sandboxed-apps.nix"
 else
-  warn "safeVrcxDaily is no longer commented out — update tests"
-fi
-if grep -q '^\s*#\s*safeWindsurfDaily' "$sa"; then
-  pass "safeWindsurfDaily still commented out in sandboxed-apps.nix"
-else
-  warn "safeWindsurfDaily is no longer commented out — update tests"
-fi
-# Hence, safe-vrcx / safe-windsurf must NOT be in PATH.
-if command -v safe-vrcx >/dev/null 2>&1; then
-  warn "safe-vrcx is in PATH but sandboxed-apps.nix keeps it commented — update tests"
-else
-  pass "safe-vrcx absent (matches current commented-out state)"
-fi
-if command -v safe-windsurf >/dev/null 2>&1; then
-  warn "safe-windsurf is in PATH but sandboxed-apps.nix keeps it commented — update tests"
-else
-  pass "safe-windsurf absent (matches current commented-out state)"
+  info "sandboxed-apps.nix structure changed — review for app wrapper enablement"
 fi

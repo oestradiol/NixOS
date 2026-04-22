@@ -16,12 +16,23 @@ tests/
 └── results/             — per-run logs (gitignored)
 ```
 
-## Target profile
+## Test philosophy: static vs runtime
 
-Every test is profile-aware:
-- Daily is the player-facing profile. Its expected baseline differs from paranoid.
-- The runtime layer auto-detects which profile is booted by reading `/etc/shadow`
-  and kernel params, so you do not need to pass `--profile` manually.
+**Static tests** validate the framework repository itself:
+- Repo file structure, documentation accuracy, governance assertions
+- Nix evaluation of framework modules with test fixtures
+- Profile deltas and option definitions
+- No booted system required; runs in CI or any checkout
+
+**Runtime tests** validate the user's booted system derived from a template:
+- Discovers the active profile and users from the running system's configuration
+- Auto-detects which profile is booted by reading `myOS.profile` from the eval cache
+- Tests validate that the framework options are correctly applied based on the template's definitions
+- Template-agnostic: works with any user names defined in `myOS.users`
+
+Users running their own flakes derived from templates should expect:
+- Static tests pass when run against the framework source
+- Runtime tests pass when run on their booted system, validating their template's specific configuration
 
 ## What is covered
 
@@ -38,8 +49,8 @@ Static layer (no root needed):
 Runtime layer (booted system required, some tests need sudo):
 - system health: failed units, journal warnings, boot-time fsck
 - filesystem: tmpfs root, Btrfs subvolumes, persist mount, swap
-- profile invariants: correct homes mounted, the other profile's homes absent
-- users and identity: player unlocked on daily / ghost locked, machine-id persistence
+- profile invariants: correct homes mounted, the other profile's homes absent (template-agnostic)
+- users and identity: active users unlocked per profile config (discovers users from myOS.users), machine-id persistence
 - kernel: applied sysctls, boot params, blacklisted modules not loaded
 - networking: NetworkManager, systemd-resolved, firewall, Mullvad daemon, DNS works
 - desktop session: greetd/regreet, Plasma 6, Wayland-only (X server disabled)

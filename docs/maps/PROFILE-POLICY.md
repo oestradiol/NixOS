@@ -16,8 +16,8 @@ This file defines the intended governance model for the repo.
 This is the common policy substrate that both boot states inherit.
 
 ### `paranoid`
-`paranoid` is the default boot state.
-It instantiates the shared base with the strongest workstation-safe settings the repo currently considers baseline for `ghost`.
+`paranoid` is the default boot profile.
+It instantiates the shared base with the strongest workstation-safe settings the repo currently considers baseline.
 
 Intent:
 - keep same-kernel desktop usability
@@ -46,7 +46,7 @@ Disabled or relaxed on daily because breakage/cost is more likely:
 - paranoid browser wrappers for the main Firefox path
 
 Daily wrapper cost expectations:
-- VRCX and Windsurf wrappers may add startup friction or compatibility debugging
+- Electron app wrappers may add startup friction or compatibility debugging
 - they are not benchmark-neutral by default
 
 ### Paranoid policy
@@ -67,26 +67,32 @@ If a hardening change has non-trivial performance cost, document:
 - real-hardware result
 
 ### `daily`
-`daily` is a specialization that instantiates the same shared base, then softens explicit controls for `player`.
+`daily` is a specialization that instantiates the same shared base, then softens explicit controls for daily-use scenarios (gaming, social, recovery-friendly use).
 
 Intent:
 - remain hardened and privacy-aware
 - re-enable the compatibility required for socialization, gaming, and ordinary desktop recovery
 - make each relaxation explicit and auditable
 
-### `ghost`
-`ghost` is the hardened workspace account.
-Expected boot state: `paranoid`.
+### Hardened user model (template example)
+A paranoid-style user typically has:
+- `home.persistent = false` (tmpfs home)
+- `allowWheel = false` (no wheel group)
+- Expected on `paranoid` profile via `activeOnProfiles`
 
-### `player`
-`player` is the daily desktop account.
-Expected boot state: `daily`.
+### Daily user model (template example)
+A daily-style user typically has:
+- `home.persistent = true` (Btrfs-backed persistent home)
+- `allowWheel = true` (wheel group membership)
+- Expected on `daily` profile via `activeOnProfiles`
+
+These are reference patterns demonstrated by the default template. Forkers may use any user names and bindings.
 
 Intent:
-- let sibling instances describe themselves honestly without pretending to be
+- Allow sibling instances to describe themselves honestly without pretending to be
   `daily` or `paranoid`
-- keep the local Dotfiles truth unchanged: this repo still ships one default
-  boot state (`paranoid`) and one explicit specialization (`daily`)
+- The framework exports `profile-paranoid` and `profile-daily` as optional pre-definitions
+- Forkers may use these directly, define custom specializations, or use the default template as reference
 
 ## 2. Policy rule set
 
@@ -149,7 +155,7 @@ This folder is that layer.
 Current state: `false` (immutable users, declarative password management).
 
 Reason:
-- install script writes hashed passwords to `/persist/secrets/{player,ghost}-password.hash`
+- install script writes hashed passwords to `/persist/secrets/<username>-password.hash`
 - users.nix reads passwords declaratively via `hashedPasswordFile`
 - this is the hardened baseline and is already implemented
 

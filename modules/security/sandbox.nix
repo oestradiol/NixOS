@@ -5,7 +5,7 @@
 # options below control which surfaces those wrappers expose, and they are
 # consumed by:
 #   - modules/security/browser.nix        (safe-firefox, safe-tor, safe-mullvad)
-#   - modules/security/sandboxed-apps.nix (safe-vrcx, safe-windsurf)
+#   - modules/security/sandboxed-apps.nix (app wrappers - see templates/default)
 #   - modules/security/vm-tooling.nix     (vms enable gate, via `vms`)
 #   - modules/security/governance.nix     (profile-specific invariants)
 #

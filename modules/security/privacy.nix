@@ -1,11 +1,25 @@
 { config, lib, pkgs, ... }:
 let
-  paranoid = config.myOS.profile == "paranoid";
-  daily = config.myOS.profile == "daily";
+  cfg = config.myOS.privacy;
+  # Posture selection: can be set explicitly or derived from profile
+  highPrivacy = cfg.posture == "high";
+  relaxedPrivacy = cfg.posture == "relaxed";
 in {
+  options.myOS.privacy = {
+    posture = lib.mkOption {
+      type = lib.types.enum [ "high" "relaxed" ];
+      default = "relaxed";
+      description = ''
+        Privacy/fingerprinting posture.
+        - high: Comprehensive anti-fingerprinting (MAC randomization, TCP timestamps disabled)
+        - relaxed: Standard privacy (stable MAC per network, TCP timestamps enabled)
+      '';
+    };
+  };
+
   config = lib.mkMerge [
-    # === PARANOID: Comprehensive anti-fingerprinting ===
-    (lib.mkIf paranoid {
+    # === HIGH PRIVACY: Comprehensive anti-fingerprinting ===
+    (lib.mkIf highPrivacy {
       # 1. machine-id: persisted, unique host identity handled by impermanence.
       #    Bare-metal host IDs stay locally unique on both profiles.
 
@@ -39,8 +53,8 @@ in {
       # Can be enabled manually: networking.hostName = lib.mkForce "anon-${builtins.substring 0 8 (builtins.hashString "sha256" config.networking.hostName)}";
     })
 
-    # === DAILY: Relaxed fingerprinting protection ===
-    (lib.mkIf daily {
+    # === RELAXED: Standard fingerprinting protection ===
+    (lib.mkIf relaxedPrivacy {
       # Machine-id: systemd-generated unique stable ID, persisted via impermanence.
       
       # MAC: Stable per-network (default NetworkManager behavior)

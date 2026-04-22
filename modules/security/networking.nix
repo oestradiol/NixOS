@@ -1,12 +1,11 @@
 { config, lib, pkgs, ... }:
 let
-  isDaily = config.myOS.profile == "daily";
   primaryIface = config.myOS.networking.primaryInterface;
 
-  # VPN architecture:
-  # daily/player  → Mullvad app mode (GUI + daemon)
-  # paranoid/ghost → self-owned WireGuard path (staged, wireguard.nix)
+  # VPN architecture options
   useSelfOwnedWireGuard = config.myOS.security.wireguardMullvad.enable;
+  # Enable Mullvad app mode by default when not using self-owned WireGuard
+  useMullvadAppMode = config.myOS.networking.mullvadAppMode.enable or (!useSelfOwnedWireGuard);
 in {
   networking.networkmanager.enable = true;
 
@@ -19,24 +18,23 @@ in {
   # proxies / routers re-encapsulate magic packets as UDP-9 (discard) payloads,
   # so we open UDP 9 on the LAN interface only, not globally. UDP 7 (echo) was
   # never needed and has been removed (attack-surface minimisation).
-  networking.interfaces = lib.mkIf isDaily {
+  networking.interfaces = lib.mkIf config.myOS.networking.wakeOnLan.enable {
     ${primaryIface}.wakeOnLan = {
       enable = true;
       policy = [ "magic" ];
     };
   };
-  networking.firewall.interfaces = lib.mkIf isDaily {
+  networking.firewall.interfaces = lib.mkIf config.myOS.networking.wakeOnLan.enable {
     ${primaryIface}.allowedUDPPorts = [ 9 ];  # WoL-over-UDP compatibility (LAN only)
   };
 
-  # DNS resolver: needed on both profiles
-  services.resolved.enable = lib.mkDefault true;
+  # DNS resolver: needed when NetworkManager is enabled
+  services.resolved.enable = lib.mkDefault config.networking.networkmanager.enable;
 
   # Configure NetworkManager to use systemd-resolved for DNS
-  networking.networkmanager.dns = lib.mkIf isDaily "systemd-resolved";
+  networking.networkmanager.dns = lib.mkIf config.networking.networkmanager.enable "systemd-resolved";
 
-  # Mullvad app mode: daily/player only
-  # Paranoid/ghost uses the self-owned WireGuard path (wireguard.nix)
-  services.mullvad-vpn.enable = lib.mkDefault (isDaily && !useSelfOwnedWireGuard);
-  services.mullvad-vpn.package = lib.mkIf isDaily pkgs.mullvad-vpn;
+  # Mullvad app mode: enabled by default unless using self-owned WireGuard
+  services.mullvad-vpn.enable = lib.mkDefault (useMullvadAppMode && !useSelfOwnedWireGuard);
+  services.mullvad-vpn.package = lib.mkIf (useMullvadAppMode && !useSelfOwnedWireGuard) pkgs.mullvad-vpn;
 }

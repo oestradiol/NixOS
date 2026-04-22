@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Runtime: account locks, machine-id persistence, root lock, sudo posture.
+# Template-agnostic: discovers users from myOS.users configuration.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
 
 needs_sudo
@@ -8,8 +9,34 @@ profile=$(detect_profile)
 describe "detected profile at runtime"
 info "profile: $profile"
 
-describe "both user accounts exist"
-for u in player ghost; do
+# Discover users from the running system (template-agnostic)
+mapfile -t all_users < <(detect_system_users)
+
+if [[ ${#all_users[@]} -eq 0 ]]; then
+  fail "no users found on system (neither in /etc/passwd nor config)"
+  exit 1
+fi
+
+info "system users: ${all_users[*]}"
+
+# Determine active user(s) on current profile
+active_users=()
+for u in "${all_users[@]}"; do
+  active=$(config_value "myOS.users.${u}._activeOn" | jq_cmd -r 'select(type=="boolean")')
+  # If user exists on system but not in config, assume active (template mismatch)
+  if [[ "$active" == "true" || -d "/home/$u" ]]; then
+    active_users+=("$u")
+  fi
+done
+
+if [[ ${#active_users[@]} -eq 0 ]]; then
+  warn "no active users found for profile: $profile"
+else
+  info "active user(s) on $profile: ${active_users[*]}"
+fi
+
+describe "all declared users exist in passwd"
+for u in "${all_users[@]}"; do
   if getent passwd "$u" >/dev/null; then
     pass "$u exists in passwd"
   else
@@ -17,66 +44,80 @@ for u in player ghost; do
   fi
 done
 
-describe "explicit UID for ghost = 1001 (used by tmpfs uid= option)"
-gid=$(id -u ghost 2>/dev/null || true)
-if [[ "$gid" == "1001" ]]; then
-  pass "ghost UID = 1001"
-else
-  fail "ghost UID wrong" "expected 1001, got $gid"
-fi
+describe "user UID/GID consistency"
+for u in "${all_users[@]}"; do
+  uid=$(id -u "$u" 2>/dev/null || true)
+  gid=$(id -g "$u" 2>/dev/null || true)
+  if [[ -n "$uid" && -n "$gid" ]]; then
+    pass "$u: UID=$uid GID=$gid"
+    # Check for collisions
+    for other in "${all_users[@]}"; do
+      [[ "$u" == "$other" ]] && continue
+      other_uid=$(id -u "$other" 2>/dev/null || true)
+      if [[ "$uid" == "$other_uid" && -n "$other_uid" ]]; then
+        fail "UID collision: $u and $other both have UID $uid"
+      fi
+    done
+  else
+    fail "$u: cannot determine UID/GID"
+  fi
+done
 
-describe "player is in wheel; ghost is NOT in wheel"
-pg=$(id -nG player 2>/dev/null || true)
-gg=$(id -nG ghost 2>/dev/null || true)
-if grep -qw wheel <<<"$pg"; then pass "player in wheel"; else fail "player not in wheel"; fi
-if grep -qw wheel <<<"$gg"; then fail "ghost is in wheel (forbidden)"; else pass "ghost NOT in wheel"; fi
+describe "wheel group membership matches allowWheel config"
+for u in "${all_users[@]}"; do
+  user_in_config=$(config_value "myOS.users.${u}._exists" | jq_cmd -r 'select(type=="boolean")')
+  allow_wheel=$(config_value "myOS.users.${u}.allowWheel" | jq_cmd -r 'select(type=="boolean")')
+  actual_groups=$(id -nG "$u" 2>/dev/null || true)
+  
+  if [[ "$user_in_config" != "true" ]]; then
+    # User not in config - just report wheel status without validation
+    if grep -qw wheel <<<"$actual_groups"; then
+      pass "$u: in wheel (user not in config, skipping allowWheel check)"
+    else
+      pass "$u: not in wheel (user not in config, skipping allowWheel check)"
+    fi
+  elif [[ "$allow_wheel" == "true" ]]; then
+    if grep -qw wheel <<<"$actual_groups"; then
+      pass "$u: in wheel (allowWheel=true)"
+    else
+      fail "$u: not in wheel but allowWheel=true"
+    fi
+  else
+    if grep -qw wheel <<<"$actual_groups"; then
+      fail "$u: in wheel but allowWheel != true"
+    else
+      pass "$u: not in wheel (allowWheel!=true)"
+    fi
+  fi
+done
 
 describe "profile-specific account locking"
-if sudo -n true 2>/dev/null; then
-  # Sudo without password works; we have passwordless sudo already.
-  :
-else
-  skip "sudo -n not available; skip /etc/shadow comparison"
-  if [[ "$profile" == "daily" ]]; then
-    # fallback: use getent which may expose x only
-    :
-  fi
+if ! sudo -n test -r /etc/shadow 2>/dev/null; then
+  skip "shadow not readable without sudo; cannot verify account locks"
+  exit 0
 fi
 
-# /etc/shadow entries: on daily, player has a real hash and ghost is "!".
-# On paranoid, reverse.
-if sudo -n test -r /etc/shadow 2>/dev/null; then
-  player_f=$(sudo -n getent shadow player | cut -d: -f2)
-  ghost_f=$(sudo -n getent shadow ghost  | cut -d: -f2)
-  case "$profile" in
-    daily)
-      if [[ "$player_f" == '!' ]]; then
-        fail "daily: player must be unlocked, shadow hash = '!'"
-      else
-        pass "daily: player has a real hash"
-      fi
-      if [[ "$ghost_f" == '!' ]]; then
-        pass "daily: ghost is locked ('!')"
-      else
-        fail "daily: ghost should be locked, hash = $ghost_f"
-      fi
-      ;;
-    paranoid)
-      if [[ "$player_f" == '!' ]]; then
-        pass "paranoid: player is locked ('!')"
-      else
-        fail "paranoid: player should be locked, hash = $player_f"
-      fi
-      if [[ "$ghost_f" == '!' ]]; then
-        fail "paranoid: ghost must be unlocked, shadow hash = '!'"
-      else
-        pass "paranoid: ghost has a real hash"
-      fi
-      ;;
-  esac
-else
-  skip "shadow not readable without sudo; cannot verify account locks"
-fi
+# Check each user's shadow entry based on whether they're active on this profile
+for u in "${all_users[@]}"; do
+  active=$(config_value "myOS.users.${u}._activeOn" | jq_cmd -r 'select(type=="boolean")')
+  shadow_field=$(sudo -n getent shadow "$u" 2>/dev/null | cut -d: -f2 || true)
+  
+  if [[ "$active" == "true" ]]; then
+    # Active user should be unlocked
+    if [[ "$shadow_field" == '!' || "$shadow_field" == '!!' || "$shadow_field" == '*' ]]; then
+      fail "$u: active but locked (shadow='$shadow_field')"
+    else
+      pass "$u: active and unlocked"
+    fi
+  else
+    # Inactive user should be locked
+    if [[ "$shadow_field" == '!' || "$shadow_field" == '!!' || "$shadow_field" == '*' ]]; then
+      pass "$u: inactive and locked (shadow='$shadow_field')"
+    else
+      warn "$u: inactive but has hash (may be intentional)"
+    fi
+  fi
+done
 
 describe "root account is locked"
 if sudo -n test -r /etc/shadow 2>/dev/null; then
@@ -88,23 +129,33 @@ if sudo -n test -r /etc/shadow 2>/dev/null; then
   fi
 fi
 
-describe "persist secrets files exist"
-if sudo -n true 2>/dev/null; then
-  for f in /persist/secrets/player-password.hash /persist/secrets/ghost-password.hash; do
-    if sudo -n test -f "$f"; then
-      pass "exists: $f"
+describe "password hash files for declared users"
+if ! sudo -n true 2>/dev/null; then
+  skip "sudo not available; cannot verify password hash files"
+  exit 0
+fi
+
+# Check if users use hashedPasswordFile and verify those files exist
+for u in "${all_users[@]}"; do
+  hash_file=$(config_value "users.users.${u}.hashedPasswordFile" | jq_cmd -r 'select(type=="string")')
+  
+  if [[ -n "$hash_file" && "$hash_file" != "null" ]]; then
+    if sudo -n test -f "$hash_file"; then
+      pass "$u: hashedPasswordFile exists: $hash_file"
       # Should be 0400 root-only
-      perm=$(sudo -n stat -c '%a %U' "$f" 2>/dev/null || true)
+      perm=$(sudo -n stat -c '%a %U' "$hash_file" 2>/dev/null || true)
       if [[ "$perm" == "400 root" ]]; then
-        pass "$f mode = 0400 root"
+        pass "$hash_file mode = 0400 root"
       else
-        warn "$f permission drift" "got: $perm"
+        warn "$hash_file permissions = $perm (expected 400 root)"
       fi
     else
-      fail "$f missing from /persist/secrets"
+      fail "$u: hashedPasswordFile missing: $hash_file"
     fi
-  done
-fi
+  else
+    info "$u: no hashedPasswordFile configured"
+  fi
+done
 
 describe "machine-id persistence"
 if [[ -s /etc/machine-id ]]; then

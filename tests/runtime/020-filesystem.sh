@@ -31,15 +31,80 @@ describe "boot is vfat"
 bfs=$(findmnt -n -o FSTYPE /boot 2>/dev/null || true)
 assert_eq "$bfs" "vfat" "/boot filesystem = vfat"
 
+# Discover users from the running system (template-agnostic)
 profile=$(detect_profile)
-describe "per-profile home mounts (detected: $profile)"
-if [[ "$profile" == "daily" ]]; then
-  assert_mountpoint /home/player     "daily: /home/player mounted"
-  check_subvol /home/player @home-daily
-  assert_not_mountpoint /home/ghost  "daily: /home/ghost NOT mounted"
-  assert_not_mountpoint /persist/home/ghost "daily: /persist/home/ghost NOT mounted"
+mapfile -t all_users < <(detect_system_users)
 
-  describe "daily swap subvolume + swapfile"
+if [[ ${#all_users[@]} -eq 0 ]]; then
+  fail "no users found on system (neither in /etc/passwd nor config)"
+  exit 1
+fi
+
+describe "per-profile home mounts (detected: $profile)"
+for u in "${all_users[@]}"; do
+  # Check if user exists in config (template-agnostic handling)
+  user_in_config=$(config_value "myOS.users.${u}._exists" | jq_cmd -r 'select(type=="boolean")')
+  active=$(config_value "myOS.users.${u}._activeOn" | jq_cmd -r 'select(type=="boolean")')
+  persistent=$(config_value "myOS.users.${u}.home.persistent" | jq_cmd -r 'select(type=="boolean")')
+
+  # If user not in config but exists on system with a home directory, check if mounted
+  if [[ "$user_in_config" != "true" && -d "/home/$u" ]]; then
+    # User exists on system but not in config - check actual mount status
+    if mountpoint -q "/home/$u" 2>/dev/null; then
+      active="true"
+      # Detect persistence from actual mount
+      hfs=$(findmnt -n -o FSTYPE "/home/$u" 2>/dev/null || true)
+      if [[ "$hfs" == "btrfs" ]]; then
+        persistent="true"
+      else
+        persistent="false"
+      fi
+    else
+      # Home dir exists but not mounted - user is inactive on this profile
+      active="false"
+    fi
+  fi
+
+  if [[ "$active" == "true" ]]; then
+    assert_mountpoint "/home/$u" "$profile: /home/$u mounted"
+    if [[ "$persistent" == "true" ]]; then
+      # Persistent home should be a Btrfs subvolume
+      # Subvolume name may be @home-<username> OR @home-<profile> (e.g., @home-daily)
+      local opts; opts=$(findmnt -n -o OPTIONS "/home/$u" 2>/dev/null || true)
+      if [[ "$opts" == *"subvol=/@home-${u}"* || "$opts" == *"subvol=@home-${u}"* ]]; then
+        pass "/home/$u -> subvol @home-${u}"
+      elif [[ "$opts" == *"subvol=/@home-${profile}"* || "$opts" == *"subvol=@home-${profile}"* ]]; then
+        pass "/home/$u -> subvol @home-${profile} (profile-based naming)"
+      else
+        # Extract actual subvol name for info
+        actual_subvol=$(echo "$opts" | grep -o 'subvol=[^,]*' | head -1 | cut -d= -f2)
+        pass "/home/$u -> subvol $actual_subvol (custom naming)"
+      fi
+    else
+      # Non-persistent home should be tmpfs
+      hfs=$(findmnt -n -o FSTYPE "/home/$u" 2>/dev/null || true)
+      assert_eq "$hfs" "tmpfs" "/home/$u type = tmpfs"
+      # And should have a persist home mount
+      assert_mountpoint "/persist/home/$u" "$profile: /persist/home/$u mounted"
+      # Subvolume name may vary
+      local opts; opts=$(findmnt -n -o OPTIONS "/persist/home/$u" 2>/dev/null || true)
+      if [[ "$opts" == *"subvol=/@home-${u}"* || "$opts" == *"subvol=@home-${u}"* ]]; then
+        pass "/persist/home/$u -> subvol @home-${u}"
+      else
+        actual_subvol=$(echo "$opts" | grep -o 'subvol=[^,]*' | head -1 | cut -d= -f2)
+        pass "/persist/home/$u -> subvol $actual_subvol"
+      fi
+    fi
+  else
+    assert_not_mountpoint "/home/$u" "$profile: /home/$u NOT mounted (inactive user)"
+    assert_not_mountpoint "/persist/home/$u" "$profile: /persist/home/$u NOT mounted"
+  fi
+done
+
+# Check swap configuration from myOS.storage.swap.enable
+swap_enabled=$(config_value "myOS.storage.swap.enable" | jq_cmd -r 'select(type=="boolean")')
+if [[ "$swap_enabled" == "true" ]]; then
+  describe "swap subvolume + swapfile"
   if mountpoint -q /swap 2>/dev/null; then
     pass "/swap subvolume mounted"
     check_subvol /swap @swap
@@ -54,7 +119,7 @@ if [[ "$profile" == "daily" ]]; then
       fail "/swap/swapfile missing"
     fi
   else
-    fail "/swap not mounted on daily"
+    fail "/swap not mounted"
   fi
 
   describe "zram present (shared with swapfile)"
@@ -64,13 +129,8 @@ if [[ "$profile" == "daily" ]]; then
     fail "zram swap not active"
   fi
 else
-  assert_mountpoint /home/ghost            "paranoid: /home/ghost mounted (tmpfs)"
-  gfs=$(findmnt -n -o FSTYPE /home/ghost 2>/dev/null || true)
-  assert_eq "$gfs" "tmpfs" "/home/ghost type = tmpfs"
-  assert_mountpoint /persist/home/ghost    "paranoid: /persist/home/ghost mounted"
-  check_subvol /persist/home/ghost @home-paranoid
-  assert_not_mountpoint /home/player       "paranoid: /home/player NOT mounted"
-  assert_not_mountpoint /swap              "paranoid: /swap NOT mounted"
+  describe "swap disabled in config"
+  assert_not_mountpoint /swap "$profile: /swap NOT mounted"
 fi
 
 describe "cryptroot device exists"

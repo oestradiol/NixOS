@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
-# Runtime: miscellaneous expected services for the daily/player stack that
+# Runtime: miscellaneous expected services for the active user stack that
 # don't fit neatly into the other buckets.
+# Template-agnostic: discovers users from myOS.users configuration.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
+
+# Discover declared users from framework config
+user_names_json=$(config_value "myOS.users.__names")
+if [[ "$user_names_json" != "null" && "$user_names_json" != "[]" ]]; then
+  mapfile -t all_users < <(echo "$user_names_json" | jq_cmd -r '.[]')
+else
+  all_users=()
+fi
 
 describe "accounts-daemon, systemd-logind, systemd-hostnamed, systemd-machined"
 for u in accounts-daemon.service systemd-logind.service systemd-hostnamed.service; do
@@ -109,9 +118,22 @@ for c in kded6 kscreen-doctor qdbus-qt6 kwin_wayland; do
   fi
 done
 
-describe "user-level systemd manager is alive for player"
-if systemctl --user status --no-pager 2>/dev/null | head -3 | grep -q 'running'; then
-  pass "player has an active --user systemd manager"
+describe "user-level systemd manager is alive for active users"
+# Check if the active user(s) have a running systemd --user instance
+if [[ ${#all_users[@]} -eq 0 ]]; then
+  info "no users declared - cannot verify user-level systemd"
 else
-  info "no user systemd manager context in this shell (run interactive to verify)"
+  for u in "${all_users[@]}"; do
+    active=$(config_value "myOS.users.${u}._activeOn" | jq_cmd -r 'select(type=="boolean")')
+    if [[ "$active" == "true" ]]; then
+      # Try to check if user has a systemd session
+      if systemctl --user status --no-pager 2>/dev/null | head -3 | grep -q 'running'; then
+        pass "$u: --user systemd manager is running"
+      else
+        info "$u: --user systemd manager status not visible from this shell"
+      fi
+      # Only check first active user from current shell context
+      break
+    fi
+  done
 fi

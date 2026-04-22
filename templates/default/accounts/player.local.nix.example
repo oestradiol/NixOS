@@ -22,7 +22,5 @@
     audio.micSourceAlias = "alsa_input.usb-XXXX_MyMic-00.mono-fallback";
     # Optional: pin the monitor sink.
     # audio.micLoopbackSink = "alsa_output.pci-0000_00_00.0.analog-stereo";
-
-    workspace.autoUpdateRepoPath = "/home/player/dotfiles";
   };
 }

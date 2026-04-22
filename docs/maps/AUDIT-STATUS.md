@@ -22,7 +22,7 @@ Canonical audit surface: what has been checked, what is only statically verified
 | daily Firefox enterprise-policy path | implemented | static review | `modules/security/browser.nix`, `docs/governance/PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md` | normal Firefox path, not arkenfox-managed |
 | paranoid `safe-firefox` arkenfox-derived baseline | implemented | static review | `modules/security/browser.nix`, `modules/security/arkenfox/user.js`, `docs/governance/PROJECT-STATE.md`, `docs/pipeline/TEST-PLAN.md` | wrapper + vendored arkenfox + repo overrides |
 | Tor Browser / Mullvad Browser wrapper path | implemented+manual | static review | `modules/security/browser.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/POST-STABILITY.md` | upstream browser model kept; wrapper compatibility still needs runtime trials |
-| daily app wrappers (`safe-vrcx`, `safe-windsurf`) | implemented+manual | static review | `modules/security/sandboxed-apps.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/RECOVERY.md` | functionality must be proven on target desktop |
+| daily app wrappers (e.g., safe-Electron-app) | implemented+manual | static review | `modules/security/sandboxed-apps.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/RECOVERY.md` | functionality must be proven on target desktop; template-specific apps configured in templates/ |
 | staged self-owned WireGuard path | implemented | static review | `modules/security/wireguard.nix`, `modules/security/networking.nix`, `docs/pipeline/INSTALL-GUIDE.md`, `docs/pipeline/TEST-PLAN.md` | present in repo, off by default |
 | paranoid audit subsystem | implemented | static review | `modules/security/base.nix`, `profiles/paranoid.nix`, `docs/pipeline/TEST-PLAN.md`, `docs/pipeline/RECOVERY.md` | `security.audit` + `auditd` are baseline on paranoid |
 | repo custom audit rules | deferred | static review | `modules/security/base.nix`, `modules/core/options.nix`, `docs/pipeline/POST-STABILITY.md`, `docs/pipeline/TEST-PLAN.md` | intentionally defaulted off pending upstream fix and live revalidation |
@@ -48,7 +48,7 @@ Still needs target-machine validation:
 - paranoid `safe-firefox` runtime validation
 - Tor Browser wrapper runtime matrix
 - Mullvad Browser wrapper runtime matrix
-- `safe-vrcx` and `safe-windsurf` launch/file-chooser validation
+- Electron app wrapper launch/file-chooser validation (template-specific apps)
 - live VM class validation and guest-template refinement
 - scanner timers/services and AIDE initialization flow
 

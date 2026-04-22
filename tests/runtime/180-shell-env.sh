@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
-# Runtime: shell environment + home-manager for player (daily-only tests
-# check VRCX/Windsurf reachability).
+# Runtime: shell environment + home-manager for active users.
+# Template-agnostic: discovers users from myOS.users configuration.
 source "${BASH_SOURCE%/*}/../lib/common.sh"
+
+# Discover active users (template-agnostic)
+mapfile -t active_users < <(detect_active_users)
+
+if [[ ${#active_users[@]} -eq 0 ]]; then
+  warn "no active users found for current profile"
+else
+  info "active user(s): ${active_users[*]}"
+fi
 
 describe "zsh system-wide enabled"
 assert_file /etc/zshenv
@@ -10,13 +19,16 @@ if command -v zsh >/dev/null 2>&1; then
 else
   fail "zsh missing from PATH"
 fi
-# player's shell must be zsh at the passwd level
-shell=$(getent passwd player | awk -F: '{print $7}')
-if [[ "$shell" == *"/zsh" ]]; then
-  pass "player's login shell = $shell"
-else
-  fail "player's login shell is not zsh" "got: $shell"
-fi
+
+# Check active users' shells
+for u in "${active_users[@]}"; do
+  shell=$(getent passwd "$u" | awk -F: '{print $7}')
+  if [[ "$shell" == *"/zsh" ]]; then
+    pass "${u}'s login shell = $shell"
+  else
+    fail "${u}'s login shell is not zsh" "got: $shell"
+  fi
+done
 
 describe "git + git-lfs + mtr"
 for c in git git-lfs mtr; do
@@ -27,102 +39,119 @@ for c in git git-lfs mtr; do
   fi
 done
 
-describe "home-manager unit for player ran successfully"
-if systemctl cat home-manager-player.service >/dev/null 2>&1; then
-  state=$(systemctl is-active home-manager-player.service 2>&1 || true)
-  case "$state" in
-    active)
-      pass "home-manager-player.service active"
-      ;;
-    inactive|failed)
-      fail "home-manager-player.service state: $state" "$(journalctl -u home-manager-player.service -n 20 --no-pager 2>/dev/null || true)"
-      ;;
-    *)
-      info "home-manager-player.service state: $state"
-      ;;
-  esac
-else
-  fail "home-manager-player.service unit not found"
-fi
+describe "home-manager units for active users"
+for u in "${active_users[@]}"; do
+  unit_name="home-manager-${u}.service"
+  if systemctl cat "$unit_name" >/dev/null 2>&1; then
+    state=$(systemctl is-active "$unit_name" 2>&1 || true)
+    case "$state" in
+      active)
+        pass "${unit_name} active"
+        ;;
+      inactive|failed)
+        fail "${unit_name} state: $state" "$(journalctl -u "$unit_name" -n 20 --no-pager 2>/dev/null || true)"
+        ;;
+      *)
+        info "${unit_name} state: $state"
+        ;;
+    esac
+  else
+    fail "${unit_name} unit not found"
+  fi
+done
 
-describe "player's HM-managed packages are installed"
+describe "HM-managed packages are installed for active users"
 # With home-manager `useGlobalPkgs = true; useUserPackages = true;`, the repo
 # installs user packages via nix profile into ~/.nix-profile (standard HM
 # behaviour). However, the important thing is that packages are reachable via
 # PATH, which they are via useGlobalPkgs=true. Skip profile path checks.
-np=/home/player/.nix-profile
-if [[ -L "$np" ]]; then
-  pass "~/.nix-profile is a symlink -> $(readlink "$np" 2>/dev/null || true)"
-  resolved=$(readlink -f "$np" 2>/dev/null)
-  if [[ -n "$resolved" && -e "$resolved" ]]; then
-    pass "~/.nix-profile target exists: $resolved"
-  else
-    info "~/.nix-profile is a DANGLING symlink (packages still reachable via system PATH)"
-  fi
-elif [[ -d "$np" ]]; then
-  pass "~/.nix-profile is a directory"
-else
-  # Some HM setups install everything into environment.systemPackages, leaving
-  # no user profile. This is fine as long as packages are in PATH.
-  info "~/.nix-profile missing (packages installed via system PATH)"
-fi
-bins="$np/bin"
-if [[ -d "$bins" ]]; then
-  pass "$bins is a directory"
-  for b in eza bat; do
-    if [[ -x "$bins/$b" || -L "$bins/$b" ]]; then
-      pass "~/.nix-profile/bin/$b present"
+
+for u in "${active_users[@]}"; do
+  np="/home/${u}/.nix-profile"
+  if [[ -L "$np" ]]; then
+    pass "${u}: ~/.nix-profile is a symlink -> $(readlink "$np" 2>/dev/null || true)"
+    resolved=$(readlink -f "$np" 2>/dev/null)
+    if [[ -n "$resolved" && -e "$resolved" ]]; then
+      pass "${u}: ~/.nix-profile target exists: $resolved"
     else
-      # eza + bat could also be in /run/current-system/sw/bin via global pkgs.
-      if command -v "$b" >/dev/null 2>&1; then
-        pass "$b reachable via system PATH (useGlobalPkgs=true)"
+      info "${u}: ~/.nix-profile is a DANGLING symlink (packages still reachable via system PATH)"
+    fi
+  elif [[ -d "$np" ]]; then
+    pass "${u}: ~/.nix-profile is a directory"
+  else
+    # Some HM setups install everything into environment.systemPackages, leaving
+    # no user profile. This is fine as long as packages are in PATH.
+    info "${u}: ~/.nix-profile missing (packages installed via system PATH)"
+  fi
+  bins="$np/bin"
+  if [[ -d "$bins" ]]; then
+    pass "${u}: $bins is a directory"
+    for b in eza bat; do
+      if [[ -x "$bins/$b" || -L "$bins/$b" ]]; then
+        pass "${u}: ~/.nix-profile/bin/$b present"
       else
-        warn "$b missing from user profile AND system PATH"
+        # eza + bat could also be in /run/current-system/sw/bin via global pkgs.
+        if command -v "$b" >/dev/null 2>&1; then
+          pass "${u}: $b reachable via system PATH (useGlobalPkgs=true)"
+        else
+          warn "${u}: $b missing from user profile AND system PATH"
+        fi
       fi
-    fi
-  done
-else
-  # Fall back to confirming eza/bat reach player via PATH (system-packaged).
-  for b in eza bat; do
-    if command -v "$b" >/dev/null 2>&1; then
-      pass "$b reachable via system PATH (useGlobalPkgs=true)"
+    done
+  else
+    # Fall back to confirming eza/bat are reachable via PATH (system-packaged).
+    for b in eza bat; do
+      if command -v "$b" >/dev/null 2>&1; then
+        pass "${u}: $b reachable via system PATH (useGlobalPkgs=true)"
+      else
+        fail "${u}: $b missing entirely (neither user profile nor system PATH)"
+      fi
+    done
+  fi
+done
+
+describe "HM-generated shell config files exist for active users"
+for u in "${active_users[@]}"; do
+  # starship init is in initContent.
+  zshrc="/home/${u}/.zshrc"
+  if [[ -r "$zshrc" ]]; then
+    if grep -q 'starship' "$zshrc" 2>/dev/null; then
+      pass "${u}: starship init wired into .zshrc"
     else
-      fail "$b missing entirely (neither user profile nor system PATH)"
+      warn "${u}: .zshrc exists but starship not wired"
     fi
-  done
-fi
+  else
+    warn "${u}: .zshrc not readable as current user"
+  fi
 
-describe "HM-generated shell config files exist"
-# starship init is in initContent.
-if [[ -r /home/player/.zshrc ]]; then
-  if grep -q 'starship' /home/player/.zshrc; then
-    pass "starship init wired into /home/player/.zshrc"
+  starship_cfg="/home/${u}/.config/starship.toml"
+  if [[ -r "$starship_cfg" ]]; then
+    pass "${u}: ~/.config/starship.toml present"
+  elif [[ -r "${starship_cfg}.bkp" ]]; then
+    warn "${u}: starship.toml backed up as .bkp (rebuild may be pending)"
   else
-    warn ".zshrc exists but starship not wired"
+    warn "${u}: ~/.config/starship.toml absent"
   fi
-else
-  warn "/home/player/.zshrc not readable as current user"
-fi
-if [[ -r /home/player/.config/starship.toml ]]; then
-  pass "~/.config/starship.toml present"
-elif [[ -r /home/player/.config/starship.toml.bkp ]]; then
-  warn "starship.toml backed up as .bkp (rebuild may be pending)"
-else
-  warn "~/.config/starship.toml absent"
-fi
+done
 
-describe "git config: Elaina + github email"
-if command -v git >/dev/null 2>&1 && [[ -r /home/player/.config/git/config || -r /home/player/.gitconfig ]]; then
-  gc=$( (cat /home/player/.config/git/config /home/player/.gitconfig 2>/dev/null || true) )
-  # NixOS HM writes the values quoted: name = "Elaina"
-  if grep -Eq 'name\s*=\s*"?Elaina"?' <<<"$gc"; then
-    pass "git user.name = Elaina"
+describe "git config for active users"
+for u in "${active_users[@]}"; do
+  git_config="/home/${u}/.config/git/config"
+  git_config_alt="/home/${u}/.gitconfig"
+  if command -v git >/dev/null 2>&1 && [[ -r "$git_config" || -r "$git_config_alt" ]]; then
+    gc=$( (cat "$git_config" "$git_config_alt" 2>/dev/null || true) )
+    # Check for git identity - any identity is acceptable, we just verify git is configured
+    if grep -q 'user.name' <<<"$gc" 2>/dev/null; then
+      pass "${u}: git user.name configured"
+    else
+      warn "${u}: git user.name not configured"
+    fi
+    if grep -q 'user.email' <<<"$gc" 2>/dev/null; then
+      pass "${u}: git user.email configured"
+    else
+      warn "${u}: git user.email not configured"
+    fi
   else
-    warn "git user.name drift"
+    info "${u}: git config not accessible"
   fi
-  if grep -Fq '48662592+oestradiol@users.noreply.github.com' <<<"$gc"; then
-    pass "git user.email matches player.nix"
-  else
-    warn "git user.email drift"
-  fi
-fi
+done

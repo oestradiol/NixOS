@@ -14,17 +14,17 @@ Status values:
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| two-account split (`ghost` / `player`) | baseline | keep | `modules/core/users.nix`, `docs/governance/PROJECT-STATE.md` | core governance model |
-| `ghost` expected on `paranoid` | baseline | keep | `docs/governance/PROJECT-STATE.md`, `modules/security/governance.nix` | hardened workspace split |
-| `player` expected on `daily` | baseline | keep | `docs/governance/PROJECT-STATE.md` | normal desktop split |
-| `users.mutableUsers = false` (immutable) | baseline | keep | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | declarative password management via hashedPasswordFile |
+| two-axis profile+user model | baseline | keep | `modules/core/users.nix`, `docs/governance/PROJECT-STATE.md` | core governance model |
+| paranoid-style user (tmpfs home, no wheel) | baseline | keep | `docs/governance/PROJECT-STATE.md`, `modules/security/governance.nix` | hardened workspace split |
+| daily-style user (persistent home, wheel) | baseline | keep | `docs/governance/PROJECT-STATE.md` | normal desktop split |
+| `users.mutableUsers = false` (immutable) | baseline | keep | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | install script writes hashed passwords to `/persist/secrets/<username>-password.hash` |
 | root account locked | baseline | keep | `modules/security/base.nix` | reduce direct root login surface |
-| `ghost` in wheel by default | rejected | do not add | `modules/security/governance.nix` | paranoid user should not have default wheel escalation |
-| profile-user binding via account locking | baseline | keep | `modules/core/users.nix`, `docs/pipeline/POST-STABILITY.md` | daily locks ghost, paranoid locks player |
+| paranoid users in wheel by default | rejected | do not add | `modules/security/governance.nix` | paranoid-style users should not have default wheel escalation |
+| profile-user binding via account locking | baseline | keep | `modules/core/users.nix`, `docs/pipeline/POST-STABILITY.md` | inactive users locked, active users unlocked per profile |
 | PAM profile-binding | rejected | superseded | `modules/security/user-profile-binding.nix` | account locking approach is simpler and safer |
 | `myOS.debug.enable` master gate | baseline | keep default off | `modules/core/debug.nix` | declarative escape hatch; sub-flags are no-ops without it; must stay off on any stable baseline |
 | `myOS.debug.crossProfileLogin.enable` | staged off by default | keep off except when actively debugging login flows | `modules/core/debug.nix`, `modules/core/users.nix` | relaxes profile-user account-lock binding for cross-profile authentication; documented escape for recovery/bootstrap |
-| `myOS.debug.paranoidWheel.enable` | staged off by default | keep off except when actively administering paranoid from paranoid | `modules/core/debug.nix`, `modules/core/users.nix`, `modules/security/governance.nix` | adds ghost to wheel and skips the matching governance assertion; escape for emergency admin |
+| `myOS.debug.paranoidWheel.enable` | staged off by default | keep off except when actively administering paranoid from paranoid | `modules/core/debug.nix`, `modules/core/users.nix`, `modules/security/governance.nix` | adds wheel to paranoid users and skips the matching governance assertion; escape for emergency admin |
 | `myOS.debug.warnings.enable` | baseline on | keep on | `modules/core/debug.nix` | surfaces active debug relaxations in every rebuild; silencing is a footgun |
 
 ## Kernel and boot hardening
@@ -106,7 +106,7 @@ Status values:
 
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
-| Mullvad app mode (daily only) | baseline | keep for now | `modules/security/networking.nix`, `docs/governance/PROJECT-STATE.md` | simpler stable baseline for daily/player |
+| Mullvad app mode (daily only) | baseline | keep for now | `modules/security/networking.nix`, `docs/governance/PROJECT-STATE.md` | simpler stable baseline for daily profile |
 | self-owned WireGuard path | staged | post-stability / optional | `modules/security/wireguard.nix`, `modules/core/options.nix` | stronger repo-owned path, but more operator burden |
 | explicit nftables ownership in self-owned WG mode | staged | keep | `modules/security/wireguard.nix` | avoid split authority |
 | MAC randomization on paranoid | baseline | keep | `modules/security/privacy.nix` | stronger identifier reduction |
