@@ -138,10 +138,10 @@ in {
     };
 
     # Core dumps: disable storage and restrict
-    systemd.coredump.extraConfig = ''
-      Storage=none
-      ProcessSizeMax=0
-    '';
+    systemd.coredump.settings.Coredump = {
+      Storage = "none";
+      ProcessSizeMax = 0;
+    };
 
     # Root account: locked, su restricted to wheel
     users.users.root.hashedPassword = lib.mkIf sec.lockRoot "!";

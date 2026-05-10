@@ -14,20 +14,15 @@ Read these in order:
 5. `docs/pipeline/INSTALL-GUIDE.md`
 6. `docs/pipeline/TEST-PLAN.md`
 
-If the task crosses the framework / instance / workspace boundary, also read:
-
-- `../REPO_STRUCTURE.md`
-- `../Governance/README.md`
-- `../Governance/docs/WORKSPACE_OPERATING_MODEL.md`
-- `../Tools/README.md`
-- `../AKS/docs/INSTANCE-MODEL.md`
-- `../AKS/docs/FRAMEWORK-DEPENDENCY.md`
+If the task also edits a consuming configuration or another repo, open that
+project's own entry surface from its root before changing it. Do not infer
+external repo truth from this file.
 
 ## Operating stance
 
 - treat this repo as the framework source of truth for hardening, profile
   machinery, and reusable NixOS substrate
-- do not let instance-local convenience rewrite framework boundaries
+- do not let deployment-local convenience rewrite framework boundaries
 - preserve the distinction between stable baseline, staged features, and
   post-stability work
 - prefer minimal, validated framework changes over speculative expansion
@@ -37,7 +32,7 @@ If the task crosses the framework / instance / workspace boundary, also read:
 Cross-repo edits are allowed when the task truly crosses the boundary, but:
 
 - framework rationale belongs here
-- instance rationale belongs in the instance repo
+- consumer-specific rationale belongs with the consuming config or repo
 - validation should run in each touched repo
 - commits should stay separated by repo
 

@@ -27,12 +27,7 @@
     };
     homeManagerConfig = ./home/player.nix;
 
-    identity = {
-      git.name  = "Elaina";
-      git.email = "48662592+oestradiol@users.noreply.github.com";
-
-      audio.micSourceAlias   = "alsa_input.usb-3142_Fifine_Microphone-00.mono-fallback";
-      audio.micLoopbackSink  = "alsa_output.pci-0000_09_00.4.analog-stereo";
-    };
+    # Leave operator-owned identity and audio aliases unset in the
+    # reference template so deployments start from a clean slate.
   };
 }

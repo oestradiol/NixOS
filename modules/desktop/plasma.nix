@@ -14,7 +14,7 @@ in {
     # with automatic location ever becomes a requirement.
     services.geoclue2.enable = lib.mkForce false;
 
-    # Disable drkonqi coredump processor - coredumps are already disabled via systemd.coredump.extraConfig
+    # Disable drkonqi coredump processor - coredumps are already disabled via systemd.coredump.settings.Coredump
     # in modules/security/base.nix (Storage=none, ProcessSizeMax=0). The drkonqi service
     # tries to process stale journal entries from before that config was applied and times out.
     systemd.user.services.drkonqi-coredump-pickup.enable = false;

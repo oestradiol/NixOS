@@ -15,7 +15,7 @@ Status values:
 | knob | state | current policy | code/docs | rationale |
 |---|---|---|---|---|
 | two-axis profile+user model | baseline | keep | `modules/core/users.nix`, `docs/governance/PROJECT-STATE.md` | core governance model |
-| paranoid-style user (tmpfs home, no wheel) | baseline | keep | `docs/governance/PROJECT-STATE.md`, `modules/security/governance.nix` | hardened workspace split |
+| paranoid-style user (tmpfs home, no wheel) | baseline | keep | `docs/governance/PROJECT-STATE.md`, `modules/security/governance.nix` | hardened profile split |
 | daily-style user (persistent home, wheel) | baseline | keep | `docs/governance/PROJECT-STATE.md` | normal desktop split |
 | `users.mutableUsers = false` (immutable) | baseline | keep | `modules/core/users.nix`, `docs/maps/PROFILE-POLICY.md` | install script writes hashed passwords to `/persist/secrets/<username>-password.hash` |
 | root account locked | baseline | keep | `modules/security/base.nix` | reduce direct root login surface |

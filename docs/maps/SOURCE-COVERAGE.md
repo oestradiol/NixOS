@@ -165,7 +165,7 @@ This section now tracks the Madaidan guide **section by section**, including ite
 | 11.2 umask | absent | none | no explicit global umask policy found | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 | 12. Core dumps | baseline | `modules/security/base.nix` | systemd coredump storage/process size are explicitly restricted | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 | 12.1 sysctl | partial | `modules/security/base.nix` | repo covers some dump-related sysctls via `fs.suid_dumpable`, but not a broader dedicated section | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
-| 12.2 systemd | baseline | `modules/security/base.nix` | `systemd.coredump.extraConfig` is set | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
+| 12.2 systemd | baseline | `modules/security/base.nix` | `systemd.coredump.settings.Coredump` is set | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 | 12.3 ulimit | absent | none | no dedicated global ulimit policy found | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 | 12.4 setuid processes | partial | `modules/security/base.nix`, `modules/security/scanners.nix` | repo limits dumpability and monitors some privileged surfaces, but not as a dedicated setuid-hardening program | https://madaidans-insecurities.github.io/guides/linux-hardening.html |
 | 13. Swap | baseline + daily-softened | `modules/core/storage-layout.nix`, `profiles/daily.nix`, `modules/core/boot.nix`, installer docs/scripts | zram is baseline; daily also uses encrypted-on-disk swapfile for workload spikes | https://madaidans-insecurities.github.io/guides/linux-hardening.html |

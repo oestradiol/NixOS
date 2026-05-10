@@ -34,8 +34,6 @@ in {
     # vesktop → dev.vencord.Vesktop
     # obsidian → md.obsidian.Obsidian
     # Bubblewrapped apps (not available on Flathub)
-    # vrcx and windsurf are pulled in as dependencies of the wrappers
-    windsurf
     vrcx
   ];
 }

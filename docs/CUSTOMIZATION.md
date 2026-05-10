@@ -82,7 +82,7 @@ storage module and provide your own `fileSystems` / `swapDevices`:
 ## Installer expectations
 
 `scripts/rebuild-install.sh` now reads the selected flake/config instead
-of assuming this repo's default template. It will:
+of assuming the reference default template. It will:
 
 - ask for the target flake path or URL
 - resolve the pinned `hardening` source from that flake

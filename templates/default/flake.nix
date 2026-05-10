@@ -1,5 +1,5 @@
 {
-  description = "Operator's default workstation: full paranoid+daily with ghost+player";
+  description = "Reference hardened workstation template: paranoid+daily with ghost+player";
 
   inputs = {
     # Framework via relative path.

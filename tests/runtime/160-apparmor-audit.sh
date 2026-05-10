@@ -60,7 +60,7 @@ else
   fi
 fi
 
-describe "coredumps disabled (systemd.coredump.extraConfig Storage=none)"
+describe "coredumps disabled (systemd.coredump.settings.Coredump Storage=none)"
 cfg=/etc/systemd/coredump.conf
 if [[ -r $cfg ]]; then
   if grep -qE '^\s*Storage\s*=\s*none' "$cfg"; then

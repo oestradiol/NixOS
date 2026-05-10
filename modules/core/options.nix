@@ -26,9 +26,9 @@
       default = "paranoid";
       description = ''
         Active system posture profile. Framework provides "paranoid" and "daily"
-        as reference profiles, but instances may declare custom profiles (e.g.,
-        AKS uses "agent"). Governance assertions validate profile properties
-        (hardening level, user constraints) rather than hardcoded names.
+        as reference profiles, but deployments may declare custom profiles.
+        Governance assertions validate profile properties (hardening level,
+        user constraints) rather than hardcoded names.
       '';
     };
 

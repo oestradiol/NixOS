@@ -5,6 +5,7 @@ in {
   boot.loader = {
     systemd-boot = {
       enable = lib.mkDefault true;
+      configurationLimit = 5;
       # extraInstallCommands = ''
       #   DAILY_FILE=$(ls -t /boot/loader/entries/nixos-*-daily.conf 2>/dev/null | (read -r first; echo "$first"))
       #   if [[ -n "$DAILY_FILE" ]]; then

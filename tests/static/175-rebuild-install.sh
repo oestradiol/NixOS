@@ -20,7 +20,7 @@ assert_contains "$content" 'cfg.myOS.storage' "installer reads myOS.storage from
 assert_contains "$content" 'prompt_required "EFI partition device"' "installer prompts for EFI partition"
 assert_contains "$content" 'prompt_required "Encrypted root partition device"' "installer prompts for encrypted root partition"
 
-describe "installer no longer hardcodes the maintainer repo or account names"
+describe "installer no longer hardcodes repository-specific or account-specific names"
 assert_not_contains "$content" 'https://github.com/oestradiol/NixOS.git' "no blind GitHub clone bootstrap"
 assert_not_contains "$content" 'player-password.hash' "no hardcoded player hash path"
 assert_not_contains "$content" 'ghost-password.hash' "no hardcoded ghost hash path"

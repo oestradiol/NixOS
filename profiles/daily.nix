@@ -16,6 +16,11 @@
     # follow the master gate automatically.
   };
 
+  # VR mDNS/avahi: broadcast WiVRn on the primary LAN so headsets auto-discover
+  # the host. Disabled by default for privacy; the daily profile opts in because
+  # VR without auto-discovery is a papercut every session.
+  myOS.vr.lanDiscovery.enable = lib.mkForce true;
+
   myOS.storage.swap.enable = lib.mkForce true;
 
   # Daily networking features

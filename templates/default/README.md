@@ -34,7 +34,7 @@ templates/default/
         └── player.nix
 ```
 
-## Quick start (for this repo's maintainer)
+## Quick start (from a local checkout)
 
 This template is already wired into the framework flake. To build:
 
@@ -69,7 +69,7 @@ To use this as a starting point for your own machine:
 
 ## Framework boundary
 
-Files in this directory are **instance-specific**:
+Files in this directory are **deployment-specific**:
 - User account definitions (`accounts/*.nix`)
 - Storage device overrides and hardware quirks (`hosts/nixos/`)
 - Hostname and system-specific wiring
@@ -81,7 +81,7 @@ Framework code (reusable across instances) lives at repo root:
 
 ## Relationship to workstation template
 
-- `templates/default/` — This repo's actual machine (paranoid + daily)
+- `templates/default/` — Full paranoid + daily reference template
 - `templates/workstation/` — Minimal starter for integrators who want
   only the daily profile without the paranoid/daily split
 

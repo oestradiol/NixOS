@@ -24,7 +24,7 @@
   services.xserver.enable = lib.mkForce false;
 
   security.polkit.enable = true;
-  # services.dbus.implementation = "broker";
+  services.dbus.implementation = "dbus";
   # ^ deliberately disabled 2026-04 after it caused a boot-time hang on a D-Bus
   # message (failed to reach Plasma/greetd's bus before the login screen).
   # Do NOT re-enable without first validating that the selected desktop environment

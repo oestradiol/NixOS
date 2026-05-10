@@ -111,15 +111,15 @@ Import only the hardening surface you need:
 All 40 `nixosModules.*` outputs are documented in `flake.nix`.
 
 ### C. Fork-and-own (full adaptation)
-Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `templates/default/hosts/` and `templates/default/accounts/` are your instance.
+Fork if you need to change framework internals (governance invariants, PAM binding experiments, browser wrappers). Keep the framework boundary clear: `modules/` and `profiles/` are the reusable substrate; `templates/default/hosts/` and `templates/default/accounts/` are the deployment-specific layer.
 
 ## Identity separation
 
-Operator-specific values (git email, mic aliases, repo paths) are set directly in account definitions:
-- `templates/default/accounts/player.nix` — daily user identity
-- `templates/default/accounts/ghost.nix` — paranoid user identity
+Deployment-specific values such as git identity, audio aliases, and local paths belong in account definitions or local overrides:
+- `templates/default/accounts/player.nix` — daily reference account
+- `templates/default/accounts/ghost.nix` — paranoid reference account
 
-Forks may use any user naming scheme and identity values.
+The reference template intentionally leaves operator-owned identity fields unset. Forks may use any user naming scheme and identity values.
 
 ## Testing
 The repo ships a three-layer test suite runnable offline:

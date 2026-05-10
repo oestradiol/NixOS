@@ -1,4 +1,4 @@
-# Reference account: ghost — the hardened workspace persona.
+# Reference account: ghost — the paranoid profile persona.
 #
 # Pure data: declares the user's identity shape via the two-axis
 # framework (modules/core/users-framework.nix). The system side
@@ -7,7 +7,7 @@
 { pkgs, ... }: {
   myOS.users.ghost = {
     activeOnProfiles = [ "paranoid" ];
-    description = "Hardened workspace";
+    description = "Paranoid desktop";
     uid = 1001;  # explicit for fs-layout tmpfs uid= / gid= mount options
     shell = pkgs.zsh;
     extraGroups = [
