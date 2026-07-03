@@ -47,7 +47,7 @@ in {
           "/var/lib/flatpak"
         ]
         # Gaming/Bluetooth state: persist if controllers or bluetooth are enabled
-        ++ lib.optionals (config.myOS.gaming.controllers.enable or config.services.bluetooth.enable) [
+        ++ lib.optionals (config.myOS.gaming.controllers.enable or config.hardware.bluetooth.enable) [
           "/var/lib/bluetooth"
         ]
         # VPN state: persist if Mullvad is enabled
